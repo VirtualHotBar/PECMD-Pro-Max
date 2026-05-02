@@ -69,7 +69,7 @@ INIT [options],[timeout_ms]
 
 `INIT IU,3000` — most common form. I=keyboard layout, U=USB initialization, 3000ms timeout.
 
-`INIT CIK` — C=disable Ctrl+Alt+Del, I=keyboard, K=kill explorer
+`INIT CIK` — C=write CDROM drive letters to env var, I=install tray icon menu, K=install low-level keyboard hook immediately
 
 ### SHEL — Set Windows Shell
 
@@ -125,7 +125,7 @@ _SUB WaitForUSB
         FDRV &drvs=*:
         FORX * %&drvs%,&&drv,
         {
-            FORM -raw &&type=%&drv%
+            FORM &type=%&drv%
             FIND $DRIVE_USBDISK=%&type%,
             {
                 IFEX %&drv%\PETOOLS\LOAD.INI, TEAM LOAD %&drv%\PETOOLS\LOAD.INI| EXIT _SUB
@@ -199,7 +199,7 @@ PE environments have inherent constraints. Understanding these is critical for w
 
 ### 3. No Network by Default
 **Constraint**: Network adapters are not initialized and DHCP is not configured.
-**Mitigation**: Explicitly initialize networking with `PCIP` command before any network operations. For wireless, use `ADSL` or `UPNP` as appropriate.
+**Mitigation**: Explicitly initialize networking with `PCIP` command before any network operations. For wireless/WiFi, use `ADSL-wlan`; for PPPoE broadband dial-up, use `ADSL`.
 
 ### 4. Temporary Registry
 **Constraint**: The registry is loaded into RAM and changes are lost on reboot. The SYSTEM and SOFTWARE hives are loaded from the WIM and are read-only overlays.

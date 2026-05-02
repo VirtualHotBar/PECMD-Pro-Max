@@ -350,7 +350,7 @@ _END
 ```wcs
 // Title with formatting flags
 ENVI &&Title=100:名称%&TAB%=60:PID%&TAB%+80:内存%&TAB%*0:隐藏列%&TAB%*200:路径
-//   default=left, =  =center, +  =right-align, *0: =hidden column
+//   default=left, =  =right-align, +  =center, *0: =hidden column
 
 TABL Table1,L10T10W500H300,%&Title%,,0x10040
 

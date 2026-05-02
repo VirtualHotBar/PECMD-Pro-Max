@@ -120,7 +120,7 @@ ENVI @Ctrl.Enable=0|1             // disable/enable
 ENVI @Ctrl.Visible=0|1|*4        // hide/show/minimize
 ENVI @Ctrl.POS=l:t:w:h            // move/size
 ENVI @Ctrl.POS=?&L:&T:&W:&H     // query position
-ENVI @Ctrl.Check=0|1|-1           // checkbox state
+ENVI @Ctrl.Check=0|1|2|-1|-2       // checkbox state (1/-1=checked, 0/2/-2=unchecked, <0=grayed, ±16=invisible)
 ENVI @Ctrl.Val=data               // set content
 ENVI @Ctrl.Val=?row.col;&var      // get cell (semicolon)
 ENVI @Ctrl.Val=?*;&count          // get row count
@@ -215,14 +215,14 @@ ENVI-mkdummy &&Name=&buf@offset;length
 ```
 FIND $str1=str2, command        // equal (case-sensitive)
 FIND $str1<>str2, command       // not equal
-FIND $=%var%, command           // var is not empty
-FIND $%var%=, command           // var is empty
+FIND $=%var%, command           // var is empty
+FIND $%var%=, command           // var is empty (same, variable on left)
 FIND $str1=str2,! cmd1! cmd2   // if else (separated by !)
 FIND $str1=str2,!! command      // else only
 FIND |num1>num2, command        // numeric comparison
 FIND $'%var%'='', command       // safe empty check (single quotes)
-FIND [ $A & $B ], command       // compound AND (same syntax as IFEX)
-FIND [| $A | $B ], command      // compound OR
+FIND [$][A & B], command         // compound AND (& between conditions)
+FIND [$][A | B], command         // compound OR (| between conditions)
 FIND --pid &var,                // get process/CPU ticks
 FIND --pid*@[.ext|#parentPID] &var,  // process list (opt: extension filter or parent PID)
 FIND --wid*@[parentWID] &var,[title] // window list (opt: parent window filter)
@@ -235,8 +235,9 @@ IFEX path\|file,! command        // NOT exists
 IFEX x:\, command                // drive letter exists AND has filesystem
 IFEX $num1>=num2, command        // numeric comparison
 IFEX #num1=#num2, command        // force integer
-IFEX [ cond1 & cond2 ], command  // AND compound
-IFEX [| cond1 | cond2 ], command // OR compound
+IFEX [ cond1 & cond2 ], command  // AND compound (& and | or @ between conditions)
+IFEX [ cond1 | cond2 ], command  // OR compound
+IFEX [ cond1 @ cond2 ], command  // XOR compound
 IFEX MEMU=?,&var                 // query free memory
 IFEX MEMA=?,&var                 // query total memory
 IFEX drv:\=?,&var               // query disk free space
@@ -522,11 +523,15 @@ The indented line(s) execute when the shell transition happens.
 
 ### SHUT — Shutdown/restart
 ```
-SHUT                       // shutdown
-SHUT R                     // restart
-SHUT L                     // logoff
-SHUT E                     // standby
-SHUT H                     // hibernate
+SHUT                        // shutdown
+SHUT R                      // restart
+SHUT S                      // suspend/standby
+SHUT H                      // hibernate
+SHUT L                      // logoff
+SHUT K                      // lock workstation
+SHUT E                      // eject optical drive
+SHUT C                      // close optical drive
+SHUT O                      // eject optical + wait 10s
 ```
 
 ### DISP — Display settings
@@ -802,7 +807,7 @@ MEMO [-rich] Name,Shape,Text,[EventCmd],[Style],[FontSize]
 
 ### LIST — Dropdown
 ```
-LIST [-h] Name,Shape,item1|item2|item3,[EventCmd],[Style],[FontSize]
+LIST [-h] Name,Shape,item1|item2|item3,[EventCmd],[Sel],[Style],[FontSize]
 ```
 `-h`=always show dropdown height. Operations:
 ```
@@ -826,7 +831,7 @@ State: `1`=checked, `0`=unchecked, `-1`=toggle, `-2`=grayed
 TABL [-font:N] Name,Shape,Title,[Event],[Style]
 ```
 Title format: `100:Name%&TAB%=90:Size%&TAB%+50:Count`
-Column flags: default=left, `=`=center, `+`=right-align, `*0:`=hidden column
+Column flags: default=left, `*`=left (default), `=`=right-align, `+`=center, `*0:`=hidden column
 Style: `0x10040`=full row select+checkboxes, `0x10200`=full row select,
 `0x4000`=grid lines, `0x16000`=single select+no header
 Operations:
@@ -897,7 +902,14 @@ BROW &result,[*|&]path,[prompt],[filter],[flags] // file/dir browser
 MESS [text][+iconN] [\n...] [@title][#buttons][*ms][$default]  // message box
 LOGO imagePath                                 // show/hide splash
 TEXT text[#color][LxTy][RxBy][$size:font]     // display status text
-HIDE                                           // toggle taskbar
+HIDE                                           // hide PECMD.EXE process
+WALL imagePath                                 // set desktop wallpaper
+WALL -center imagePath                          // centered
+WALL -tile imagePath                            // tiled
+WALL -stretch imagePath                         // stretched
+WALL -fit imagePath                             // proportional fit
+WALL -fill imagePath                            // fill (crop to fit)
+WALL -span imagePath                            // span across monitors
 SEND {ENTER}                                   // send keystrokes
 NUMK 1|0                                       // NumLock on/off
 ```

@@ -236,11 +236,11 @@ EDIT [-vcenter] [-rich] [-wantTAB] [-pwd|-ipwd] Name,LxTyWwHh,[InitText],[Cmd],[
 | `-ipwd` | Invisible password: no visual feedback at all |
 | (none) | Standard single-line edit |
 
-**Scroll bar flags in Style:**
+**Scroll bar flags (prefix on EDIT command):**
 ```wcs
-EDIT Ed,L10T30W200H200,,,0x0020          // VSCROLL
-EDIT Ed,L10T30W200H200,,,0x0010          // HSCROLL (horizontal scroll)
-EDIT Ed,L10T30W200H200,,,0x0030          // both VSCROLL + HSCROLL
+EDIT- Ed,L10T30W200H200          // horizontal scroll bar
+EDIT| Ed,L10T30W200H200          // vertical scroll bar
+EDIT-| Ed,L10T30W200H200         // both scroll bars
 ```
 
 **Read-only:** Add `0x0800` (ES_READONLY) to Style.
@@ -472,17 +472,17 @@ HeaderString = "col1_text:col1_width col2_text:col2_width ..."
 Width prefixes:
 | Prefix | Meaning |
 |--------|---------|
-| `=` | Center-aligned column |
-| `+` | Right-aligned column |
-| `*` | Checkbox column header |
+| `*` | Left-aligned (default) |
+| `=` | Right-aligned column |
+| `+` | Center-aligned column |
 | (none) | Left-aligned (default) |
 | (blank name) | No header text for this column |
 
 ```wcs
 TABL Tbl,L10T10W400H200,=100:Name +80:Size =120:Date *30,0x40
-// Column 1: "Name", width 100, centered
-// Column 2: "Size", width 80, right-aligned
-// Column 3: "Date", width 120, centered
+// Column 1: "Name", width 100, right-aligned
+// Column 2: "Size", width 80, centered
+// Column 3: "Date", width 120, right-aligned
 // Column 4: (empty), width 30, checkbox
 ```
 
@@ -628,13 +628,13 @@ _END
 ### 4.12 SLID — Slider / Trackbar
 
 ```wcs
-SLID [-range:min:max] Name,LxTyWwHh,[InitVal],[EventCmd],[Style]
+SLID [-right] [-left] [*] Name,LxTyWwHh,[InitVal:EndVal:CurVal:PageSize],[CmdParamName],[EventCmd],[Style]
 ```
 
 ```wcs
-SLID -range:0:100 Sld,L10T10W200H30,50,CALL OnSlide
-SLID -range:1:10 Sld,L10T10W200H30,5                // init at 5, range 1-10
-SLID -range:-20:80 Sld,L10T50W200H30,0               // negative min supported
+SLID Sld,L10T10W200H30,0:100:50:10,CALL OnSlide       // init at 50, range 0-100, page=10
+SLID Sld,L10T10W200H30,1:10:5                          // init at 5, range 1-10
+SLID Sld,L10T50W200H30,-20:80:0                         // negative min supported
 ```
 
 **Operations:**
@@ -648,17 +648,18 @@ ENVI @Sld.VAL=?;&value                                // query slider value
 ### 4.13 SPIN — Spinner / Up-Down Control
 
 ```wcs
-SPIN [-range:min:max] [buddyEditName] Name,LxTyWwHh,[InitVal],[EventCmd],[Style]
+SPIN [-right] [-left] [*] Name,LxTyWwHh,[BuddyEdit:InitVal:EndVal:CurVal],[CmdParamName],[EventCmd],[Style]
 ```
 
 SPIN automatically pairs with a buddy EDIT control for numeric input:
 
 ```wcs
 EDIT Edit1,L10T10W60H20,0
-SPIN -range:0:100 Spin1,L70T10W16H20,0,CALL OnSpin   // buddy = Edit1 (auto-detect)
+SPIN Spin1,L70T10W16H20,Edit1:0:100:0,CALL OnSpin
 
 // Explicit buddy:
-SPIN -range:0:255 Spin2,L10T40W16H20,0,,,Edit2
+EDIT Edit2,L10T40W60H20,0
+SPIN Spin2,L70T40W16H20,Edit2:0:255:0
 ```
 
 **Operations:**
@@ -672,20 +673,27 @@ ENVI @Spin1.VAL=?;&value                              // query value
 ### 4.14 DTIM — Date-Time Picker
 
 ```wcs
-DTIM [-type:N] Name,LxTyWwHh,[InitDateTime],[EventCmd],[Style]
+DTIM Name,LxTyWwHh,[InitDateTime],[EventCmd],[Style]
 ```
 
-| Type | Display |
-|------|---------|
-| `-type:0` | Date and Time (default) |
-| `-type:1` | Date only (short format) |
-| `-type:2` | Time only |
-| `-type:3` | Date + Time + Checkbox |
+Type is set via bit flags in the Style parameter:
+
+| Bit | Hex | Description |
+|-----|-----|-------------|
+| — | 0x00 | Short date format (default) |
+| 0x20 | 0x20 | Long date format |
+| 0x40 | 0x40 | Time format |
+| 0x80 | 0x80 | Short century date format |
+| 0x100 | 0x100 | Up/down key adjustment |
+| 0x200 | 0x200 | Checkbox picker |
+| 0x10 | 0x10 | Invisible |
+| <0 | (negative) | Grayed (disabled) |
 
 ```wcs
-DTIM -type:1 Dt1,L10T10W120H22,,CALL OnDateChange     // date only
-DTIM -type:2 Dt2,L10T40W80H22                          // time only
-DTIM -type:0 Dt3,L10T70W180H22                          // date + time
+DTIM Dt1,L10T10W120H22,,CALL OnDateChange,0x20         // long date format
+DTIM Dt2,L10T40W80H22,,,0x40                             // time format
+DTIM Dt3,L10T70W180H22                                    // default: short date
+DTIM Dt4,L10T100W180H22,,,0x240                           // long date + time (0x20|0x40)
 ```
 
 **Operations:**

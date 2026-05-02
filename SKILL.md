@@ -191,11 +191,11 @@ FIND $%var%=hello, command           // equal
 FIND $%var%<>hello, command          // not equal
 FIND $%var%=hello,!! command         // !! = else with no if-body
 FIND $%var%=hello, cmd1! cmd2       // ! separates if-body from else-body
-FIND $=%var%, command               // "is not empty" test
+FIND $=%var%, command               // "is empty" test
 FIND $'%var%'='', command           // "is empty" (single-quote protects special chars)
 FIND |%a%>%b%, command              // | prefix = numeric comparison (NOT string)
-FIND [ $A & $B ], command          // compound AND (same syntax as IFEX)
-FIND [| $A | $B ], command         // compound OR
+FIND [$][$A & $B], command          // compound AND (& between conditions, [...]=multi-condition)
+FIND [$][$A | $B], command          // compound OR (| between conditions)
 FIND --pid &var,                    // get process/CPU info
 FIND --pid*@[.ext|#parentPID] &var, // process list for TABL (opt: filter by .ext or #parent)
 FIND --wid*@[parentWID] &var,[titleFilter]  // window list
@@ -208,10 +208,10 @@ IFEX C:\boot.ini, command           // file/directory exists
 IFEX C:\boot.ini,! command          // NOT exists
 IFEX x:\, command                   // drive letter exists AND has filesystem
 IFEX x:, command                    // drive letter exists (may be unformatted)
-IFEX $%val%>=5, command             // numeric comparison
+IFEX $%val%>=5, command             // $=numeric comparison
 IFEX #%a%<#%b%, command             // # prefix = force integer
-IFEX [ cond1 & cond2 ], command     // AND compound condition (use &)
-IFEX [| cond1 | cond2 ], command    // OR compound condition (use |)
+IFEX [ cond1 & cond2 ], command     // AND compound condition (& / | / @ between conditions)
+IFEX [ cond1 | cond2 ], command     // OR compound condition
 IFEX MEMU=?,&MemU                   // query free memory into variable
 IFEX C:\=?,&FreeSpace               // query free disk space
 ```
@@ -250,7 +250,7 @@ FORX @\Windows,&&winDir,1          // search ALL drives for directory (1=first m
     MESS Windows at: %&winDir%
 }
 
-FORX *v &var1 &var2 &var3,&&v,    // *v = iterate variable names, not values
+FORX *v varlist,&&v,               // *v = iterate variable TABLE (names not values)
 ```
 
 Break out: `EXIT FORX`. Continue: `EXIT -`.
@@ -620,7 +620,7 @@ ENVI @TABL.Val=-*                                   // clear all rows
 ENVI @TABL.Sel=%row%                                // select row
 ENVI @TABL.Sel=%row%;0                              // deselect row
 // Column format flags in title: 100:磁盘  =90:大小  +50:磁头数
-//   (default=left, =  =center, +  =right-align, empty/blank = no column header text)
+//   (default=left, =  =right-align, +  =center, empty/blank = no column header text)
 ```
 
 ### String manipulation
@@ -673,7 +673,7 @@ SET~ &&val=Arr.%&row%.%&col%                          // indirect read
 15. **Exit codes**: PECMD.exe exit code = last command's error code. 0=success, other=failure.
 16. **Thread safety**: Threads receive a COPY of the parent's PE variables at creation time. Use `&::` variables for true inter-thread sharing. Never share environment variables across threads.
 17. **Chinese variable names**: Real PECMD code overwhelmingly uses Chinese variable names. This is the de facto standard in the PECMD community. Use Chinese names when writing scripts for this ecosystem, though English names are also fully supported.
-18. **OnShutdown.wcs auto-execution**: PECMD automatically runs `%SystemRoot%\System32\OnShutdown.wcs` (if it exists) before system shutdown/reboot/logoff, passing the operation code as `%1` (shutdown, reboot, poweroff, logoff, suspend, hibernate).
+18. **OnShutdown.wcs auto-execution**: PECMD automatically runs `%SystemRoot%\System32\OnShutdown.wcs` (if it exists) before system shutdown/reboot/logoff, passing the operation code as `%1` (shutdown, reboot, poweroff, logoff, suspend, hiber, lock).
 19. **&&__RET convention**: The standard function return variable. When using `ENVI-ret` to return values, the caller can introspect with `&&__RET`.
 20. **WM_NOTIFY / WM_COMMAND subfields**: After receiving a WM_NOTIFY message (via `_msg#` mapping), the subfields `%&__NMHDR.idFrom%`, `%&__NMHDR.code%`, `%&__NMHDR.hwndFrom%` are auto-parsed. Similarly, WM_COMMAND provides `%&__wParam.wID%` and `%&__wParam.wNotifyCode%`.
 21. **FIND expansion rule**: In FIND, bare identifiers (no `%` wrappers) are treated as literal strings. Always use `FIND $%&var%=value` for PE variables, not `FIND $&var=value`.
