@@ -4,7 +4,7 @@
 
 简体中文 | [English](./README.en.md)
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
@@ -20,22 +20,22 @@ pecmd-pro-max/
 ├── README.en.md                     ← English version
 ├── SKILL.md                         ← 主技能文件 — 心智模型、变量系统、模式、陷阱
 └── references/
-    ├── commands-full.md             ← 100+ 条命令完整参考 + VK键码附录
-    ├── codebook.md                  ← 42 个实战代码模式（分区、串口、GUI等）
-    ├── pecmd-gui.md                 ← 完整 GUI 控件与窗口系统参考
+    ├── commands-full.md             ← 110+ 条命令完整参考（含新增 BROW/TREE/LAMBDA/SBAR等）+ VK键码
+    ├── codebook.md                  ← 67 个实战代码模式（分区、设备枚举、GUI、回调、缓冲区等）
+    ├── pecmd-gui.md                 ← 完整 GUI 控件与窗口系统参考（22种控件）
     └── pe-startup.md                ← WinPE 启动流程、环境限制、版本差异
 ```
 
 ## 核心特性
 
-- **三层变量系统详解** —— 环境变量 vs PE-局部 vs PE-全局，间接引用、延迟展开、引用返回、十六进制/原始缓冲区分配
-- **100+ 命令参考** —— 每条 PECMD 命令包含语法、返回值、陷阱说明，附 VK 键码表
-- **42 个经过实战验证的代码模式** —— 模态对话框、`HASH` 完整性校验、`PART` 磁盘分区、进度条、多页向导、`CALL` 调用变体
-- **完整 GUI 参考** —— 所有控件类型（`LABE`、`EDIT`、`CHEK`、`RADI`、`IMAG`、`TABL`、`LIST`、`MEMO`、`IPAD`...）、消息系统、图标、样式
+- **三层变量系统详解** —— 环境变量 vs PE-局部 vs PE-全局，间接引用、延迟展开、引用返回、十六进制/原始缓冲区分配、二进制比较/转换
+- **110+ 命令参考** —— 每条 PECMD 命令包含语法、返回值、陷阱说明，附 VK 键码表（含新增 BROW、TREE、LAMBDA、SBAR、IPAD、BLOCK）
+- **67 个经过实战验证的代码模式** —— 磁盘枚举、设备IOCTL、Win32 API回调、GUID构造、缓冲区模板、ICO提取、GDI绘图、鼠标模拟等
+- **完整 GUI 参考** —— 所有控件类型（`LABE`、`EDIT`、`CHEK`、`RADI`、`IMAG`、`TABL`、`LIST`、`MEMO`、`IPAD`、`TREE`、`SBAR`...）、消息系统、图标、样式
 - **WinPE 启动流程** —— 从 `winpeshl.exe` → `PECMD MAIN PECMD.INI` 直至 `EXPLORER.EXE`，包含 `WinXShell` 集成、驱动加载和版本特定行为
-- **21 条常见陷阱** —— 注释标记规则、CALC 空格、FIND vs IFEX 行为、线程安全、中文变量命名约定等
+- **25 条常见陷阱** —— 注释标记规则、CALC 空格、FIND vs IFEX 行为、线程安全、Visable/Visible 区别、鼠标模拟等
 - **ForceLocal + EnviMode 默认值** —— 确保每个生成的脚本都使用最安全的变量作用域
-- **代码组织规则** —— `_SUB` 声明时解析 vs 运行时调用、类嵌套、窗口创建标志、`CALL @` 变体速查表
+- **代码组织规则** —— `_SUB` 声明时解析 vs 运行时调用、`SET^` Win32 回调绑定、`CALL @` 变体速查表
 
 ## 快速上手
 

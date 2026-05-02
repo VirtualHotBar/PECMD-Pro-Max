@@ -67,6 +67,16 @@ DLL flags: `--cd`=chdir, `--nrcd`=don't restore, `--c`=C convention,
 `--bool`=BOOL return, `--ret:*`=return via pointer, `--m`=in-memory,
 `--1`=all remaining as one param, `--qd@`/`--qd#`/`--qd$`/`--qd*`=per-param type
 
+// Additional DLL flags:
+--sret        // return symbol count
+--16          // return in hex
+--vret:var    // return VARIANT
+--arg         // alternative parameter format table
+.vFun         // virtual function index or IDispatch function name
+--get/--put   // property get/set
+?             // query DLL function address
+^<            // COM DLL loading prefix
+
 ### EXIT — Terminate
 ```
 EXIT FILE      // terminate entire script
@@ -97,6 +107,12 @@ THREAD[*][&][+][$][#] [-exp] [-wait[x][-here]] [-tid:var] [--st:stackSize] comma
 ```
 `*` = immediate, `&` = force PE var mode, `$` = pre-interpret, `+` = abandoned thread,
 `-wait` = wait for completion, `-tid:var` = get thread ID
+
+Additional flags:
+`-link` = maintain parent-child window connection,
+`-waitp` = wait for process end before thread,
+`-here` = current stack child (modify execution stack),
+`-htid:var` = get thread handle
 
 ---
 
@@ -137,6 +153,14 @@ ENVI @Ctrl.bkcolor=0xRRGGBB
 ENVI @Ctrl.Cursor=32649           // hand cursor
 ENVI @@POS=wid:l:t:w:h:layer:trans:front:activate
 ENVI @@Visible=wid:0|1|*4        // cross-process visibility
+ENVI^ Clipboard=text             // write to clipboard
+ENVI^ Clipboard?=var             // read clipboard to variable
+ENVI^ EXPORTLOCAL=1|0|&1         // PE variable inheritance: 1=propagate, 0=isolate, &=recursive
+ENVI^ DisX64=1                   // disable WOW64 filesystem redirection
+ENVI^ Arg=*                      // split words into parameters
+ENVI^ DeskTopFresh=[clearicon][;][1|2|4|8|16][;[-+]path]  // desktop refresh
+ENVI @@TaskIcoMenu=0|1|2         // tray menu toggle
+ENVI^ HelpColor=[*cmdHeight] [fgColor][#bgColor]  // HELP display colors
 ```
 
 ### CALC — Calculate / evaluate
@@ -206,6 +230,39 @@ ENVI-addr &&ptr=&buf
 ### ENVI-mkdummy — Dummy pointer/length descriptor
 ```
 ENVI-mkdummy &&Name=&buf@offset;length
+```
+
+### SET-cmp — Binary compare
+```
+SET-cmp dst=src;srcOff;len;dstOff;[S|s|I|i]
+```
+S/I = wide chars, s/i = narrow chars, I/i = case-insensitive.
+
+### SET-tom / SET-tow — Encoding conversion
+```
+SET-tom dst=src       // UNICODE to multibyte (e.g. GBK)
+SET-tow dst=src       // multibyte to UNICODE
+```
+
+### SET-swap — Swap variable contents
+```
+SET-swap var1=var2
+```
+
+### SET-zero — Clear variable memory
+```
+SET-zero var=[value][@offset][;count]
+```
+`$` prefix for wide-char mode.
+
+### ENVI-ex — Check variable existence
+```
+ENVI-ex retVar=varName
+```
+
+### ENVI-tom — String-to-pointer conversion
+```
+ENVI-tom &&dst=&src    // convert string to memory pointer
 ```
 
 ---
@@ -1127,6 +1184,13 @@ WALL -fit imagePath                             // proportional fit
 WALL -fill imagePath                            // fill (crop to fit)
 WALL -span imagePath                            // span across monitors
 SEND {ENTER}                                   // send keystrokes
+// Mouse simulation:
+SEND -m flags;dx;dy[;data[;extdata]]
+// flags: 0x8000=absolute, 1=move, 2/4=left press/release,
+//   8/0x10=right press/release, 0x20/0x40=middle, 0x800=wheel
+SEND -gui [-m] [-nfocus] [-right|-left|-top]   // GUI-targeted send
+SEND --ext                                     // extended key
+SEND --s                                       // quiet mode
 NUMK 1|0                                       // NumLock on/off
 ```
 
@@ -1193,6 +1257,18 @@ Additional flags (most commonly used):
 -raw                   // capture raw (no recoding)
 -nowin                 // CREATE_NO_WINDOW
 -incmd                  // run command in a fresh PECMD instance (no message loop)
+
+// Additional EXEC flags:
+-clone:var            // clone PECMD to run script variable
+-mem                  // ghost process (in-memory execution)
+-io                   // take over child process I/O
+-code:<enc>           // specify source encoding
+-REALTIME|-HIGH|-ABOVENORMAL|-NORMAL|-BELOWNORMAL|-LOW|-IDLE  // process priority
+-shel:"auto_cmd"      // execute in SHEL mode
+-svrsys|-svrusr|-svr- // service-to-desktop execution
+/InstallService /name // install as Windows service
+/RemoveService name   // uninstall service
+-poprmenu|-runrmenu   // popup/execute file right-click menu
 ```
 
 ### EXEC* — Capture output
@@ -1226,6 +1302,67 @@ PINT %Desktop%\Name.lnk,StartMenu        // pin to start menu
 LINK %Desktop%\Name.lnk,target,[args],[icon],[iconIdx],[workDir]
 LINK [?]Name.lnk                          // query shortcut info
 ```
+
+---
+
+## ADDITIONAL CONTROLS
+
+### BROW — File/Directory Browse Dialog
+```
+BROW [-fix] <变量名称[;flgnm]>,[[*|&]初始路径],[提示文字],[扩展名],[标志][,hookfun[,参数]]
+```
+`*` = directory browser, `&` = save-file dialog, none = open-file dialog.
+`-fix`: attempt to break system directory masking.
+Flags: `0x10`=has edit box, `0x200`=no New Folder button, `0x4000`=mixed file+dir, `0x200`=multi-select, `0x80000`=browser style, `0x1000`=file must exist, `0x2`=overwrite warning, `0x1`=readonly checkbox, `0x40000`=short filenames.
+Filter format: `说明1|*.后缀1|说明2|*.后缀2|`.
+Does NOT change current working directory.
+
+### SBAR — Standalone Scrollbar
+```
+SBAR [-left|-right|-color:杆色:块色:[*]绑定者] [*] 名称,形状[,值信息,命令,状态]
+```
+Must be inside a `_SUB` window. `*` = auto-recycle.
+Value info: `[起始值][:终到值][:初值][:页大小]`, default `0:100:0`.
+State: negative=disabled, `0x10`=invisible, `0x40`=horizontal.
+Operations: `ENVI @名称.VAL=[当前值][:起始值][:终到值][:页大小]` to set, `?` prefix to query.
+
+### IPAD — IP Address Input
+```
+IPAD [*] 名称,形状,[初始值],[事件],[类型]
+```
+Must be inside a `_SUB` window. `*` = auto-recycle.
+Initial value: `AA.BB.CC.DD`.
+Type: 0=default, negative=disabled, `0x10`=invisible.
+Operations: `ENVI @名称.VAL=AA.BB.CC.DD` to set, `ENVI @名称.VAL=?.FullIP` to query, `ENVI @名称.VAL=#位置` to set cursor.
+
+### TREE — Tree View Control
+```
+TREE [-font:...] [-color:...] [*] [名称],<形状>[,图片数据][,数据][,状态]
+```
+Must be inside a `_SUB` window.
+Status flags: `1`=HASBUTTONS, `2`=HASLINES, `4`=LINESATROOT, `8`=EDITLABELS, `0x100`=CHECKBOXES, `0x1000`=FULLROWSELECT.
+Data format: `<图标索引:选择图标索引>文本`, nodes separated by `0x09` (TAB), child start `0x0b`, child end `0x0c`.
+Operations: `ENVI @TREE.Sel`, `.Val`, `.Check`, `.Enable`, `.Expand`, `.UPos`, `.hID`.
+
+### LAMBDA — Anonymous Function
+```
+[]参数1 参数2 ... 参数N {函数体}
+```
+Inline anonymous function with its own stack. Parameters via `%1`, `%2`, etc.
+Assignment: `&func = [] P1 P2 { body }`.
+Direct call: `CALL [] P1 { body } arg1`.
+At command-group level, `%` in body must be `%%` (TEAM/FIND expansion).
+Auto-destroys PE variables, locks, controls on exit.
+
+### BLOCK — Code Block / Scope
+```
+{ 代码块内容 }
+{* 代码块内容 }
+```
+`{...}` = code block with own PE variable stack scope.
+`{*...}` = "this" block, no stack/autodestroy, pure scope.
+Can be nested; at file/function level `{` must start at line 1.
+Inside TEAM/LOOP/IFEX: `{` starts command group, `}` ends it.
 
 ---
 
@@ -1366,11 +1503,6 @@ TIME -t:1 TimerName,interval,command     // one-shot
 ENVI @TimerName=0                        // stop
 ENVI @TimerName=interval;count           // run N times
 ENVI @TimerName=-del                     // destroy
-```
-
-### IPAD — IP address display control
-```
-IPAD Name,LxTyWwHh,IP,[Style]
 ```
 
 ### ENVI ? — System queries

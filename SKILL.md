@@ -1,6 +1,6 @@
 ---
 name: pecmd-pro-max
-version: 1.0.3
+version: 1.1.0
 description: |
   PECMD2012 scripting for WinPE — lightweight Windows GUIs, system
   tools, boot/init scripts, and automation. Use for .wcs/.wci/.wce files,
@@ -66,6 +66,20 @@ SET$# &buf=*4096 0           // hex to raw bytes (binary buffer)
 ENVI$ &data=*1M 30 0d 0a    // variable length hex allocation
 ```
 
+### Binary buffer operations
+
+```wcs
+SET-cmp dst=src;srcOff;len;dstOff;[S|s|I|i]   // binary compare (S/I=wide, s/i=narrow, I/i=nocase)
+SET-tom dst=src                                 // UNICODE → multibyte (e.g. GBK)
+SET-tow dst=src                                 // multibyte → UNICODE
+SET-swap var1=var2                              // swap variable contents
+SET-zero var=[value][@offset][;count]           // clear/fill memory ($ = wide mode)
+ENVI-ex retVar=varName                          // check variable existence (1=exists, 0=not)
+ENVI-tom &&dst=&src                             // string → memory pointer conversion
+SET^ FuncName,addrVar                           // bind _SUB as Win32 callback, get address
+SET^ FuncName=0                                 // unbind callback
+```
+
 ### Standard file header
 
 ```wcs
@@ -88,6 +102,10 @@ SET$ &TAB=09
 | `ENVI^ Clipboard?=var` | Read clipboard content into a variable (use `?=` to query) |
 | `ENVI^ DisX64=1` | Disable WOW64 filesystem redirection (when 32-bit PECMD runs on 64-bit Windows, prevents automatic `System32`→`SysWOW64` path redirection) |
 | `ENVI^ LoadEnvi=file` | Load environment variables from a file into the process environment block |
+| `ENVI^ Arg=*` | Split words into `%1`, `%2`, etc. parameters |
+| `ENVI^ HelpColor=[*cmdH] [fg][#bg]` | Set HELP display colors |
+| `ENVI @@TaskIcoMenu=0\|1\|2` | Toggle default PECMD tray menu (off/on/toggle) |
+| `ENVI @@DeskTopFresh=[clear][;][1\|2\|4\|8\|16][;[-+]path]` | Force desktop refresh |
 
 **Environment variable `$`/`#` prefixes**: When setting environment variables, the prefix controls scope:
 - `ENVI $var=value` — system-level environment variable (broadcast to HKLM, visible to all processes)
@@ -458,6 +476,7 @@ CALL $--cpl CPLpath                              // control panel applet
 
 DLL params: `#N`=integer, `$s`=wide string, `@s`=narrow string, `*buf`=buffer pointer, `=s`=raw string
 Type override per-param: `--qd#` (all int), `--qd*` (all PE var), `--qd$` (all string), `--qd@` (all narrow)
+Additional flags: `--sret` (return symbol count), `--16` (hex return), `--vret:var` (VARIANT return), `.vFun` (virtual func index), `--get`/`--put` (COM property), `?` (query address), `^<` (COM DLL loading)
 
 ### Memory buffer operations
 
@@ -612,6 +631,27 @@ HKEY Ctrl+Shift+#0x41, CALL OnHotkeyA            // register
 HKEY #0x0D,--del                                  // unregister
 ```
 
+### Win32 callback via SET^
+
+```wcs
+SET^ MyCallback,&&callbackAddr                    // bind _SUB to execution stack, get address
+CALL $--qd --ret:&ret SomeAPI.dll,EnumSomething,#%&callbackAddr%,#0
+SET^ MyCallback=0                                 // unbind when done
+_SUB MyCallback
+    // %1-%4 = API callback parameters
+    EXIT _SUB 1                                   // return 1 to continue enumeration
+_END
+```
+
+### Mouse simulation via SEND
+
+```wcs
+SEND -m 0x8002;100;200                           // move mouse to (100,200) absolute
+SEND -m 0x8006;100;200                           // left click at (100,200) absolute
+SEND -m 0x8000;100;200                           // move only
+SEND -m 0x80800;0;50                             // scroll wheel up 50 units
+```
+
 ### TABL data operations
 
 ```wcs
@@ -648,6 +688,16 @@ RPOS &&pos=needle,,%&haystack%                        // find last
 RSTR &&pad=3,000%num%                                 // zero-pad to 3 digits
 ```
 
+### Win32 API two-call buffer pattern
+
+```wcs
+// Many Win32 APIs require: call with NULL to get size → allocate → call again
+CALL $--qd --ret:&retSize DLL.dll,FunctionName,*#0,#0, ...     // get required size
+SET$# &buf=*%&retSize% 0                                        // allocate
+CALL $--qd --ret:&retSize DLL.dll,FunctionName,*&buf,#%&retSize%, ...  // actual call
+```
+Used by: GetWindowsDirectoryW, GetComputerNameW, GetIfTable, QueryDosDeviceW, GetAdaptersInfo, etc.
+
 ### Dynamic variable reference (pseudo-array)
 
 ```wcs
@@ -680,6 +730,10 @@ SET~ &&val=Arr.%&row%.%&col%                          // indirect read
 19. **&&__RET convention**: The standard function return variable. When using `ENVI-ret` to return values, the caller can introspect with `&&__RET`.
 20. **WM_NOTIFY / WM_COMMAND subfields**: After receiving a WM_NOTIFY message (via `_msg#` mapping), the subfields `%&__NMHDR.idFrom%`, `%&__NMHDR.code%`, `%&__NMHDR.hwndFrom%` are auto-parsed. Similarly, WM_COMMAND provides `%&__wParam.wID%` and `%&__wParam.wNotifyCode%`.
 21. **FIND expansion rule**: In FIND, bare identifiers (no `%` wrappers) are treated as literal strings. Always use `FIND $%&var%=value` for PE variables, not `FIND $&var=value`.
+22. **`^` pre-interpretation**: `^COMMAND` defers variable expansion to execution time (essential in loops). `^^COMMAND` pre-interprets twice. `SET^` binds a `_SUB` as a Win32 callback address.
+23. **EXEC service management**: `EXEC /InstallService /name SvcName --gui- --hide program args` installs a PECMD script as a Windows service. Use `/RemoveService name` to uninstall.
+24. **Mouse simulation**: `SEND -m flags;dx;dy` simulates mouse events. `0x8000`=absolute coords, `2`=left-down, `4`=left-up, `0x800`=wheel. Combine: `0x8006`=left click at absolute position.
+25. **`@@Visable` vs `@Visible`**: Cross-process visibility uses `ENVI @@Visable=WinID:value` (this is PECMD's spelling). In-process uses `ENVI @Control.Visible=0|1`. Both work in their context.
 
 ## $9 WHEN TO READ REFERENCE FILES
 

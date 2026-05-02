@@ -4,7 +4,7 @@
 
 [简体中文](./README.md) | English
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
@@ -19,22 +19,22 @@ pecmd-pro-max/
 ├── README.md                        ← You're reading it
 ├── SKILL.md                         ← Main skill file — mental model, variable system, patterns, traps
 └── references/
-    ├── commands-full.md             ← Complete 100+ command reference with VK key codes appendix
-    ├── codebook.md                  ← 42 real-world code patterns (dialogs, partitioning, serial, etc.)
-    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference
+    ├── commands-full.md             ← Complete 110+ command reference (incl. BROW/TREE/LAMBDA/SBAR) + VK keys
+    ├── codebook.md                  ← 67 real-world code patterns (disk, API callbacks, GUI, buffers, etc.)
+    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (22 control types)
     └── pe-startup.md                ← WinPE boot flow, environment limitations, version differences
 ```
 
 ## Key features
 
-- **Three-tier variable system explained** — environment vs PE-local vs PE-global, indirect dereference, deferral, return-by-reference, hex/raw-buffer allocation
-- **100+ command reference** — every PECMD command with syntax, return values, gotchas, and VK key codes
-- **42 battle-tested code patterns** — modal dialogs, `HASH` integrity checks, `PART` disk partitioning, progress bars, multi-page wizards, `CALL` variants
-- **Complete GUI reference** — every control type (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `IPAD`...), message system, icons, styles
+- **Three-tier variable system explained** — environment vs PE-local vs PE-global, indirect dereference, deferral, return-by-reference, hex/raw-buffer allocation, binary compare/convert
+- **110+ command reference** — every PECMD command with syntax, return values, gotchas, and VK key codes (incl. BROW, TREE, LAMBDA, SBAR, IPAD, BLOCK)
+- **67 battle-tested code patterns** — disk enumeration, device IOCTL, Win32 API callbacks, GUID construction, buffer templates, ICO extraction, GDI drawing, mouse simulation
+- **Complete GUI reference** — every control type (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `IPAD`, `TREE`, `SBAR`...), message system, icons, styles
 - **WinPE boot flow** — from `winpeshl.exe` → `PECMD MAIN PECMD.INI` through to `EXPLORER.EXE`, with `WinXShell` integration, driver loading, and version-specific behavior
-- **21 common traps** — comment marker rules, CALC spacing, FIND vs IFEX behavior, thread safety, Chinese variable naming conventions, and more
+- **25 common traps** — comment marker rules, CALC spacing, FIND vs IFEX behavior, thread safety, Visable/Visible distinction, mouse simulation, and more
 - **ForceLocal + EnviMode defaults** — ensures every generated script uses the safest variable scoping by default
-- **Code organization rules** — `_SUB` declaration at parse time vs runtime, class nesting, window creation flags, `CALL @` variants cheat sheet
+- **Code organization rules** — `_SUB` declaration at parse time vs runtime, `SET^` Win32 callback binding, `CALL @` variants cheat sheet
 
 ## Quick start
 

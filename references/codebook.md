@@ -1391,8 +1391,8 @@ _SUB SortTableByCol
             IFEX $%&nA%>%&nB%,
             {
                 SET &tmp=%%&Row[%&i%]%%
-                ENVI &Row[%&i%]=%%&Row[%&j%]%%
-                ENVI &Row[%&j%]=%&tmp%
+                SET &Row[%&i%]=%%&Row[%&j%]%%
+                SET &Row[%&j%]=%&tmp%
             }
         }
     }
@@ -1615,6 +1615,158 @@ Key points:
 
 ---
 
+## Additional Patterns
+
+### Pattern 61: Win32 API Two-Call Buffer Pattern
+
+Many Win32 APIs require calling twice: once to get the required buffer size, then allocate, then call again. This is the canonical reusable template:
+
+```wcs
+// Generic two-call buffer pattern
+// Step 1: Call with NULL/0 to get required size
+CALL $--qd --ret:&retSize DLL.dll,FunctionName,*#0,#0,...
+// Step 2: Allocate buffer with returned size
+SET$# &buffer=*%&retSize% 0
+// Step 3: Call again with actual buffer
+CALL $--qd --ret:&retSize DLL.dll,FunctionName,*&buffer,#%&retSize%,...
+```
+
+Used by: GetWindowsDirectoryW, GetSystemDirectoryW, GetTempPathW, GetComputerNameW, GetUserNameW, GetIfTable, QueryDosDeviceW, GetAdaptersInfo, GetModuleFileNameW.
+
+Example - Get Computer Name:
+```wcs
+_SUB GetComputerName
+    CALL $--qd --ret:&ret Kernel32.dll,GetComputerNameW,*#0,*#0
+    SET$# &buf=*%&ret% 0
+    CALL $--qd --ret:&ret Kernel32.dll,GetComputerNameW,*&buf,*&ret
+    ENVI-ret %~1=%&buf%
+_END
+```
+
+### Pattern 62: GUID Byte-Swap via SED Regex (CLSIDFromString Fallback)
+
+When `ole32.dll!CLSIDFromString` is unavailable (common in minimal PE), construct GUID binary from string using regex byte-swap:
+
+```wcs
+_SUB MakeGuid
+    // Try CLSIDFromString first
+    CALL $--qd --ret:&ret ole32.dll,CLSIDFromString,${%~2},*%~1
+    IFEX #%&ret%>=0, EXIT _SUB
+    // Fallback: regex byte-swap for little-endian GUID layout
+    // Input: {XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}
+    SED &&hex=0,
+      {\a\a}{\a\a}{\a\a}{\a\a}-{\a\a}{\a\a}-{\a\a}{\a\a}-{\a\a}{\a\a}-{\a\a}{\a\a}{\a\a}{\a\a}{\a\a}{\a\a},
+      0x\4 0x\3 0x\2 0x\1 0x\6 0x\5 0x\8 0x\7 0x\9 0x\10 0x\11 0x\12 0x\13 0x\14 0x\15 0x\16,
+      %~2
+    CODE *,%&hex%,*HEX,%~1
+_END
+```
+
+### Pattern 63: WndProc Binding for Win32 Callbacks
+
+Register a PECMD `_SUB` function as a Win32 callback (e.g., for EnumResourceNames, EnumWindows):
+
+```wcs
+// Bind function to execution stack and get its address
+SET^ CallbackFunc,&&callbackAddr
+// Pass address to Win32 API as callback
+CALL $--qd --ret:&ret Kernel32.dll,EnumResourceNamesW,
+    #%&hModule%,#3,#%&callbackAddr%,#0
+// Unbind when done
+SET^ CallbackFunc=0
+
+_SUB CallbackFunc
+    // %1=hModule, %2=lpType, %3=lpName, %4=lParam
+    // Return 1 to continue enumeration, 0 to stop
+    EXIT _SUB 1
+_END
+```
+
+### Pattern 64: WM_COMMAND + EN_CHANGE Edit Monitoring
+
+Monitor edit control text changes via WM_COMMAND notification:
+
+```wcs
+SET &WM_COMMAND=0x0111
+SET &EN_CHANGE=0x0300
+// Get the edit control's HWND
+ENVI @Edit1.ID=?;&Edit1Hwnd
+// Compute expected wParam: (EN_CHANGE << 16) | controlID
+CALC -base=16 #&ExpectedWP=%&EN_CHANGE% * 0x10000 + %&Edit1Hwnd%
+// Register for WM_COMMAND on the window
+ENVI @this.MSG=_%&WM_COMMAND%::&wp,&lp, CALL OnEditChange
+
+_SUB OnEditChange
+    IFEX $%&wp%=%&ExpectedWP%, {
+        // Edit1 text changed - read new value
+        ENVI @Edit1.VAL=?;&newText
+        // ... handle change
+    }
+_END
+```
+
+### Pattern 65: WM_MOUSEHOVER/LEAVE Hover Tooltips
+
+Show tooltips on mouse hover over controls:
+
+```wcs
+SET &WM_MOUSEHOVER=0x02A1
+SET &WM_MOUSELEAVE=0x02A3
+ENVI @Label1.MSG=_%&WM_MOUSEHOVER%: TIPS Title,"Hover text\nLine 2",3000,1
+ENVI @Label1.MSG=_%&WM_MOUSELEAVE%: TIPS *
+```
+
+### Pattern 66: WM_SIZE Responsive Layout with Saved Positions
+
+Full DPI-aware window resize handling:
+
+```wcs
+_SUB MainWindow,L200T100W600H400,My App,-trap,-size
+    TABL Table1,L10T10W580H300,...
+    ITEM Btn1,L10T320W80H28,Refresh
+    ITEM Btn2,L100T320W80H28,Close
+    // Save initial window and control sizes
+    ENVI @this.POS=?::&initW:&initH
+    ENVI @Table1.POS=?::&tblW:&tblH
+    ENVI @Btn2.POS=?&btn2L:&btn2T
+    // Register resize handler
+    SET &WM_SIZE=0x0005
+    ENVI @this.MSG=_%&WM_SIZE%: CALL OnResize
+_END
+
+_SUB OnResize
+    // Extract new width/height from wParam
+    CALC #&newW= %2 & 0xFFFF          // LOWORD
+    CALC #&newH= %2 >> 16              // HIWORD
+    // Calculate delta from initial size
+    CALC #&dw= %&newW% - %&initW%
+    CALC #&dh= %&newH% - %&initH%
+    // Resize table proportionally
+    CALC #&tw= %&tblW% + %&dw%
+    CALC #&th= %&tblH% + %&dh%
+    ENVI @Table1.POS=::%&tw%:%&th%
+    // Reposition buttons (anchor to bottom-right)
+    CALC #&b2L= %&btn2L% + %&dw%
+    CALC #&b2T= %&btn2T% + %&dh%
+    ENVI @Btn2.POS=%&b2L%:%&b2T%::
+_END
+```
+
+### Pattern 67: LoadLibraryExW for Resource-Only Loading
+
+Load a DLL/EXE purely for resource extraction without executing code:
+
+```wcs
+SET &LOAD_LIBRARY_AS_DATAFILE=0x00000002
+SET &LOAD_LIBRARY_AS_IMAGE_RESOURCE=0x00000020
+CALC #&flags=%&LOAD_LIBRARY_AS_DATAFILE% | %&LOAD_LIBRARY_AS_IMAGE_RESOURCE%
+CALL $--qd --ret:&hMod Kernel32.dll,LoadLibraryExW,$%&filePath%,#0,#%&flags%
+// Now use EnumResourceNamesW, LoadResourceW etc. on &hMod
+// Don't forget to free: CALL $--qd kernel32.dll,FreeLibrary,#%&hMod%
+```
+
+---
+
 ## Pattern Index
 
 | # | Pattern | Description |
@@ -1679,6 +1831,13 @@ Key points:
 | 58 | WiFi Connect + Tray UI | ADSL-wlan + TABL + minimize-to-tray |
 | 59 | Display Presets with Timeout | DISP + KILL explorer + countdown revert |
 | 60 | Generic IOCTL Code Formula | shl(base,16) \| shl(access,14) \| shl(func,2) \| method |
+| 61 | Win32 API Two-Call Buffer Pattern | Get-size → allocate → call-again template |
+| 62 | GUID Byte-Swap via SED Regex | CLSIDFromString fallback for minimal PE |
+| 63 | WndProc Binding for Callbacks | SET^ to register _SUB as Win32 callback |
+| 64 | WM_COMMAND + EN_CHANGE Edit Monitoring | Edit control change notification |
+| 65 | WM_MOUSEHOVER/LEAVE Tooltips | Hover tooltips on controls |
+| 66 | WM_SIZE Responsive Layout | DPI-aware resize with saved positions |
+| 67 | LoadLibraryExW Resource-Only Loading | Load DLL for resources without execution |
 
 ---
 
@@ -1691,14 +1850,14 @@ SET &STORAGE_PROPERTY_QUERY_Unknown=0
 SET &StorageDeviceSeekPenaltyProperty=7
 SET &STORAGE_PROPERTY_QUERY.INPUT=12  // PropertyId(4)+QueryType(4)+AdditionalParams(4)
 ENVI$ &&input=*0xC 0
-ENVI-long &&input=7:0       // PropertyId=7 (SeekPenalty)
-ENVI-long &&input=0:4       // QueryType=0 (Standard)
-ENVI-long &&input=0:8       // AdditionalParams=0
+SET-long &&input=7:0       // PropertyId=7 (SeekPenalty)
+SET-long &&input=0:4       // QueryType=0 (Standard)
+SET-long &&input=0:8       // AdditionalParams=0
 SET &output.SIZE=12         // DEVICE_SEEK_PENALTY_DESCRIPTOR: Version(4)+Size(4)+IncursSeekPenalty(1)+3pad
 ENVI$ &&output=*0xC 0
 ENVI$# &&dwSize=*4 0
-CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0xC,*&&dwSize,#0
-ENVI?int &&output=&&IncursSeekPenalty:8
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0xC,*&&dwSize,#0
+SET?int &&output=&&IncursSeekPenalty:8
 // 0=SSD (no seek penalty), 1=HDD
 ```
 
@@ -1710,12 +1869,12 @@ Same IOCTL 0x2D1400, PropertyId=8 (StorageDeviceTrimProperty).
 
 ```wcs
 SET &StorageDeviceTrimProperty=8
-ENVI-long &&input=8:0       // PropertyId=8
-ENVI-long &&input=0:4       // QueryType
-ENVI-long &&input=0:8       // AdditionalParams
-CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0x20,*&&dwSize,#0
+SET-long &&input=8:0       // PropertyId=8
+SET-long &&input=0:4       // QueryType
+SET-long &&input=0:8       // AdditionalParams
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0x20,*&&dwSize,#0
 // DEVICE_TRIM_DESCRIPTOR: Version(4)+Size(4)+TrimEnabled(1)
-ENVI?int &&output=&&TrimEnabled:8
+SET?int &&output=&&TrimEnabled:8
 ```
 
 ### 60. Generic IOCTL Code Construction
@@ -1750,10 +1909,10 @@ CALC &IOCTL_STORAGE_GET_DEVICE_NUMBER = shl(0x2D,16) | shl(0,14) | shl(0x05,2) |
 SET &STORAGE_DEVICE_NUMBER.SIZE=12  // DeviceType(4)+DeviceNumber(4)+PartitionNumber(4)
 ENVI$ &&output=*0xC 0
 ENVI$# &&dwSize=*4 0
-CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_STORAGE_GET_DEVICE_NUMBER%,#0,#0,*&&output,#0xC,*&&dwSize,#0
-ENVI?long &&output=&&DeviceType:0
-ENVI?long &&output=&&DeviceNumber:4
-ENVI?long &&output=&&PartitionNumber:8
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_STORAGE_GET_DEVICE_NUMBER%,#0,#0,*&&output,#0xC,*&&dwSize,#0
+SET?long &&output=&&DeviceType:0
+SET?long &&output=&&DeviceNumber:4
+SET?long &&output=&&PartitionNumber:8
 ```
 
 Opening by device path: `\\.\C:` → returns partition info. Opening by `\\.\PhysicalDrive0` → returns disk info with PartitionNumber=0.
@@ -1766,7 +1925,7 @@ Opening by device path: `\\.\C:` → returns partition info. Opening by `\\.\Phy
 CALC &IOCTL_DISK_GET_DRIVE_LAYOUT_EX = shl(0x07,16) | shl(0,14) | shl(0x14,2) | 0  // 0x70050
 ENVI$ &&output=*8M 0
 ENVI$# &&dwSize=*4 0
-CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_DISK_GET_DRIVE_LAYOUT_EX%,#0,#0,*&&output,#%&output.SIZE%,*&&dwSize,#0
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_DISK_GET_DRIVE_LAYOUT_EX%,#0,#0,*&&output,#%&output.SIZE%,*&&dwSize,#0
 
 // MBR:  PartitionStyle=0, Header at offset 48: Signature(4)+CheckSum(4)
 // GPT:  PartitionStyle=1, Header at offset 48: DiskId(16)+StartingUsableOffset(8)+UsableLength(8)+MaxPartitionCount(4)
@@ -1784,7 +1943,7 @@ Complete GPT type GUID table (23 entries): includes EBD0A0A2 (MS Basic Data), C1
 ```wcs
 ENVI$ &&buf=*0x1000 0
 ENVI$# &&dwSize=*4 0
-CALL $**qd **ret:&&bret Iphlpapi.dll,GetIfTable,*&&buf,*&&dwSize,#0
+CALL $--qd --ret:&&bret Iphlpapi.dll,GetIfTable,*&&buf,*&&dwSize,#0
 // If GetLastError==122 (ERROR_INSUFFICIENT_BUFFER), re-allocate with returned size
 ENVI-addr ;&&bufsize=&&buf
 // MIB_IFENTRY: 860 bytes per entry, name at offset 0, dwInOctets at offset 344, dwOutOctets at offset 356
@@ -1800,42 +1959,42 @@ ENVI-addr ;&&bufsize=&&buf
 ```wcs
 // Load hive
 ENVI$ &&hResult=*4 0
-CALL $**qd **ret:&bret offreg.dll,ORLoadHive,$%&hivepath%,*&&hResult
-ENVI?int &&hResult=&&hKey:0
+CALL $--qd --ret:&bret offreg.dll,ORLoadHive,$%&hivepath%,*&&hResult
+SET?int &&hResult=&&hKey:0
 
 // Read REG_SZ
 ENVI-copy &&lpData=&&null
 ENVI$# &&lpcbData=*4 0
-CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
-ENVI?int &&lpcbData=&&cbData:0
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
+SET?int &&lpcbData=&&cbData:0
 ENVI$ &&lpData=*%&cbData% 0
-CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
 
 // Read REG_DWORD (type 4)
 ENVI$# &&dwData=*4 0
 ENVI$# &&lpcbData=*4 4
-CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#4,*&&dwData,*&&lpcbData
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#4,*&&dwData,*&&lpcbData
 
 // Read REG_QWORD (type 11)
 ENVI$# &&qwData=*8 0
 ENVI$# &&lpcbData=*8 8
-CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#11,*&&qwData,*&&lpcbData
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#11,*&&qwData,*&&lpcbData
 
 // Write: same pattern but ORSetValue
 
 // Enumerate subkeys
-CALL $**qd **ret:&bret offreg.dll,ORQueryInfoKey,%&hKey%,$#0,*&&cSubKeys,*&&cValues,*&&maxSubKeyLen,*&&lpcbMaxValNameLen,*&&lpcbMaxValLen,*&&lpcbSecurityDescriptor,*&&lpftLastWriteTime
+CALL $--qd --ret:&bret offreg.dll,ORQueryInfoKey,%&hKey%,$#0,*&&cSubKeys,*&&cValues,*&&maxSubKeyLen,*&&lpcbMaxValNameLen,*&&lpcbMaxValLen,*&&lpcbSecurityDescriptor,*&&lpftLastWriteTime
 CALC #&&KeySize=%&maxSubKeyLen%*2
 ENVI$# &&cSubKeys=*4 0
 ENVI$ &&lpName=*%&KeySize% 0
 ENVI$# &&lpcchName=*4 %&KeySize%
-CALL $**qd **ret:&bret offreg.dll,OREnumKey,%&hKey%,%&i%,*&&lpName,*&&lpcchName,#0,#0,#0
+CALL $--qd --ret:&bret offreg.dll,OREnumKey,%&hKey%,%&i%,*&&lpName,*&&lpcchName,#0,#0,#0
 
 // Save hive (use correct NT version number)
-CALL $**qd **ret:&bret offreg.dll,ORSaveHive,%&hKey%,$%&savepath%,#%&MajorVersion%,#%&MinorVersion%
+CALL $--qd --ret:&bret offreg.dll,ORSaveHive,%&hKey%,$%&savepath%,#%&MajorVersion%,#%&MinorVersion%
 
 // Unload
-CALL $**qd **ret:&bret offreg.dll,ORCloseKey,%&hKey%
+CALL $--qd --ret:&bret offreg.dll,ORCloseKey,%&hKey%
 ```
 
 Backup-before-write safety: copy hive file → operate → if success delete backup, else restore from backup.
@@ -1891,7 +2050,7 @@ ADSL-wlan %&ssid%,%&password%,,
 
 // Minimize to tray
 _SUB OnClose
-    ENVI @@Visable=::0        // hide window
+    ENVI @@Visible=::0        // hide window
     // Show tray icon with notification
 _END
 ```
@@ -1937,7 +2096,7 @@ ENVI-mkdummy &&view=&&buf@8
 SET?short &buf=&val:offset
 
 // Need SeSystemEnvironmentPrivilege to write
-CALL $**qd **ret:&bret ntdll.dll,RtlAdjustPrivilege,#22,#1,#0,&&pEnabled
+CALL $--qd --ret:&bret ntdll.dll,RtlAdjustPrivilege,#22,#1,#0,&&pEnabled
 
 // Boot entry ID naming: Boot%IDXX% where IDXX = BootID + 0x100000
 // Clean empty IDs, compact BootOrder array
@@ -1947,7 +2106,7 @@ CALL $**qd **ret:&bret ntdll.dll,RtlAdjustPrivilege,#22,#1,#0,&&pEnabled
 
 ```wcs
 ENVI$ &&buf=*0x100000 0
-CALL $**qd **ret:&bret kernel32.dll,QueryDosDeviceW,#0,*&&buf,#0x80000
+CALL $--qd --ret:&bret kernel32.dll,QueryDosDeviceW,#0,*&&buf,#0x80000
 // Returns null-delimited, double-null terminated device list
 // lpos* * for binary null pattern search
 LPOS* * &&pos=0x00 0x00 0x00 0x00,1,&&buf
@@ -1961,10 +2120,10 @@ CODE ***unicode,**.buf,*uni,&&result
 ENVI$# &&Major=*4 0
 ENVI$# &&Minor=*4 0  
 ENVI$# &&Build=*4 0
-CALL $**qd **ret:&bret ntdll.dll,RtlGetNtVersionNumbers,*&&Major,*&&Minor,*&&Build
-ENVI?int &&Major=&&Major:0
-ENVI?int &&Minor=&&Minor:0
-ENVI?int &&Build=&&Build:0
+CALL $--qd --ret:&bret ntdll.dll,RtlGetNtVersionNumbers,*&&Major,*&&Minor,*&&Build
+SET?int &&Major=&&Major:0
+SET?int &&Minor=&&Minor:0
+SET?int &&Build=&&Build:0
 CALC &BuildNumber=%&Build% & 0xFFFF   // mask high 16 bits
 ```
 
@@ -1979,11 +2138,11 @@ SET &SIF_ALL=0x0017
 
 SET &SCROLLINFO.SIZE=28  // cbSize(4)+fMask(4)+nMin(4)+nMax(4)+nPage(4)+nPos(4)+nTrackPos(4)
 ENVI$ &&si=*28 0
-ENVI-long &&si=28:0           // cbSize=28
-ENVI-long &&si=%SIF_ALL%:4    // fMask
+SET-long &&si=28:0           // cbSize=28
+SET-long &&si=%SIF_ALL%:4    // fMask
 
-CALL $**qd **ret:&bret user32.dll,GetScrollInfo,#%&TBID%,#0,*&&si  // SB_HORZ=0
-ENVI?int &&si=&&nPos:20        // current scroll position
+CALL $--qd --ret:&bret user32.dll,GetScrollInfo,#%&TBID%,#0,*&&si  // SB_HORZ=0
+SET?int &&si=&&nPos:20        // current scroll position
 
 // Horizontal column position:
 CALC &&col=ceil(%&nPos% / %&ColumnWidth%) + 1
@@ -2082,6 +2241,12 @@ WRIT %tmpf%,$+0,set a=%val%   // then CALL .\tmpf.CMD
 // Method 3: Registry
 REGI HKCU\PECMD_U\var=%val%   // CMD reads via reg query
 ```
+
+---
+
+### Pattern Index Cross-Reference
+
+Patterns 43-60 above use the same PECMD2012 API as patterns 1-42. Both `SET-long`/`SET?int` and `ENVI-long`/`ENVI?int` are valid PECMD syntax for buffer operations — this codebook standardizes on the `SET-*` form for consistency.
 
 ---
 
