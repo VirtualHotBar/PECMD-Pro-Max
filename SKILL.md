@@ -294,7 +294,7 @@ CALL [] P1 P2 { body } arg1 arg2
 // Creates anonymous function and calls it immediately
 ```
 
-**Variable capture**: PE variables from the outer scope are visible inside the LAMBDA body (closure-like behavior). This is a major advantage over `_SUB` which starts with a clean variable stack.
+**Variable capture**: A LAMBDA assigned inside a `_SUB` or block can reference PE variables from the enclosing scope via its name — PECMD resolves them at execution time using the caller's context. The exact capture semantics depend on PECMD version.
 
 **Important TEAM/FIND caveat**: When using LAMBDA inside `TEAM` or `FIND` commands, you must use `%%` to escape `%` signs within the LAMBDA body:
 ```wcs
@@ -530,7 +530,12 @@ BROW &result,[*|&]initPath,[prompt],[filter],[flags]  // file/browse dialog
 
 // Parse INI-style config
 READ %curdir%\config.ini,*,&cfg
-FORX *NL &cfg,&&line,{SED &&k=1,=.*,,%&line%|SED &&v=1,.*=,,%&line%|SET %&k%=%&v%}
+FORX *NL &cfg,&&line,
+{
+    SED &&k=1,=.*,,%&line%
+    SED &&v=1,.*=,,%&line%
+    FIND $=%&k%,! SET %&k%=%&v%
+}
 
 // Win32 INI API
 CALL $--qd --ret:&r Kernel32.dll,GetPrivateProfileStringW,$sect,$key,$def,*&buf,#65535,$%file%

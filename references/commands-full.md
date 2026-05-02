@@ -819,7 +819,7 @@ ENVI @LIST.isel=N                  // select by index
 CHEK [-right] Name,Shape,Text,[EventCmd],[State]
 RADI [-right] Name,Shape,Text,[EventCmd],[State]
 ```
-State: `1`/`-1`=checked, `0`=unchecked, `-2`=grayed
+State: `1`=checked, `0`=unchecked, `-1`=toggle, `-2`=grayed
 
 ### TABL — Table / grid
 ```

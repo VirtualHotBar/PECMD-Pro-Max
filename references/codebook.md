@@ -141,9 +141,9 @@ _END
 ### Detect Secure Boot state
 
 ```wcs
-SET$ &SSBI=*1 0 *1 0
-CALL $--qd --ret:&&r ntdll.dll,NtQuerySystemInformation,#145,*&SSBI,#2,#0
-SET?char &SSBI=&&enabled
+SET$ &SSBI=*4 0
+CALL $--qd --ret:&&r ntdll.dll,NtQuerySystemInformation,#145,*&SSBI,#4,#0
+SET?char &SSBI=&&enabled:1
 IFEX #%&enabled%=0,MESS Secure Boot: Disabled! MESS Secure Boot: Enabled
 ```
 
@@ -163,7 +163,7 @@ MESS Windows %&major%.%&minor% build %&build%
 
 ```wcs
 ENVI ?WinPE=&&isPE
-IFEX $%&isPE%=PE, MESS Running in WinPE! MESS Normal Windows
+IFEX #%&isPE%>0, MESS Running in WinPE! MESS Normal Windows
 ```
 
 ### Get file version
@@ -247,7 +247,8 @@ REGI HKCU\Software\MyApp,&vals               // values in key
 
 ```wcs
 EXEC* &output=!cmd.exe /c dir C:\ /b
-READ -*,-1,&&count,&output
+SET &count=0
+FORX *NL &output,&&line, CALC &count=%&count%+1
 MESS %&count% lines:%&NL%%&output%
 ```
 
@@ -495,7 +496,7 @@ _END
 _SUB CheckSingle *
     { LOCK #pecmd                                   // atomic scope
         LOCK --exist #MyApp_UniqueName,&&exists
-        REGI .HKCU\Software\MyApp\WID,&&wid
+        REGI $HKCU\Software\MyApp\WID,&&wid
     }
     IFEX $1=%&exists%,
     {
@@ -707,7 +708,7 @@ FIND TTL=,%&result%,MESS Host reachable             // substring search (no $ = 
 
 ```wcs
 DATE &&dateVar                                     // get current date
-DATE &&dateVar 2024-01-15                           // parse custom date
+DATE &&dateVar -now                                // get date+time
 TIME &&timeVar                                     // get current time
 DTIM &&ts,&&dateVar,&&timeVar                       // combine to timestamp (seconds)
 CALC &&ts=%&ts% + 3600                              // add 1 hour
@@ -889,9 +890,11 @@ IFEX #%&ret%=0,                                       // key already exists
 // Set value
 CALL $--qd --ret:&&ret offreg.dll,ORSetValue,#%&hKey%,$%&Value%,#1,*&Data,#%&DataSize%
 
-// Enumerate subkeys
-CALL $--qd --ret:&&ret offreg.dll,ORQueryInfoKey,#%&hKey%,#0,#0,*&keyCount,*&valCount,#0,#0,#0
-SET?int keyCount=&&nKeys:0
+    // Enumerate subkeys
+    SET$# &keyCount=*4 0
+    SET$# &valCount=*4 0
+    CALL $--qd --ret:&&ret offreg.dll,ORQueryInfoKey,#%&hKey%,#0,#0,*&keyCount,*&valCount,#0,#0,#0
+    SET?int keyCount=&&nKeys:0
 
 // Save and close
 CALL $--qd --ret:&&ret offreg.dll,ORSaveHive,#%&hHive%,$%&HiveFile%,#0,#0
