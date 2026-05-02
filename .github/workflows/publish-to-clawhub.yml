@@ -2,12 +2,8 @@ name: Publish to ClawHub
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - SKILL.md
-      - references/**
-      - .github/workflows/publish-to-clawhub.yml
+    tags:
+      - 'v*'
 
 jobs:
   publish:
@@ -15,13 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from SKILL.md
+      - name: Extract version from tag
         id: version
         shell: bash
         run: |
-          VERSION=$(sed -n 's/^version: *//p' SKILL.md)
-          echo "version=${VERSION:-1.0.0}" >> $GITHUB_OUTPUT
-          echo "Version: ${VERSION:-1.0.0}"
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
 
       - name: Login to ClawHub
         run: npx clawhub login --no-browser --token "${{ secrets.CLAWHUB_TOKEN }}"
