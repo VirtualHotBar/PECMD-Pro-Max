@@ -2,6 +2,8 @@
 
 > PECMD2012 脚本编程的 AI 技能文件 —— 让 AI 编码助手一次写出正确的 WinPE 工具、GUI 和启动脚本。
 
+简体中文 | [English](./README.en.md)
+
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
