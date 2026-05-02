@@ -759,30 +759,36 @@ TIME TimerOnce,0,CALL DelayedInit
 
 ---
 
-### 4.17 TIPS — System Tray Icon
+### 4.17 TIPS* — System Tray Icon
 
 ```wcs
-TIPS* IconName,tooltipText,[iconFile],[LeftClickCmd],[RightClickCmd],[Flags]
+TIPS* WindowName,[Content],[timeout],[iconStyleID],[trayIcon],[#WID]
 ```
 
-The `*` suffix creates an entry in the tray notification area.
+| Param | Description |
+|-------|-------------|
+| `WindowName` | Window name (for private tray, requires prior `_SUB`) |
+| `Content` | Tooltip text / tray label (max 256 chars, `\n` for multi-line) |
+| `timeout` | Bubble lifetime in ms (default 10s, 0=permanent) |
+| `iconStyleID` | 0=none, 1=info icon, 2=warning icon, 3=error icon, 4+=tray icon |
+| `trayIcon` | Icon file path or `#resID` (e.g., `shell32.dll#94`) |
+| `#WID` | Window handle for association |
+
+Click handling is done via `WM_TRAYNOTIFY` (1109) message map — there are NO click handler parameters:
 
 ```wcs
-TIPS* MyApp,My Application,shell32.dll#13,CALL OnTrayLClick,CALL OnTrayRClick
-TIPS* MyApp,My Application,%CurDir%\myicon.ico,CALL OnLClick,CALL OnRClick
-```
+SET &WM_TRAYNOTIFY=1109
+SET &WM_LBUTTONDOWN=0x0201
+SET &WM_RBUTTONDOWN=0x0204
 
-**Left-click handler:**
-```wcs
-_SUB OnTrayLClick
-    ENVI @MyWin.Visible=1                                // show/restore window
+CALL @WinMain
+_SUB WinMain,#
+    ENVI @this.MSG=_%&WM_TRAYNOTIFY%::wp,lp,CALL DoTrayClick %wp% %lp%
+    TIPS* WinMain,My Tool,,,shell32.dll#94
 _END
-```
 
-**Right-click handler — typically a popup menu:**
-```wcs
-_SUB OnTrayRClick
-    CALL @--popmenu TrayMenu
+_SUB DoTrayClick
+    IFEX $%&WM_RBUTTONDOWN%=%2, CALL @--popmenu TrayMenu    // right-click → popup menu
 _END
 
 _SUB TrayMenu
@@ -793,27 +799,16 @@ _SUB TrayMenu
 _END
 ```
 
-**Bubble / balloon notification:**
+**Bubble notification:**
 ```wcs
-ENVI @MyApp.MSG=+0x0400:CALL OnTrayNotify              // on tray notification
-// Use Shell_NotifyIcon for balloon display
+TIPS MyTitle,Hello World\nLine 2,5000,1                     // info icon, 5 seconds
+TIPS* WinMain,Status update,,2,#1                            // warning icon, resource icon
 ```
 
-**Tooltip update:**
+**Clear:**
 ```wcs
-ENVI @MyApp.tip=New Status: Processing...               // update tooltip text
-```
-
-**Multi-icon support:**
-```wcs
-TIPS* App1,App 1 Title,icon1.ico
-TIPS* App2,App 2 Title,icon2.ico                         // multiple tray icons
-```
-
-**Removal:**
-```wcs
-ENVI @MyApp.DEL=                                         // remove tray icon
-TIPS.DEL=MyApp                                            // alternative syntax
+TIPS -                                                       // clear bubble
+TIPS *                                                       // clear all tray + bubble
 ```
 
 ---

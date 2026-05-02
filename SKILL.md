@@ -27,7 +27,7 @@ Key runtime facts:
 - You can run PECMD inside itself: `EXEC =!"%MyNAME%" <command>` — useful for isolated sub-operations
 - `EXIT FILE` terminates the entire script; `EXIT _SUB` returns from the current function
 - `EXIT -` in a loop body continues to the next iteration; `EXIT LOOP` / `EXIT FORX` breaks out
-- Script files typically use `.wcs` extension (or `.wci`, `.wce`). INI files also work. Start with `#code=936T950` on line 1 for GBK-encoded files (the default for Chinese PECMD scripts).
+- Script files typically use `.wcs` extension (or `.wci`, `.wce`). INI files also work. Start with `#code=936T950` on line 1 for GBK-encoded files (the default for Chinese PECMD scripts). If line 1 starts with `#!`, the encoding directive goes on line 2.
 
 ## $2 VARIABLE SYSTEM — THE MOST CRITICAL SECTION
 
@@ -102,6 +102,7 @@ When a `_SUB` function is called with arguments, these special variables are ava
 %1..%n = argument 1..n
 %#  = argument count
 %*  = all arguments from %1 onward (space-separated)
+%@  = all arguments from %0 onward (including function name)
 %~0..%~n = same as %0..%n but with outer quotes stripped
 ```
 Always use `%~1`, `%~2` etc. for function parameters — they strip quotes safely.
@@ -143,7 +144,7 @@ _END
 ```
 
 Window shape: `L<left>T<top>W<width>H<height>`. Omit L/T for centered.
-Common flags: `-trap` (close button doesn't exit), `-nocap` (no title bar), `-nosysmenu`, `-top`, `-size`, `-maxb` (enable maximize), `-minb` (enable minimize), `-disminb` (disable minimize button), `-discloseb` (disable close button), `-nfocus` (no keyboard focus), `-ntab` (no tab focus), `-disaltmv` (disable ALT+mouse move), `-forcenomin` (prevent minimize), `-scalef` (XP-style scaling), `-scale[:DPI]` (Win8+ DPI scaling), `-nxp` (no XP visual style), `-csize` (size = client area), `-na` (don't activate), `,#` (hidden window)
+Common flags: `-trap` (close button doesn't exit), `-nocap` (no title bar), `-nosysmenu`, `-top`, `-size`, `-maxb` (enable maximize), `-minb` (enable minimize), `-disminb` (disable minimize button), `-discloseb` (disable close button), `-nfocus` (no keyboard focus), `-ntab` (no tab focus), `-disaltmv` (disable ALT+mouse move), `-forcenomin` (prevent minimize), `-nofix` (non-fixed window position), `-nb` (no border), `-scalef` (XP-style scaling), `-scale[:DPI]` (Win8+ DPI scaling), `-nxp` (no XP visual style), `-csize` (size = client area), `-na` (don't activate), `,#` (hidden window)
 
 ### Classes and nesting
 

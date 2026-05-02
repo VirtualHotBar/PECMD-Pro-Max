@@ -263,8 +263,13 @@ LOOP [#]condition,
 FORX * list,&&item,              // space-delimited
 FORX *NL &multiLine,&&line,      // newline-delimited
 FORX *v &a &b &c,&&name,         // iterate variable names
-FORX /S path\*.ext,&&name,0      // file enumeration (0=files, 1=dirs)
+FORX /S[:depth] path\*.ext,&&name,0  // file enumeration (0=files, 1=dirs)
+FORX /S:3 /O:N path\*.ext,&&f,0     // max depth 3, sorted by name
+FORX /S /O:-N path\*.ext,&&f,0      // depth unlimited, reverse sort
+FORX /S /size:0:1048576:512 path\*.ext,&&f,0  // size 0-1MB, 512-aligned
 FORX @\Windows,&&dir,1           // search for directory root
+FORX !\*.ext,&&f,0               // reverse directory order
+FORX @\*.ext,&&d,1               // dirs only (@ prefix)
 ```
 
 ### TEAM — Multi-command
@@ -452,6 +457,7 @@ FORM -raw &type,&bus,&drvType=&dsk,<drive>  // comprehensive: all type info in o
 | DRIVE_REMOTE | 4 | Network/mapped drive |
 | DRIVE_CDROM | 5 | Optical disc (CD/DVD/BD) |
 | DRIVE_RAMDISK | 6 | RAM disk |
+| DRIVE_CDROMUSB | 7 | USB optical disc |
 
 ### DFMT — Format
 ```
@@ -467,9 +473,13 @@ EJEC * d:                                  // eject removable disk
 
 ### DISK — Disk operations
 ```
-DISK 1,,,3                                 // initialize disk
+DISK 1,,,3                                 // assign drive letters: disk 1, USB, rearrange
 DISK 0,,,1,U:                              // assign USB starting from U:
 DISK &drvLetter,diskNum,partitionNum        // get drive letter of specific partition
+```
+Options (4th parameter): 0x1=rearrange only assigned, 0x2=verify partition validity,
+0x4=skip 0xEE/0xEF partitions, 0x10=include hidden, 0x20=include CDROM, 0x40=limit letter table
+Flags: `-check`=skip if already loaded, `-skiptp:tp1;tp2`=skip types, `-skippt:hd:pt`=skip partitions, `-from:D:`=start from letter, `-cdrom`=CDROM
 ```
 
 ---
@@ -828,15 +838,21 @@ ENVI @LIST.ADD=item                // add item
 ENVI @LIST.ADDSEL=item             // add and select
 ENVI @LIST.DEL=item                // delete item
 ENVI @LIST.QUERY=;&all             // get all (NL-delimited)
+ENVI @LIST.QUERY=row;&line         // get specific row
 ENVI @LIST.isel=N                  // select by index
+ENVI @LIST.ADD1=item1|item2        // bulk-add (pipe-delimited)
+ENVI @LIST.VAL=item1|item2         // reset and add all
+ENVI @LIST.VAL=:+item              // insert at top
+ENVI @LIST.VAL=:-item              // insert at bottom
+ENVI @LIST.VAL=:=item              // replace current selection
 ```
 
 ### CHEK / RADI — Checkbox / Radio
 ```
-CHEK [-right] Name,Shape,Text,[EventCmd],[State]
+CHEK [-right] [-center] [-scale[:[res][:icon]]] Name,Shape,Text,[EventCmd],[State]
 RADI [-right] Name,Shape,Text,[EventCmd],[State]
 ```
-State: `1`=checked, `0`=unchecked, `-1`=toggle, `-2`=grayed
+State: `1`|`-1`=checked, `0`|`2`|`-2`=unchecked, `<0`=grayed, `±16`=invisible
 
 ### TABL — Table / grid
 ```
@@ -874,44 +890,55 @@ MENU -                                        // separator
 CALL @--popmenu MenuWindow [x.y[:align]]       // show popup
 ```
 
-### TIPS — Tray icon / notification
+### TIPS — Tray icon / bubble notification
 ```
-// Create tray icon
-TIPS* WindowName,iconFile,tooltip,leftClickHandler,rightClickHandler,timeout
+// Tray icon (with * suffix: private tray control, requires window)
+TIPS* WindowName,[Content],[timeout],[iconStyleID],[trayIcon],[#WID]
+
+// Bubble notification
+TIPS Title,Content,[timeout],[iconStyleID],[@[A]LxTy]
+TIPS# Title,#Content,#timeout,[iconStyleID],[@[A]LxTy]
 
 // Params:
-//   WindowName        - window to receive messages
-//   iconFile          - icon path (or #resID for built-in)
-//   tooltip           - hover tooltip text
-//   leftClickHandler  - command on left-click (or 0 for none)
-//   rightClickHandler - command on right-click (or 0 for none)
-//   timeout           - display duration in ms (0=permanent)
+//   WindowName  - window name for private tray (* suffix)
+//   Title       - bubble title / tray label (max 64 chars)
+//   Content     - body text (max 256 chars), \n for line breaks
+//   timeout     - display ms (default 10s, 0=permanent)
+//   iconStyleID - 0=none, 1=info, 2=warning, 3=error, 4+=tray icon
+//   trayIcon    - icon file or #resID (shell32.dll#94 etc.)
+//   @[A]LxTy    - screen position (@=rectangular, @A=arrow style)
+//   #WID        - window handle for association
+```
 
-// Examples
-TIPS* MAINWIN,#1,My Tool,TEAM MESS Clicked!,0,0        // built-in icon, left-click only
-TIPS* MAINWIN,%SystemRoot%\my.ico,Title,0,popmenuCmd,0  // right-click popup menu
-TIPS* MAINWIN,#2,Hello World,CALL OnLeft,CALL OnRight,5000  // auto-dismiss after 5s
+Examples:
+```wcs
+// Tray icon with WM_TRAYNOTIFY message for click handling
+SET &WM_TRAYNOTIFY=1109
+CALL @WinMain
+_SUB WinMain,#
+    ENVI @this.MSG=_%&WM_TRAYNOTIFY%::wp,lp,CALL DoTrayClick %wp% %lp%
+    TIPS* WinMain,MyTool,,,shell32.dll#94
+_END
+_SUB DoTrayClick
+    IFEX $0x0204=%2, CALL @--popmenu MyMenu    // right-click → popup
+_END
 
-// Remove tray icon
-TIPS.DEL=WindowName                                     // delete specific
-TIPS.DEL=*                                              // delete all icons
+// Bubble notification
+TIPS MyTitle,Hello World\nLine 2,5000,1          // info icon, 5 seconds
+TIPS* WinMain,Status update,,2,#1                 // warning icon, built-in res#1
 
-// Multiple tray icons (different WindowName for each)
-TIPS* Icon1,#1,Tool 1,cmd1,0,0
-TIPS* Icon2,#2,Tool 2,cmd2,0,0
-
-// Bubble / balloon notification
-TIPS* MAINWIN,#1,Title\nMessage text,,,10000             // multi-line via \n
-TIPS* MAINWIN,#3,Warning!\nDisk full!,CALL OnClick,,0   // with click handler
-
-// Update existing tray icon
-TIPS* WindowName,newIcon,newTooltip,newLeftCmd,newRightCmd,newTimeout
+// Clear
+TIPS -                                            // clear bubble
+TIPS *                                            // clear all tray icons + bubble
 ```
 
 ### Other GUI commands
 ```
 BROW &result,[*|&]path,[prompt],[filter],[flags] // file/dir browser
 MESS [text][+iconN] [\n...] [@title][#buttons][*ms][$default]  // message box
+// iconN: +6=info, +32=question, +16=error, +48=warning, +0=none
+// #buttons: #OK=OK, #YN=YesNo, #YNC=YesNoCancel, #YNCD=with default, #IC=IgnoreCancel
+// *ms: auto-close timeout in ms. $N/$Y: default button (No/Yes)
 LOGO imagePath                                 // show/hide splash
 TEXT text[#color][LxTy][RxBy][$size:font]     // display status text
 HIDE                                           // hide PECMD.EXE process
@@ -1069,8 +1096,17 @@ BASE* -u string,&var                     // standard decode
 
 ### CMPS — Compression
 ```
-CMPS -m source.wcs,dest.wcz             // compress
-CMPS -u source.wcz,dest.wcs             // decompress
+CMPS -m source.wcs,dest.wcz             // compress (encrypted)
+CMPS -m -u source.wcz,dest.wcs           // decompress
+CMPS -f -m source.wcs,dest.wcz           // compress (no encryption, -m after -f)
+CMPS -bin source.exe,dest.wcz            // compress binary (NOT script)
+CMPS -src[:flags] source.wcs,dest.wcz    // source compression with clean flags:
+  // -src:1 = remove comment lines
+  // -src:2 = convert line endings
+  // -src:4 = compress empty lines
+  // -src:8 = remove inline comments
+  // Combine: -src:15 = all of above
+CMPS -utf8 source.wcs,dest.wcz           // encode as UTF-8
 ```
 
 ### WAIT — Pause / key wait
