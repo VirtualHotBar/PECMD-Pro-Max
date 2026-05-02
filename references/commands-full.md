@@ -131,6 +131,7 @@ ENVI @Ctrl.MSG=_msgId:cmd         // message map (control notifications use _)
 ENVI @Ctrl.POSTMSG=#msg;wp;lp     // async post message
 ENVI @Ctrl.SENDMSG=#msg;wp;lp     // sync send message
 ENVI @Ctrl.*del=                  // destroy control
+ENVI @Ctrl.ID=?&hwnd               // get control HWND
 ENVI @Ctrl.Font=size:name
 ENVI @Ctrl.bkcolor=0xRRGGBB
 ENVI @Ctrl.Cursor=32649           // hand cursor
@@ -217,6 +218,8 @@ FIND $str1=str2, command        // equal (case-sensitive)
 FIND $str1<>str2, command       // not equal
 FIND $=%var%, command           // var is empty
 FIND $%var%=, command           // var is empty (same, variable on left)
+FIND *=var, command              // IDIOM: var is empty (primary source pattern)
+FIND *<>var, command             // IDIOM: var is NOT empty
 FIND $str1=str2,! cmd1! cmd2   // if else (separated by !)
 FIND $str1=str2,!! command      // else only
 FIND |num1>num2, command        // numeric comparison
@@ -226,6 +229,7 @@ FIND [$][A | B], command         // compound OR (| between conditions)
 FIND --pid &var,                // get process/CPU ticks
 FIND --pid*@[.ext|#parentPID] &var,  // process list (opt: extension filter or parent PID)
 FIND --wid*@[parentWID] &var,[title] // window list (opt: parent window filter)
+FIND --class:ClassName --wid*@ &var   // window list filtered by window class
 ```
 
 ### IFEX — File test / numeric comparison / system query
@@ -365,10 +369,15 @@ PART list disk,&var                         // list all disk numbers
 PART list disk N,&var                       // disk info (size, cylinders, heads, etc.)
 PART list part N,&var                       // list partition numbers on disk N
 PART -hextp -phy# list part N#M,&var        // detailed partition info (hex type + physical#)
+PART -phy# list part N#M,&var               // partition info with physical numbering
 PART -devid list disk N,&var                // device path/ID
 PART -devidx list disk N,&var               // physical serial number
+PART -devida list disk N,&var               // device path/ID (alternative)
+PART -iv=N list disk N,&var                 // query sub-field N of disk info
+PART -raw list disk N,&var                  // query raw disk info
 PART list drv D:,&var                       // info about specific drive letter
 PART list volume volumeName,&var            // info about volume
+PART -drv list volume N,&var                // list volumes by drive number
 
 // Modify operations
 PART -super -up -xup N#M type [attr]        // set partition type+attribute (use both -super -up)
@@ -376,6 +385,7 @@ PART -super -up -swap:M N#P                // swap physical partition numbers
 PART -super -up N#M a|A|-a|-A type start len // create partition (a=active, A=extended)
 PART -super -up del N#M                    // delete partition
 PART -super -up N#M a|A                     // set active/inactive on existing partition
+PART -super -up -fs0 N#M init               // initialize partition as raw (no filesystem)
 PART update N                               // refresh disk info from system
 
 // MBR/PBR operations
@@ -386,6 +396,7 @@ PART /pbr[=nt6|=win|=nt5|=dos|=file] N#M    // rewrite PBR on partition
 PART -gpt init N                            // initialize as GPT
 PART -super -up -gpt N#M a type start len guid attr name  // create GPT partition
 PART -gpt -cmp N                            // compress GPT partition table
+PART -super -up -gpt -fs0 -mbr init N       // init GPT+MBR, raw FS
 
 // Other
 PART -gui                                   // launch GUI partition manager
@@ -458,6 +469,7 @@ EJEC * d:                                  // eject removable disk
 ```
 DISK 1,,,3                                 // initialize disk
 DISK 0,,,1,U:                              // assign USB starting from U:
+DISK &drvLetter,diskNum,partitionNum        // get drive letter of specific partition
 ```
 
 ---
@@ -965,6 +977,7 @@ Additional flags (most commonly used):
 -waiti                 // wait for UI init
 -raw                   // capture raw (no recoding)
 -nowin                 // CREATE_NO_WINDOW
+-incmd                  // run command in a fresh PECMD instance (no message loop)
 ```
 
 ### EXEC* — Capture output
@@ -1011,6 +1024,8 @@ MSTR &restq=<~5>%&data%                 // field 5 with outer quotes stripped (~
 MSTR &s=pos,len,%&str%                 // substring at position
 MSTR &last=<-1>%&data%                 // last field (negative index)
 MSTR -delims:. &a,&b,&c=<1*>%&ip%     // split by custom delimiter
+MSTR* &a,&b=<1><2>%&data%               // TAB-delimited (prefix * on command)
+MSTR$ &a,&b=<1><2>%&data%               // space-delimited, consecutive spaces = single
 ```
 
 ### SED — Regex substitution

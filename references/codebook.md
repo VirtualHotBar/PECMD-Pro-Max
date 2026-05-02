@@ -80,10 +80,13 @@ _END
 ### Enumerate physical disks via SetupAPI
 
 ```wcs
-// GUID_DEVINTERFACE_DISK = 53f56307-b6bf-11d0-94f2-00a0c91efb8b
-SET &GUID_HEX=53 f5 63 07 b6 bf 11 d0 94 f2 00 a0 c9 1e fb 8b
+// Canonical method: CLSIDFromString produces binary GUID
+SET &GUID_STR={53f56307-b6bf-11d0-94f2-00a0c91efb8b}
 SET$# &guid=*16 0
-CODE *,%&GUID_HEX%,*UNI,&guid
+CALL $--qd --ret:&&r ole32.dll,CLSIDFromString,${%&GUID_STR%},*&guid
+// Alternative: construct GUID from hex bytes
+SET &GUID_HEX=53 f5 63 07 b6 bf 11 d0 94 f2 00 a0 c9 1e fb 8b
+CODE *,%&GUID_HEX%,*HEX,&guid
 CALL $--qd --ret:&&hSetup Setupapi.dll,SetupDiGetClassDevsW,*&guid,#0,#0,#0x12
 IFEX $%&hSetup%<>-1,
 {
@@ -141,21 +144,22 @@ _END
 ### Detect Secure Boot state
 
 ```wcs
-SET$ &SSBI=*4 0
-CALL $--qd --ret:&&r ntdll.dll,NtQuerySystemInformation,#145,*&SSBI,#4,#0
-SET?char &SSBI=&&enabled:1
+SET$ &SSBI=*2 0
+CALL $--qd --ret:&&r ntdll.dll,NtQuerySystemInformation,#145,*&SSBI,#2,#0
+SET?char &SSBI=&&enabled:0
 IFEX #%&enabled%=0,MESS Secure Boot: Disabled! MESS Secure Boot: Enabled
 ```
 
 ### Get Windows version (RtlGetVersion)
 
 ```wcs
-SET$# &verBuf=*284 0
-SET-long &verBuf=284:0
+SET$# &verBuf=*4 0 *4 0 *4 0 *4 0 *4 0 *256 0
+SET-long &verBuf=276:0
 CALL $--qd --ret:&&r ntdll.dll,RtlGetVersion,*&verBuf
 SET?int &verBuf=&&major:4
 SET?int &verBuf=&&minor:8
 SET?int &verBuf=&&build:12
+SET-make &&sp=&verBuf@16;256
 MESS Windows %&major%.%&minor% build %&build%
 ```
 
@@ -193,6 +197,9 @@ FORX *NL &cfg,&&line,
     SED &&key=1,=.*,,%&line%
     SED &&val=1,.*=,,%&line%
     FIND $=%&key%,! SET %&key%=%&val%         // skip empty key lines
+    // Alternative idiom (canonical in 代码大全 source):
+    // FIND *<>var,...  = "var is NOT empty"  (execute if var has content)
+    // FIND *=var,...   = "var IS empty"      (execute if var is blank)
 }
 ```
 
@@ -831,6 +838,8 @@ SHUT H                      // hibernate
 DISP W1920 H1080 B32 F60    // set 1920x1080, 32-bit color, 60Hz
 DISP W1024 H768 B16 F60     // set 1024x768, 16-bit color
 DISP                        // auto-detect best mode (no arguments)
+// After DISP, restart Explorer to refresh taskbar positioning:
+TEAM DISP| KILL explorer
 ```
 
 ### Screen dimensions
@@ -838,6 +847,22 @@ DISP                        // auto-detect best mode (no arguments)
 ```wcs
 SCRN &scrW,&scrH
 CALC &&rightEdge=%&scrW% - 300
+```
+
+### Query taskbar height
+
+```wcs
+FIND --class:Shell_TrayWnd --wid*@ &tbars
+FORX *NL &tbars,&&tb,
+{
+    MSTR &tbtype=<7>&&tb
+    FIND $%&tbtype%=Shell_TrayWnd,
+    {
+        MSTR &tbWid=<2>&&tb
+        ENVI @@POS=?%&tbWid%::::&TB_H
+    }
+}
+MESS Taskbar height: %&TB_H% px
 ```
 
 ---
@@ -892,12 +917,14 @@ CALL $--qd --ret:&&ret offreg.dll,ORSetValue,#%&hKey%,$%&Value%,#1,*&Data,#%&Dat
 
     // Enumerate subkeys
     SET$# &keyCount=*4 0
+    SET$# &maxSubKeyLen=*4 0
     SET$# &valCount=*4 0
-    CALL $--qd --ret:&&ret offreg.dll,ORQueryInfoKey,#%&hKey%,#0,#0,*&keyCount,*&valCount,#0,#0,#0
+    CALL $--qd --ret:&&ret offreg.dll,ORQueryInfoKey,#%&hKey%,#0,#0,*&keyCount,*&maxSubKeyLen,#0,*&valCount,#0,#0,#0,#0
     SET?int keyCount=&&nKeys:0
 
-// Save and close
-CALL $--qd --ret:&&ret offreg.dll,ORSaveHive,#%&hHive%,$%&HiveFile%,#0,#0
+// Save and close — use actual NT version numbers for best compatibility
+// Use $0 for generic (current OS version implied)
+CALL $--qd --ret:&&ret offreg.dll,ORSaveHive,#%&hHive%,$%&HiveFile%,$0,$0
 CALL $--qd offreg.dll,ORCloseKey,#%&hKey%
 CALL $--qd offreg.dll,ORCloseHive,#%&hHive%
 ```

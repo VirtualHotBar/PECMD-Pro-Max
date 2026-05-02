@@ -193,6 +193,8 @@ FIND $%var%=hello,!! command         // !! = else with no if-body
 FIND $%var%=hello, cmd1! cmd2       // ! separates if-body from else-body
 FIND $=%var%, command               // "is empty" test
 FIND $'%var%'='', command           // "is empty" (single-quote protects special chars)
+FIND *=var, command                  // IDIOM: "is empty" (primary source pattern)
+FIND *<>var, command                 // IDIOM: "is NOT empty"
 FIND |%a%>%b%, command              // | prefix = numeric comparison (NOT string)
 FIND [$][$A & $B], command          // compound AND (& between conditions, [...]=multi-condition)
 FIND [$][$A | $B], command          // compound OR (| between conditions)
