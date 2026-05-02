@@ -56,7 +56,8 @@ FORX * %&Drvs%,&&D,
 ```wcs
 _SUB GetVol
     TEAM ENVI %1=| ENVI %2=| ENVI &&v=| ENVI &&b=0| ENVI &&VL=%~3| ENVI &&dsk=%~4| ENVI &&pt=%~5
-    SET &r1=| SET &r2=
+    SET &r1=
+    SET &r2=
     FIND $X=X%&VL%,! FDRV *vol r1,r2=%&VL%      // vol exists: direct query
     FIND $X=X%&VL%,                               // vol doesn't exist: auto-assign letter
     { LOCK #pecmd
@@ -988,7 +989,7 @@ ENVI @Btn.color=0x000000#0xFFF0E0#0xFF0000#0xFFE0C0
 // Updates colors at runtime
 ```
 
-## 33. Dynamic Control Creation & Deletion
+## 33. Dynamic Control Creation (Command String in Variable)
 
 ```wcs
 // Create controls programmatically from a command string in a variable
@@ -1104,7 +1105,7 @@ Key points:
 
 ---
 
-## 36. Dynamic Control Creation & Batch Deletion
+## 36. Dynamic Row Creation & Batch Deletion
 
 Build controls at runtime from variable-expanded command strings. Batch-delete groups in loops.
 
@@ -1370,7 +1371,7 @@ _SUB SortTableByCol
     // LOOP ...
     //     MSTR &&sA=<%&col%>%%&Row[%&i%]%%
     //     MSTR &&sB=<%&col%>%%&Row[%&j%]%%
-    //     FIND $<%&sA%>%&sB%,                            // "greater" for ascending
+    //     FIND $%&sA%>%&sB%,                             // lexicographic "greater" for ascending
     //     {
     //         SET &tmp=%%&Row[%&i%]%%
     //         SET &Row[%&i%]=%%&Row[%&j%]%%
@@ -1392,7 +1393,7 @@ _END
 
 Key points:
 - Double-percent `%%&Row[%&i%]%%` dereference: first `%%` evaluates to `%`, then `%&Row[3]%` reads the variable.
-- `FIND $<str1>str2` does lexicographic "greater" via `<`.
+- `FIND $str1>str2` does lexicographic "greater" comparison (compare two strings, true if first > second). Use `|` prefix instead for numeric compare.
 - Remove non-digits with `SED` for numeric extraction before numeric compare.
 
 ---
@@ -1620,10 +1621,10 @@ Key points:
 | 30 | NET & Network Card Operations | PCIP query/set |
 | 31 | SEND / WAIT -cont — Keyboard Input | Send keys, wait for keypress |
 | 32 | Multi-Part Color Format | 4-part color for hover effects |
-| 33 | Dynamic Control Creation & Deletion | Variable-expanded command strings |
+| 33 | Dynamic Control Creation (Command String) | Variable-expanded command strings |
 | 34 | WM_TRAYNOTIFY Pattern | Full tray icon handler |
 | 35 | SWIN Nested Windows (Tab Pages) | TABS + SWIN property pages |
-| 36 | Dynamic Control Creation & Batch Deletion | Runtime control creation & loop deletion |
+| 36 | Dynamic Row Creation & Batch Deletion | Runtime control creation & loop deletion |
 | 37 | Parameter Validation Guard | Early-exit argument guards |
 | 38 | MSTR String Splitting — All Variants | Complete MSTR parsing cookbook |
 | 39 | TABL Scrollbar Control via LVM | LVM_SCROLL, LVM_ENSUREVISIBLE messages |

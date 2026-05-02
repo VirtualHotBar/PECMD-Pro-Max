@@ -788,9 +788,8 @@ _END
 **Bubble / balloon notification:**
 ```wcs
 ENVI @MyApp.MSG=+0x0400:CALL OnTrayNotify              // on tray notification
+// Use Shell_NotifyIcon for balloon display
 ```
-
-// Use TrayNotify through Shell_NotifyIcon
 
 **Tooltip update:**
 ```wcs

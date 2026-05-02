@@ -101,7 +101,6 @@ When a `_SUB` function is called with arguments, these special variables are ava
 %1..%n = argument 1..n
 %#  = argument count
 %*  = all arguments from %1 onward (space-separated)
-%@  = all arguments from %0 onward (includes function name)
 %~0..%~n = same as %0..%n but with outer quotes stripped
 ```
 Always use `%~1`, `%~2` etc. for function parameters — they strip quotes safely.
@@ -193,7 +192,7 @@ FIND $%var%=hello,!! command         // !! = else with no if-body
 FIND $%var%=hello, cmd1! cmd2       // ! separates if-body from else-body
 FIND $=%var%, command               // "is not empty" test
 FIND $'%var%'='', command           // "is empty" (single-quote protects special chars)
-FIND |%a%>%b%, command              // | prefix = numeric comparison
+FIND |%a%>%b%, command              // | prefix = numeric comparison (NOT string)
 FIND [ $A & $B ], command          // compound AND (same syntax as IFEX)
 FIND [| $A | $B ], command         // compound OR
 FIND --pid &var,                    // get process/CPU info
@@ -624,12 +623,14 @@ ENVI @TABL.Sel=%row%;0                              // deselect row
 MSTR &&a,&&b=<1><~3>%&data%                          // field 1, fields 3-through-end
 MSTR &&last=<-1>%&data%                               // last field
 MSTR -delims:. &&a,&&b,&&c,&&d=<1*>%&ip%             // split by custom delimiter
-// MSTR segment modes (first character after = in <N*> controls delimiter behavior):
+// MSTR command-level flags (prefix MSTR itself — control delimiter behavior):
 MSTR$ a,b,c=<1*>%&data%                               // $ flag: treat consecutive spaces as single delimiter
-MSTR* a,b,c=<1*>%&data%                               // * flag: TAB-delimited data
+MSTR* a,b,c=<1*>%&data%                               // * flag: TAB is the field separator
+// Note: command-level * (TAB delimiter) vs segment-spec <N*> (fields N through end) are unrelated.
+// MSTR$ and MSTR* are prefixes on the MSTR command; <N*> is a field-range specifier.
 // Real-world example: parse TAB-delimited command output (e.g., DISKPART, WMIC)
 EXEC* &raw=!wmic.exe logicaldisk get DeviceID,Size,FreeSpace /format:csv
-FORX *NL &raw,&&line,{ MSTR* &&node,&&dev,&&size,&&free=<1*>%&line% }
+FORX *NL &raw,&&line,{ MSTR* &&node,&&dev,&&size,&&free=<1><2><3><4>%&line% }
 SED &&r=0,pattern,replacement,%&source%              // replace ALL occurrences
 SED &&r=1,find,replace,%&source%                     // replace FIRST only
 SED &&ext=-1,.*\.,,%&filename%                        // get file extension (negative = from end)

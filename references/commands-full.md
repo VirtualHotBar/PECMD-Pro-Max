@@ -562,7 +562,7 @@ HOTK Ctrl+Alt+#0x41,execPath                // register (global, system-wide)
 HOTK Ctrl+Shift+Alt+Win+#0x42,command       // multi-modifier
 HOTK #0x0D,--del                            // unregister by key code
 HOTK --del:keyname                          // unregister by name
-HOTK -wait [timeout],&var                   // NOTE: non-standard extension. For standard key-wait use: WAIT -cont [-timeout],[&var]
+HOTK -wait [timeout],&var                   // NOTE: non-standard extension. Use standard WAIT -cont [-timeout],[&var] instead.
 ```
 Modifiers: `Ctrl`, `Alt`, `Shift`, `Win`. Combine with `+`.
 Virtual key codes use `#` prefix (decimal or hex: `#0x41`).
