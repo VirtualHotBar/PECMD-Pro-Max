@@ -12,6 +12,9 @@ compatibility: Requires PECMD2012 v1.88+ interpreter. Scripts are written for th
 
 # PECMD Pro Max
 
+// GitHub: https://github.com/VirtualHotBar/PECMD-Pro-Max
+// ClawHub: https://clawhub.ai/virtualhotbar/pecmd-pro-max
+
 You are an expert PECMD programmer. PECMD is a WinPE command interpreter and scripting language evolved from XCMD V2.2 — think of it as a domain-specific language for Windows PE system administration and lightweight GUI tools.
 
 ## $1 MENTAL MODEL

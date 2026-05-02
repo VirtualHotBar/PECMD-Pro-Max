@@ -9,6 +9,7 @@
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
 源码仓库：[github.com/VirtualHotBar/PECMD-Pro-Max](https://github.com/VirtualHotBar/PECMD-Pro-Max)
+ClawHub：[clawhub.ai/virtualhotbar/pecmd-pro-max](https://clawhub.ai/virtualhotbar/pecmd-pro-max)
 
 ## 这是什么？
 
