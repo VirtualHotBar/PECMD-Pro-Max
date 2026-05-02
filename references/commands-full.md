@@ -56,27 +56,49 @@ CALL @--WinName                      // destroy Win environment
 CALL @WinName                        // initialize Win environment
 
 // DLL calling
-CALL $[? --cd --nrcd --c --ret:retVar] DLL|*hDll,Func,[#]p1,[#]p2...
+CALL $[? --cd --nrcd --c --[[i]v]ret:[~@]retVar] DLL|*hDll,Func,[#]p1,[#]p2...
 CALL $--ret:retVar [--cd],[--nrcd],-LoadLibrary,[^]DLLpath     // load DLL (^=auto-free)
 CALL $--ret:retVar [&&memVar],-LoadLibrary,*[file]#resID[|type] // load from memory
 CALL $--ret:retVar ,-GetProcAddress,*hDll,FuncName             // get function address
 CALL $[--ret:retVar] ,-FreeLibrary,*hDll                        // free DLL
 CALL $--win [--qd@ --cd --nrcd --ret:retVar] DLL,Func,cmdLine   // rundll32
 CALL $--cpl CPLpath                                             // control panel
+CALL $--ret:var ,-LoadLibrary,^<DLLpath                         // COM DLL load
 ```
-DLL flags: `--cd`=chdir, `--nrcd`=don't restore, `--c`=C convention,
+DLL flags: `--cd`=chdir, `--nrcd`=don't restore, `--c`=C convention (default=PASCAL/stdcall),
 `--bool`=BOOL return, `--ret:*`=return via pointer, `--m`=in-memory,
-`--1`=all remaining as one param, `--qd@`/`--qd#`/`--qd$`/`--qd*`=per-param type
+`--1`=all remaining as one param, `--co`=register DLL (default), `--nco`=don't register.
 
-// Additional DLL flags:
---sret        // return symbol count
---16          // return in hex
---vret:var    // return VARIANT
---arg         // alternative parameter format table
-.vFun         // virtual function index or IDispatch function name
---get/--put   // property get/set
-?             // query DLL function address
-^<            // COM DLL loading prefix
+**Type prefix system (--qd):** Per-parameter type overrides with `--qd:type1,type2,...`
+| Prefix | Type | Description |
+|--------|------|-------------|
+| `#` | integer | Pass as int (default for numbers) |
+| `<` | INT64 | 64-bit integer |
+| `*` | PE variable | Pass as PE variable pointer |
+| `$` | string | Pass as string (Unicode) |
+| `=` | raw | Pass as raw data |
+| `>` | VARIANT | Pass as VARIANT |
+| `@` | narrow | ANSI narrow string |
+| `~` | UTF8 | UTF-8 string |
+
+Additional flags:
+```
+--sret           // return symbol count
+--16             // return in hex
+--iret:retVar    // return as INT
+--vret:[~@]var   // return VARIANT (~=strip, @=raw)
+--arg:~.table    // alternative parameter format (~=strip quotes)
+.vFun:index      // virtual function index
+.vFun:[?]name    // IDispatch function name ([propget] prefix removed)
+--get / --put    // COM property get/set
+?                // query DLL function address (store in ret var)
+^<               // COM DLL loading prefix
+^                // auto-free when variable goes out of scope
+```
+
+Address call: DLL path=`#`, function=raw address. `*` prefix on func = take address. `&` prefix on param = group variable address.
+Built-in: `-DllRegisterServer` / `-DllUnregisterServer`.
+DLL architecture must match PECMD process (x86/x64).
 
 ### EXIT — Terminate
 ```
@@ -169,11 +191,17 @@ ENVI^ HelpColor=[*cmdHeight] [fgColor][#bgColor]  // HELP display colors
 CALC [#][变量=]表达式[#[#][小数位][E|F|G]]
 ```
 `#` prefix = integer mode. Supports: `+ - * / % ^`, bitwise `& | @`, comparison `= <> > >= < <=`,
-logic `&& || lnot`. Functions: `abs sin cos tan sqrt ln lg log pow exp pow10`,
-`floor ceil round int frac div mod rand shl shr xor not`,
+logic `&& ||`. Functions (34 total): `abs sin cos tan ctg sqrt ln lg log pow exp pow10`,
+`floor ceil round int frac div mod rand shl shr xor not lnot`,
 `arcsin arccos arctan arcctg deg rad hypot max min`.
+`lnot` = logical NOT (`!a`), `not` = bitwise NOT (`~a`). Constants: `e`, `pi`.
+Size suffixes: `K`=1024, `M`=1024^2, `G`=1024^3, `T`=1024^4, `S`=512.
+`#` on result = integer, `$` on result = double (INT64/float).
+`-base=[u]2|8|10|16|N` — output base (`u` = unsigned). `-gui` — graphical calc.
+`-err=defaultValue` — return value on error.
 `CALC -base=16 #&hex=shl(0x07,16)|0x20` — hex bitwise.
 `CALC &sz=%&bytes%/1G#3` — bytes to GB, 3 decimal places.
+Multiple expressions: separate with `;`, sub-variables: `$subName=expr`.
 
 ### CODE — Encoding conversion
 ```
@@ -284,10 +312,16 @@ FIND |num1>num2, command        // numeric comparison
 FIND $'%var%'='', command       // safe empty check (single quotes)
 FIND [$][A & B], command         // compound AND (& between conditions)
 FIND [$][A | B], command         // compound OR (| between conditions)
-FIND --pid &var,                // get process/CPU ticks
-FIND --pid*@[.ext|#parentPID] &var,  // process list (opt: extension filter or parent PID)
-FIND --wid*@[parentWID] &var,[title] // window list (opt: parent window filter)
-FIND --class:ClassName --wid*@ &var   // window list filtered by window class
+FIND --pid &var,ProcessName            // get process PID
+FIND --pid &var                        // get process CPU ticks
+FIND --pid*@[.ext|#parentPID] &var,    // process list (opt: extension filter or parent PID)
+FIND --wid*@[parentWID] &var,[title]   // window list (* = prefix match on title)
+FIND --wid#ParentWID &var,ControlID    // query control's window ID
+FIND --class:ClassName --wid*@ &var    // window list filtered by window class
+FIND --menu &var,WindowID              // query window's MENU handle
+FIND --menu#Index &var,MenuID          // query sub-MENU by index
+FIND $!=%var%,                         // compare against literal "!" (special: $ followed by comparison op)
+FIND C:\=?,&var                        // query total disk space (bytes)
 ```
 
 ### IFEX — File test / numeric comparison / system query
@@ -515,11 +549,17 @@ PART GPT output fields: `分区号 GUID 属性 起始(字节) 长度(字节) 结
 ### SHOW — Show/hide partitions
 ```
 SHOW -1:-1                                // show all partitions
-SHOW * N#M,driveLetter                     // assign drive letter
-SHOW *- N#M,                              // remove drive letter
-SHOW & N#M,driveLetter                     // local-mode assign
-SHOW =1 * N#M,driveLetter                  // skip if already loaded
-SHOW -check * N#M,driveLetter              // skip if no valid filesystem
+SHOW * hd:part,driveLetter                 // assign drive letter (hd=disk, part=partition)
+SHOW *- hd:part,                           // remove drive letter
+SHOW & hd:part,driveLetter                 // local-mode assign
+SHOW =1 * hd:part,driveLetter              // skip if already loaded
+SHOW -check * hd:part,driveLetter          // skip if no valid filesystem
+SHOW * F:,driveLetter                      // fixed disk
+SHOW * U:,driveLetter                      // USB disk
+SHOW * #physicalPart,driveLetter            // physical partition number
+SHOW * -1,driveLetter                       // all unlettered partitions
+SHOW * hd:part,ChineseChar                  // assign Chinese-character drive letter
+SHOW * hd:part,letter,WaitMs               // assign with wait time for device readiness
 ```
 
 ### SUBJ — Mount/unmount
@@ -735,6 +775,7 @@ SHUT K                            // lock workstation
 SHUT E                            // eject optical drive
 SHUT C                            // close optical drive
 SHUT O                            // eject optical + wait 10s
+SHUT O5                           // eject optical + wait 5s (O+数字=wait N seconds)
 SHUT -force R                     // force restart
 SHUT -- [scriptFile]              // run script on shutdown
 SHUTDOWN -s|-r|-f|-t 秒           // pass raw args to shutdown.exe
@@ -839,14 +880,41 @@ Sub-items (use `MSTR` or direct `%&var:item%` syntax):
 | `utc` | 100ns units since 1601-01-01 |
 | `uptimens` | Nanoseconds since boot |
 
-### Various system commands
+### TEMP — Temporary file/directory management
 ```
-RUNS prog,Name                       // add to Run registry key
-TEMP @SetTemp                        // set temp directory
-PATH C:\Tools;%PATH%                 // set search path
-RECY C:|*                            // empty recycle bin
-USER username,password               // create user
-HOME C:\Users\name                   // set home directory
+TEMP [[@]Delete|[$]Setting] [初始目录][,变量名]           // query/set temp dir
+TEMP @[$]Setting 新临时目录,[变量名]                       // silent set
+TEMP [*del] [*tmpl:[前部]*[尾部]] *tmpdir [,]变量名        // generate unique temp directory
+TEMP [*del] [*tmpl:...]*tmpfile [,]变量名[,目录变量名]      // generate unique temp file
+```
+`@` = silent mode. `*del` = auto-delete on exit. `*tmpl:` = custom name template (`*` = random portion).
+
+### RUNS — Run registry key
+```
+RUNS prog,Name                       // add to HKLM\...\Run
+RUNS -d Name                         // delete entry
+```
+
+### PATH — Set search path
+```
+PATH C:\Tools;%PATH%                 // set PATH environment variable
+PATH %CurDir%\Tools                  // append to existing
+```
+
+### RECY — Empty Recycle Bin
+```
+RECY *                               // empty all recycle bins
+RECY C:                              // empty C: drive recycle bin
+```
+
+### USER — Set owner info
+```
+USER 用户名,公司名                    // set My Computer property values
+```
+
+### HOME — Set home directory
+```
+HOME C:\Users\name                   // set home directory (sets HKCU registry)
 ```
 
 ---
@@ -971,6 +1039,8 @@ DEVI *install:hardwareID:INF                     // install driver
 DEVI *rescan[:Fun]                               // rescan devices
 DEVI buildcache:[-a:arch] dir                    // build driver cache
 ```
+Advanced flags: `*dummy`=test mode, `*7pe[-]`=force DrvLoad, `*inner`=force no DrvLoad, `*drvload/*devcon`=priority selection, `*retid:var`=return installed device IDs, `*auto`=auto-convert INF, `*sys:`=copy to system dir, `*cab`=force CAB type, `*comp+`=match compatible IDs, `*ret:retVar`=return report, `*IdCah:PeVar`=reuse ID buffer, `*infcache:`=acceleration cache, `*optsys[:val]`=system tools priority, `*num:count`=count limit, `*disverify/*autodisverify`=signature check control, `*sub/*self`=search modes, `*showdev:`=show device info, `*norescan`=skip rescan.
+Listdev options: `*comp[+]`=compatible IDs, `*hwid`=hardware IDs, `*inst`=instance IDs, `*many`=multi-line, `*rescan`=rescan first.
 
 ### FBWF — FBWF cache control
 ```
@@ -1111,31 +1181,121 @@ State: `1`|`-1`=checked, `0`|`2`|`-2`=unchecked, `<0`=grayed, `±16`=invisible
 
 ### TABL — Table / grid
 ```
-TABL [-font:N] Name,Shape,Title,[Event],[Style]
+TABL [-hfont:... -font:... -color:... -sps -cksz:...] [*] [名称],<形状>[,格式数据][,数据][,状态]
 ```
 Title format: `100:Name%&TAB%=90:Size%&TAB%+50:Count`
 Column flags: default=left, `*`=left (default), `=`=right-align, `+`=center, `*0:`=hidden column
-Style: `0x10040`=full row select+checkboxes, `0x10200`=full row select,
-`0x4000`=grid lines, `0x16000`=single select+no header
+Status: `0x40`=grid lines, `0x100`=checkboxes, `0x200`=full row select, `0x400`=header drag, `0x800`=no sort header, `0x2000`=no header, `0x4000`=single select, `0x10000`=no scrollbar, `0x40000`=show sort arrow, `0x80000`=no column resize, `0x100000`=auto sort, `0x200000`=no focus, `0x400000`=always show selection, `0x800000`=editable, `0x1000000`=visible, `0x4000000`=no header divider, `0x8000000`=hot track.
 Operations:
 ```
-ENVI @TABL.Val=1*;%&data%            // bulk-set all rows
-ENVI @TABL.Val=?row.col;&var         // get cell
-ENVI @TABL.Val=?*;&count             // get row count
-ENVI @TABL.Val=-*                    // clear all
-ENVI @TABL.Sel=row                   // select row
-ENVI @TABL.Sel=row;0                 // deselect
+ENVI @tabl.Sel=row[;val]               // select/deselect row
+ENVI @tabl.Sel=?[var]                  // query selection
+ENVI @tabl.Sel=?.[rowVar][;colVar]     // query mouse position
+ENVI @tabl.Sel=+row;col                // set cell position
+ENVI @tabl.Val=[>]row[*[*[*]][#][.col][/rowH];val  // set row (>insert, *multi, #trim)
+ENVI @tabl.Val=row.col;val             // set cell content
+ENVI @tabl.Val=?row[.col];var          // query cell
+ENVI @tabl.Val=?*;[rowVar][;colVar]    // query row/col count
+ENVI @tabl.Val=?*.*;var                // get all data
+ENVI @tabl.Val=1*;%&data%             // bulk-set all rows (pipe-delimited)
+ENVI @tabl.Val=-[*]row[#count]         // delete row(s)
+ENVI @tabl.Val=.-col                   // delete column
+ENVI @tabl.Val=+;[#fg][#bg][=width]:title  // add column
+ENVI @tabl.Check=row;0|1|2             // set checkbox
+ENVI @tabl.Check=?[*]var               // get checked rows
+ENVI @tabl.Enable=~row;state           // row enable/disable
+ENVI @tabl.Enable=~?[*]var             // get disabled rows
+ENVI @tabl.Color=[row].[col];fg[;bg]   // cell/row/col color
+ENVI @tabl.Color=*row;fg[;bg][/rowH]   // row color+height
+ENVI @tabl.UPos=?[@#][*row][.col];L;T;R;B  // query position
+ENVI @tabl.Percent=[*row]|[col];%[C|R|L|F|K][:bg][:prog][:text]  // progress in cell
+ENVI @tabl.font=[^[^]]fontParams       // set font (^=no repaint)
 ```
 
-### Other controls
+### SWIN — Sub-Window / Embedded Window
 ```
-SWIN [-] [:]SubName,LxTyWwHh,[title],[style]   // sub-window (tab pages)
-TABS Name,Shape,[Titles],[Style]               // tab control
-GROU Name,Shape,Text,[Style]                   // group frame
-PBAR Name,Shape,Value,[Style]                  // progress bar
-IMAG Name,Shape,filePath|#resID,[Event],[Style] // image (BMP,JPG,GIF)
-SLID Name,Shape,min:max,[EventCmd],[InitVal]    // slider
-SPIN Name,Shape,min:max,[EventCmd],[InitVal]    // spin control
+SWIN [*] [画框名]:类名:[名称],<形状>[,内部位置][,状态]
+SWIN -sub[:-#LxTyWwHh]] [类名]:[名称][,][命令行参数]
+```
+`*` = auto-recycle. First form embeds a window class, second form embeds a `_SUB` page.
+Status: `0x10`=invisible, `0x40`=border, `0x80`=vscrollbar, `0x100`=hscrollbar, `0x200`=title.
+Operations: standard `.Enable`, `.Visible`, `.POS`, `.SENDMSG`, `.POSTMSG`.
+
+### TABS — Tab Control
+```
+TABS [*] 名称,<形状>,属性页集合,[状态]
+```
+`*` = auto-recycle. Page collection format: `PageName:BindName:Title:Tip;...`
+Each page maps to a `_SUB` window (created with `#` flag for invisible child).
+Status: `0x4`=flat buttons, `0x20`=multiline tabs, `0x40`=right-aligned, `0x80`=fixed width, `0x40000`=hot track, `0x400000`=owner draw, `0x800000`=no scroll buttons.
+Operations:
+```
+ENVI @tabs.Select=index                // select page (>=1)
+ENVI @tabs.Title1=text                 // set page title
+ENVI @tabs.Tip1=text                   // set page tooltip
+```
+Cross-page access: use `-` prefix in ENVI path to navigate up execution stack.
+
+### IMAG — Image Control
+```
+IMAG [-gui -real -sel -scale] [*] <名称>,<形状>,<图片数据>,[事件],[类型]
+```
+`-gui` = load from GUI resource, `-real` = actual size (no stretch), `-sel` = selectable (clickable), `-scale` = auto-scale to fit.
+`*` = auto-recycle. Image data: file path, `#resID` for resource, `*#res|type` for named resource.
+Operations:
+```
+ENVI @img.update=w:h[:x:y:border:width][;[*?|][<X:Y:W;H>]file]  // update image
+ENVI @img.stat=varName                 // check if image is valid
+ENVI @img.delay=ms                     // set GIF animation delay
+```
+
+### SLID — Slider / Trackbar
+```
+SLID [-right] [-left] [*] <名称>,<形状>[,值信息,命令,状态]
+```
+`*` = auto-recycle. Value info: `[起始值][:终到值][:初值][:步长]`.
+Status: `0x10`=invisible, `0x40`=horizontal, `0x80`=no thumb.
+Operations: `ENVI @slid.VAL=[cur][:start][:end]` to set, `?` prefix to query.
+
+### SPIN — Spin / Up-Down Control
+```
+SPIN [-right] [-left] [*] <名称>,<形状>[,值信息][,命令参数名][,命令][,状态]
+```
+`*` = auto-recycle. Value info: `[起始值][:终到值][:初值]`.
+`-right` / `-left` = attach to partner EDIT control on right/left.
+Status: `0x20`=wrap, `0x40`=horizontal, `0x80`=auto-pair with EDIT.
+Operations: `ENVI @spin.VAL=[cur][:start][:end]` to set, `?` prefix to query.
+
+### GROU — Group Frame
+```
+GROU [*] <名称>,<形状>,[标题],[状态]
+```
+`*` = auto-recycle. Visual grouping frame for controls. Status: `0x10`=invisible.
+
+### DTIM — DateTimePicker Control
+```
+DTIM [-right] [*] <名称>,<形状>,[初始值],[事件],[类型]
+```
+`*` = auto-recycle. Initial value: date format `YYYY-MM-DD` or time format `HH:MM:SS`.
+Type: `0`=date picker, `1`=time picker, `2`=date+time picker.
+Operations:
+```
+ENVI @dtim.VAL=val1;val2;val3          // set year/month/day or hour/minute/second
+ENVI @dtim.VAL=?n1;n2;n3;n4;n5        // query (0=valid, 1=unchecked, -1=failed)
+```
+
+### PBAR — Progress Bar
+```
+PBAR [*] 名称,形状,[初始值],[状态]
+```
+`*` = auto-recycle. Value: `current:max` (default max=100).
+Status: `0x10`=invisible, `0x1`=smooth, `0x4`=vertical, `0x8`=marquee.
+Operations:
+```
+ENVI @pbar.Val=current                 // set value
+ENVI @pbar.Val=?var                    // query value
+ENVI @pbar.percent=[-]smooth           // toggle smooth mode
+ENVI @pbar.color=0xRRGGBB             // set text color
 ```
 
 ### MENU — Popup menu items
@@ -1357,7 +1517,7 @@ BROW [-fix] <变量名称[;flgnm]>,[[*|&]初始路径],[提示文字],[扩展名
 ```
 `*` = directory browser, `&` = save-file dialog, none = open-file dialog.
 `-fix`: attempt to break system directory masking.
-Flags: `0x10`=has edit box, `0x20`=multi-select, `0x200`=no New Folder button, `0x4000`=mixed file+dir, `0x80000`=browser style, `0x1000`=file must exist, `0x2`=overwrite warning, `0x1`=readonly checkbox, `0x40000`=short filenames.
+Flags: `0x1`=readonly checkbox, `0x2`=overwrite warning, `0x4`=remove readonly checkbox, `0x10`=has edit box, `0x20`=multi-select, `0x800`=invalid path warning, `0x1000`=file must exist, `0x2000`=new warning dialog, `0x200`=no New Folder button, `0x4000`=mixed file+dir, `0x8000`=exclude readonly files, `0x40000`=short filenames, `0x80000`=browser style, `0x800000`=resizable dialog, `0x02000000`=exclude recent shortcuts, `0x10000000`=can select readonly/hidden files.
 Filter format: `说明1|*.后缀1|说明2|*.后缀2|`.
 Does NOT change current working directory.
 
@@ -1381,12 +1541,24 @@ Operations: `ENVI @名称.VAL=AA.BB.CC.DD` to set, `ENVI @名称.VAL=?.FullIP` t
 
 ### TREE — Tree View Control
 ```
-TREE [-font:...] [-color:...] [*] [名称],<形状>[,图片数据][,数据][,状态]
+TREE [-font:... -color:...] [*] [名称],<形状>[,图片数据][,数据][,状态]
 ```
-Must be inside a `_SUB` window.
-Status flags: `1`=HASBUTTONS, `2`=HASLINES, `4`=LINESATROOT, `8`=EDITLABELS, `0x100`=CHECKBOXES, `0x1000`=FULLROWSELECT.
+Must be inside a `_SUB` window. `*` = auto-recycle.
+Status flags: `1`=HASBUTTONS, `2`=HASLINES, `4`=LINESATROOT, `8`=EDITLABELS, `0x100`=CHECKBOXES, `0x400`=SINGLEEXPAND, `0x800`=INFOTIP, `0x1000`=FULLROWSELECT, `0x2000`=NOSCROLL, `0x4200`=TRACKSELECT, `0x40000`=NONEVENHEIGHT, `0x80000`=NOHSCROLL, `0x1000000`=visible.
 Data format: `<图标索引:选择图标索引>文本`, nodes separated by `0x09` (TAB), child start `0x0b`, child end `0x0c`.
-Operations: `ENVI @TREE.Sel`, `.Val`, `.Check`, `.Enable`, `.Expand`, `.UPos`, `.hID`.
+Operations:
+```
+ENVI @tree.Sel=nodeChain[;[*~#]val]    // set/get (*=multi, ~=show, #=focus)
+ENVI @tree.Sel=?[.][@*]var[;posName]   // query (.=mouse, @=handle, *=multi)
+ENVI @tree.hID=[~]nodeChain|*hID;var   // handle ↔ node chain
+ENVI @tree.Val=[>+][node][*[*]$][#];val // set (>insert, +append, *multi, #trim)
+ENVI @tree.Val=?*[+$][node];var        // query (+children, $without children)
+ENVI @tree.Val=?**[+$~[~]-#][node];var // get all data
+ENVI @tree.Check=node;0|1|2            // checkbox
+ENVI @tree.Enable=~node;val            // gray state
+ENVI @tree.UPos=?[#]node;L;T;R;B      // query position
+ENVI @tree.Expand=[?]node;val          // 1=collapse, 2=expand, 3=toggle
+```
 
 ### LAMBDA — Anonymous Function
 ```
@@ -1567,7 +1739,10 @@ Common Windows virtual key codes used with `HKEY`, `HOTK`, `WAIT -cont`, and `SE
 | VK_LBUTTON | 1 | 0x01 | Left mouse button |
 | VK_RBUTTON | 2 | 0x02 | Right mouse button |
 | VK_CANCEL | 3 | 0x03 | Ctrl+Break |
+| VK_XBUTTON1 | 5 | 0x05 | Mouse X button 1 |
+| VK_XBUTTON2 | 6 | 0x06 | Mouse X button 2 |
 | VK_MBUTTON | 4 | 0x04 | Middle mouse button |
+| VK_CLEAR | 12 | 0x0C | Numpad 5 (Num Lock off) |
 | VK_BACK | 8 | 0x08 | Backspace |
 | VK_TAB | 9 | 0x09 | Tab |
 | VK_RETURN | 13 | 0x0D | Enter |
@@ -1576,6 +1751,12 @@ Common Windows virtual key codes used with `HKEY`, `HOTK`, `WAIT -cont`, and `SE
 | VK_MENU | 18 | 0x12 | Alt |
 | VK_PAUSE | 19 | 0x13 | Pause/Break |
 | VK_CAPITAL | 20 | 0x14 | Caps Lock |
+| VK_KANA | 21 | 0x15 | IME Kana/Hangul mode |
+| VK_JUNJA | 23 | 0x17 | IME Junja mode |
+| VK_FINAL | 24 | 0x18 | IME Final mode |
+| VK_HANJA | 25 | 0x19 | IME Hanja/Kanji mode |
+| VK_CONVERT | 28 | 0x1C | IME Convert |
+| VK_NONCONVERT | 29 | 0x1D | IME Non-Convert |
 | VK_ESCAPE | 27 | 0x1B | Esc |
 | VK_SPACE | 32 | 0x20 | Spacebar |
 | VK_PRIOR | 33 | 0x21 | Page Up |
@@ -1586,8 +1767,13 @@ Common Windows virtual key codes used with `HKEY`, `HOTK`, `WAIT -cont`, and `SE
 | VK_UP | 38 | 0x26 | Up Arrow |
 | VK_RIGHT | 39 | 0x27 | Right Arrow |
 | VK_DOWN | 40 | 0x28 | Down Arrow |
+| VK_SELECT | 41 | 0x29 | Select key |
+| VK_PRINT | 42 | 0x2A | Print key |
+| VK_EXECUTE | 43 | 0x2B | Execute key |
+| VK_SNAPSHOT | 44 | 0x2C | Print Screen |
 | VK_INSERT | 45 | 0x2D | Insert |
 | VK_DELETE | 46 | 0x2E | Delete |
+| VK_HELP | 47 | 0x2F | Help key |
 | VK_0 | 48 | 0x30 | 0 |
 | VK_1 | 49 | 0x31 | 1 |
 | VK_2 | 50 | 0x32 | 2 |
@@ -1654,14 +1840,26 @@ Common Windows virtual key codes used with `HKEY`, `HOTK`, `WAIT -cont`, and `SE
 | VK_F10 | 121 | 0x79 | F10 |
 | VK_F11 | 122 | 0x7A | F11 |
 | VK_F12 | 123 | 0x7B | F12 |
+| VK_F13 | 124 | 0x7C | F13 |
+| VK_F14 | 125 | 0x7D | F14 |
+| VK_F15 | 126 | 0x7E | F15 |
+| VK_F16 | 127 | 0x7F | F16 |
+| VK_F17 | 128 | 0x80 | F17 |
+| VK_F18 | 129 | 0x81 | F18 |
+| VK_F19 | 130 | 0x82 | F19 |
+| VK_F20 | 131 | 0x83 | F20 |
+| VK_F21 | 132 | 0x84 | F21 |
+| VK_F22 | 133 | 0x85 | F22 |
+| VK_F23 | 134 | 0x86 | F23 |
+| VK_F24 | 135 | 0x87 | F24 |
 | VK_NUMLOCK | 144 | 0x90 | Num Lock |
 | VK_SCROLL | 145 | 0x91 | Scroll Lock |
 | VK_LSHIFT | 160 | 0xA0 | Left Shift |
 | VK_RSHIFT | 161 | 0xA1 | Right Shift |
 | VK_LCONTROL | 162 | 0xA2 | Left Ctrl |
 | VK_RCONTROL | 163 | 0xA3 | Right Ctrl |
-| VK_LMENU | 164 | 0xA4 | Left Alt |
-| VK_RMENU | 165 | 0xA5 | Right Alt |
+| VK_LMENU | 164 | 0xA4 | Left Alt (also VK_LALT) |
+| VK_RMENU | 165 | 0xA5 | Right Alt (also VK_RALT) |
 | VK_BROWSER_BACK | 166 | 0xA6 | Browser Back |
 | VK_BROWSER_FORWARD | 167 | 0xA7 | Browser Forward |
 | VK_VOLUME_MUTE | 173 | 0xAD | Volume Mute |

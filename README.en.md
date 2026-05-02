@@ -4,7 +4,7 @@
 
 [简体中文](./README.md) | English
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
@@ -18,24 +18,26 @@ PECMD Pro Max is a **Claude Code skill** that teaches AI coding assistants to wr
 pecmd-pro-max/
 ├── README.md                        ← 简体中文
 ├── README.en.md                     ← You're reading it
-├── SKILL.md                         ← Main skill file — mental model, variable system, patterns, traps
+├── SKILL.md                         ← Main skill file — mental model, variable system, patterns, traps (1233 lines)
 └── references/
-    ├── commands-full.md             ← Complete 110+ command reference (incl. BROW/TREE/LAMBDA/SBAR) + VK keys
-    ├── codebook.md                  ← 68 real-world code patterns (disk, API callbacks, GUI, buffers, etc.)
-    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (22 control types)
-    └── pe-startup.md                ← WinPE boot flow, environment limitations, version differences
+    ├── commands-full.md             ← Complete 110+ command reference + ENVI @ properties + DLL type system + VK keys (1890 lines)
+    ├── codebook.md                  ← 77 real-world code patterns (disk, API callbacks, GUI, buffers, TABS cross-page, etc.) (2720 lines)
+    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (TREE, SBAR, 24 controls/sub-windows) (1343 lines)
+    └── pe-startup.md                ← WinPE boot flow, 8 environment limitations, 3 generations of PE version differences
 ```
 
 ## Key features
 
 - **Three-tier variable system explained** — environment vs PE-local vs PE-global, indirect dereference, deferral, return-by-reference, hex/raw-buffer allocation, binary compare/convert
-- **110+ command reference** — every PECMD command with syntax, return values, gotchas, and VK key codes (incl. BROW, TREE, LAMBDA, SBAR, IPAD, BLOCK)
-- **68 battle-tested code patterns** — disk enumeration, device IOCTL, Win32 API callbacks, GUID construction, buffer templates, ICO extraction, GDI drawing, mouse simulation
-- **Complete GUI reference** — every control type (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `IPAD`...), message system, icons, styles
+- **110+ command reference** — every PECMD command with full syntax, return values, gotchas, and VK key codes (incl. BROW, TREE, LAMBDA, SBAR, IPAD, BLOCK, DTIM, SLID, SPIN)
+- **77 battle-tested code patterns** — disk enumeration, device IOCTL, Win32 API callbacks, GUID construction, buffer templates, ICO extraction, GDI drawing, mouse simulation, TABS cross-page access, thread variable safety
+- **Complete GUI reference** — all 24 controls & sub-windows (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `IPAD`, `TREE`, `SBAR`...), ENVI @ properties full reference, message system, icons, styles
 - **WinPE boot flow** — from `winpeshl.exe` → `PECMD MAIN PECMD.INI` through to `EXPLORER.EXE`, with `WinXShell` integration, driver loading, and version-specific behavior
-- **25 common traps** — comment marker rules, CALC spacing, FIND vs IFEX behavior, thread safety, Visable/Visible distinction, mouse simulation, and more
+- **50 built-in variables table** — path/shell vars, process/thread vars, window/GUI vars, script/runtime vars, command-result vars
+- **20 ENVI^ runtime control commands** — EnviMode, ForceLocal, WndProc, Alias, memvar, LoadPlugin, and more
 - **ForceLocal + EnviMode defaults** — ensures every generated script uses the safest variable scoping by default
 - **Code organization rules** — `_SUB` declaration at parse time vs runtime, `SET^` Win32 callback binding, `CALL @` variants cheat sheet
+- **ENVI @ control properties reference** — universal, EDIT/ITEM/window-specific, TABL 30+ operations, TREE 10+ operations, cross-process control
 
 ## Quick start
 

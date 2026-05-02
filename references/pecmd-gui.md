@@ -161,6 +161,54 @@ ENVI @CtrlName.ExStyle=-0x80                            // remove extended style
 ENVI @CtrlName.*del=                                     // destroy control (remove from window)
 ENVI @CtrlName.InvalidateRect=                          // force full redraw
 ENVI @CtrlName.InvalidateRect=10:20:100:50               // redraw region (l:t:w:h)
+ENVI @CtrlName.InvalidateRect=<L:T:R:B>                  // redraw by LTRB coordinates
+ENVI @CtrlName.InvalidateRect=#WID                       // invalidate by window handle
+ENVI @CtrlName.InvalidateRect=@SubNAME                   // invalidate by sub-window name
+```
+
+#### Advanced Control Properties
+
+```wcs
+ENVI @CtrlName.cmd=command                                // dynamic command binding
+ENVI @CtrlName.cmd=?var                                   // query command (requires QueryCmd=1)
+ENVI @CtrlName.nxp=                                       // disable XP visual style
+ENVI @CtrlName.trans=1[*]                                 // 0x1=bkgd transparent, 0x2=full, *=transparent color
+ENVI @CtrlName.percent=[%][R|L|C|V|E|F][:bg:prog:text]  // progress background on any control
+ENVI @CtrlName.MouseCapture=1|0                          // mouse capture mode A
+ENVI @CtrlName.MouseCapture=#1|#0                        // mouse capture mode B (by handle)
+```
+
+#### EDIT-Specific
+
+```wcs
+ENVI @Ed.ReadOnly=0|1                                     // 0=editable, 1=read-only
+ENVI @Ed.LINE=0|1|-1|:N                                   // scroll to line (0/1=top, -1=bottom, :N=relative)
+```
+
+#### ITEM/BUTTON-Specific
+
+```wcs
+ENVI @Btn.color=0xRRGGBB                                  // set text color
+```
+
+#### Window-Level Properties
+
+```wcs
+ENVI @Wnd.Paint=callbackFunc                              // canvas callback (params: HDC, width, height)
+ENVI @Wnd.style=[@*]remove[:add]                          // modify window styles (@*=cross-process)
+ENVI @Wnd.HitTest=[-]height[:w:x:y]                       // drag hit-test (0=cancel, -=semi-transparent)
+ENVI @Wnd.Font=size[:name[style]]                         // set window font
+ENVI @Wnd.trans=0|1|2[*]                                 // 0x1=bkgd, 0x2=full, *=transparent color
+```
+
+#### Cross-Process Operations (using WID)
+
+```wcs
+ENVI @@Enable=?WID:varName                                // query cross-process enable state
+ENVI @@IsWindow=?WID:varName                              // check if WID is valid window
+ENVI @@style=%WID%:[@*]remove:add                        // cross-process style change
+ENVI @@percent=WID:...                                     // cross-process progress
+ENVI @@<win|mess|help|login>.font=                         // set font for system dialogs
 ```
 
 #### Multiple Controls Simultaneously
@@ -922,7 +970,90 @@ MENU -sub:ParentMenuItem -                                 // separator in subme
 
 ---
 
-### 4.22 SCRN — Screen Capture
+### 4.22 TREE — Tree View Control
+
+```wcs
+TREE [-font:... -color:...] [*] [Name],LxTyWwHh,[ImageSource],[Data],[Status]
+```
+
+Hierarchical tree with expandable/collapsible nodes. `*` = auto-recycle. Must be inside a `_SUB` window.
+
+**Status flags:**
+
+| Flag | Description |
+|------|-------------|
+| `0x1` | HASBUTTONS — show +/- buttons |
+| `0x2` | HASLINES — show lines between nodes |
+| `0x4` | LINESATROOT — lines connect to root |
+| `0x8` | EDITLABELS — user can edit node labels |
+| `0x100` | CHECKBOXES — each node has a checkbox |
+| `0x400` | SINGLEEXPAND — single-click expand |
+| `0x800` | INFOTIP — info tooltips on hover |
+| `0x1000` | FULLROWSELECT — entire row highlights |
+| `0x2000` | NOSCROLL — no scrollbars |
+| `0x4200` | TRACKSELECT — hot tracking |
+| `0x40000` | NONEVENHEIGHT — variable row heights |
+| `0x80000` | NOHSCROLL — no horizontal scrollbar |
+
+**Data format:** `<iconIdx:selIconIdx>Text`, nodes separated by `0x09` (TAB), child start `0x0b`, child end `0x0c`.
+
+```wcs
+TREE Tr1,L10T10W300H200,shell32.dll,<0:1>Root\t<1:2>Child1\x0b<2:3>Grandchild\x0c<1:2>Child2,0x100
+```
+
+**Operations:**
+```wcs
+// Selection
+ENVI @Tr1.Sel=nodeChain[;[*~#]val]    // set selection (*=multi, ~=show, #=focus)
+ENVI @Tr1.Sel=?[.][@*]var[;posName]   // query (.=mouse pos, @=handle, *=multi)
+ENVI @Tr1.Sel=?.;&&rowVar;&&colVar    // query node at mouse position
+
+// Data
+ENVI @Tr1.Val=[>+][node][*[*]$][#];val // set node (>insert, +append, *multi, #trim)
+ENVI @Tr1.Val=?*[+$][node];var        // query (+children, $without children)
+ENVI @Tr1.Val=?**[+$~[~]-#][node];var // get all node data
+
+// Checkbox
+ENVI @Tr1.Check=node;0|1|2             // set/get checkbox (2=toggle)
+
+// State
+ENVI @Tr1.Enable=~node;val             // gray state (0=normal, 1=grayed)
+
+// Expand/Collapse
+ENVI @Tr1.Expand=[?]node;val           // 1=collapse, 2=expand, 3=toggle
+
+// Position
+ENVI @Tr1.UPos=?[#]node;L;T;R;B      // query node rectangle
+
+// Handle mapping
+ENVI @Tr1.hID=[~]nodeChain|*hID;var   // node chain ↔ tree item handle
+```
+
+---
+
+### 4.23 SBAR — Standalone Scrollbar
+
+```wcs
+SBAR [-left|-right|-color:barColor:thumbColor:[*]bindTarget] [*] Name,LxTyWwHh,[ValueInfo],[EventCmd],[Status]
+```
+
+Standalone scrollbar control. `*` = auto-recycle. Must be inside a `_SUB` window.
+
+**Value info:** `[initialValue][:endValue][:initValue][:pageSize]`, default `0:100:0`.
+
+**Status:** negative=disabled, `0x10`=invisible, `0x40`=horizontal.
+
+**Bind target:** `-color:fg:bg:*TargetName` attaches scrollbar to a control for scrolling.
+
+**Operations:**
+```wcs
+ENVI @Sbar.VAL=[cur][:start][:end][:pageSize]  // set value info
+ENVI @Sbar.VAL=?[curVar][:startVar][:endVar]   // query
+```
+
+---
+
+### 4.24 SCRN — Screen Capture
 
 ```wcs
 SCRN [-cap] [-gui] Name,[filePath],[shape],[flags]

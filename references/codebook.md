@@ -2483,6 +2483,150 @@ REGI HKCU\PECMD_U\var=%val%   // CMD reads via reg query
 
 ---
 
+## 72. TABS Cross-Page Control Access
+
+### Access sibling page controls from a child function
+
+```wcs
+_SUB Page1,W289H249,P1,,,#
+    LIST L01,L18T20W240H20,,,,0x100
+_END
+_SUB Page2,W289H249,P2,,,#
+    LIST L02,L18T20W240H20,,,,0x100
+_END
+_SUB WIN3,W350H333,Tab Switch,
+    TABS TABS1,L21T4W300H188,Page1:Name1:Title1:tip1;Page2:Name2:Title2:tip2
+    ITEM ITEM2,L218T272W96H30,Close,KILL \
+_END
+
+// From a child function (e.g., called by Page1's event handler):
+_SUB ADD2LIST
+    ENVI &&PARENT=-:-:                               // two levels up in execution stack
+    ENVI @%&PARENT%Name1:L01.VAL=%&ToList%           // access Page1's LIST
+    ENVI @%&PARENT%Name2:L02.VAL=%&ToList%           // access Page2's LIST
+_END
+
+// Shortcut from parent window (WIN3 itself):
+// ENVI @Name1:L01.VAL=%&ToList%   // no "-" needed when directly in parent
+```
+
+Key: `-` navigates UP the execution stack (not window hierarchy). Each `-` = one level.
+Names navigate DOWN through the window-control tree.
+
+---
+
+## 73. Thread Variable Async Conflict & Fix
+
+### Problem: shared variable race condition
+
+```wcs
+// BUG: I is shared in persistent stack, child thread may see stale value
+SET &I=1
+LOOP %I%<10,
+{
+    SET &J=%I%
+    THREAD* TEAM WAIT 100| MESS I=%&I% J=%J%       // I may be wrong!
+    CALC I=%I% + 1
+}
+```
+
+### Fix 1: copy to local before spawning
+
+```wcs
+{
+    SET &I2=%I%                                       // copy to local
+    THREAD* TEAM WAIT 100| MESS I=%&I2% J=%J%        // I2 is safe
+    CALC I=%I% + 1
+}
+```
+
+### Fix 2: use THREAD$ for pre-interpretation
+
+```wcs
+{
+    THREAD*$ TEAM WAIT 100| MESS I=%&I% J=%J%        // %&I% resolved BEFORE thread starts
+    CALC I=%I% + 1
+}
+```
+
+### THREAD vs THREAD* variable sharing rules
+
+| Context | THREAD (no *) | THREAD* (with *) |
+|---------|---------------|-------------------|
+| Regular function `{}` block | Copy (isolated) | Copy (isolated) |
+| Window `_SUB` or `_SUB F,*` | Copy (isolated) | **Shared** (direct link) |
+| `{}` inside window `_SUB` | Copy (isolated) | Copy (isolated — `{}` demotes to temporary) |
+
+---
+
+## 74. Registry Key/Value/Data Existence Check
+
+```wcs
+// Check if KEY exists:
+REGI ?HKCU\Software\MicrosoftXxX\,&&VT
+FIND $%&VT%=ERROR, MESS KEY does not exist!  MESS KEY exists
+
+// Check if VALUE exists (key must exist):
+REGI ?HKCU\Software\Microsoft\ABC,&&VT
+FIND $%&VT%=ERROR, MESS Value does not exist!  MESS Value exists
+
+// Check if DATA exists:
+REGI ?HKCU\Software\Microsoft\,&&VT
+FIND $%&VT%=ERROR,! { MESS KEY does not exist }
+FIND $%&VT%<>ERROR,
+{
+    FIND $%&VT%=NI, MESS DATA does not exist!  MESS DATA exists
+}
+```
+
+---
+
+## 75. File vs Directory Detection
+
+```wcs
+FDIR --fullfile &&F=%&NAME1%
+IFEX %&F%,   SET &bfile=1                           // file or directory exists
+IFEX %&F%\,  SET &bfile=0                           // trailing slash = it's a directory
+FIND $""="%&NAME1", SET &bfile=0                    // empty input check
+```
+
+---
+
+## 76. Random String Generation
+
+```wcs
+SET &CSet=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+STRL * &&LCSET=CSet
+SET &V=
+SET &n=10                                            // desired length
+LOOP #%n%>0,
+{
+    CALC n=%n% - 1
+    ^CALC &&i=%RANDOM% % %LCSET% + 1
+    MSTR * &&vi=%i%,1,CSet
+    SET< V=%vi%
+}
+// &V now contains 10 random alphanumeric characters
+```
+
+---
+
+## 77. System Font Charset Constants
+
+Useful when setting fonts via `ENVI @ctrl.Font=size:name:style:charset`.
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| ANSI_CHARSET | 0 | Western |
+| DEFAULT_CHARSET | 1 | System default |
+| GB2312_CHARSET | 134 | Simplified Chinese |
+| CHINESEBIG5_CHARSET | 136 | Traditional Chinese |
+| SHIFTJIS_CHARSET | 128 | Japanese |
+| HANGEUL_CHARSET | 129 | Korean |
+| OEM_CHARSET | 255 | OEM codepage |
+
+---
+
 ### Pattern Index Cross-Reference
 
 Patterns 43-60 above use the same PECMD2012 API as patterns 1-42. Both `SET-long`/`SET?int` and `ENVI-long`/`ENVI?int` are valid PECMD syntax for buffer operations — this codebook standardizes on the `SET-*` form for consistency.
@@ -2568,3 +2712,9 @@ Real PECMD code from the Chinese WinPE community overwhelmingly uses Chinese var
 | 69 | WM_DROPFILES Drag-and-Drop | File drag-and-drop handler for windows/controls |
 | 70 | RICHEDIT Rich Text Formatting | Rich text color, font, range formatting |
 | 71 | IMAG Advanced (GIF Animation & Dynamic Update) | Animated GIF, dynamic image update, image button |
+| 72 | TABS Cross-Page Control Access | Access sibling page controls from child functions |
+| 73 | Thread Variable Async Conflict & Fix | THREAD*/THREAD$ race condition patterns |
+| 74 | Registry Key/Value/Data Existence Check | REGI ? query for existence validation |
+| 75 | File vs Directory Detection | FDIR + IFEX trailing-slash technique |
+| 76 | Random String Generation | RANDOM + MSTR + CALC loop |
+| 77 | System Font Charset Constants | Font charset reference for ENVI @Font |

@@ -4,7 +4,7 @@
 
 简体中文 | [English](./README.en.md)
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
@@ -18,24 +18,26 @@ PECMD Pro Max 是一个 **AI 编码助手技能文件**，教会 AI 如何编写
 pecmd-pro-max/
 ├── README.md                        ← 你正在阅读
 ├── README.en.md                     ← English version
-├── SKILL.md                         ← 主技能文件 — 心智模型、变量系统、模式、陷阱
+├── SKILL.md                         ← 主技能文件 — 心智模型、变量系统、模式、陷阱（1233行）
 └── references/
-    ├── commands-full.md             ← 110+ 条命令完整参考（含新增 BROW/TREE/LAMBDA/SBAR等）+ VK键码
-    ├── codebook.md                  ← 68 个实战代码模式（分区、设备枚举、GUI、回调、缓冲区等）
-    ├── pecmd-gui.md                 ← 完整 GUI 控件与窗口系统参考（22种控件）
-    └── pe-startup.md                ← WinPE 启动流程、环境限制、版本差异
+    ├── commands-full.md             ← 110+ 条命令完整参考 + ENVI @ 控件属性 + DLL调用类型系统 + VK键码（1890行）
+    ├── codebook.md                  ← 77 个实战代码模式（分区、设备枚举、GUI、回调、缓冲区、TABS跨页等）（2720行）
+    ├── pecmd-gui.md                 ← 完整 GUI 控件与窗口系统参考（TREE、SBAR、24种控件/子窗口）（1343行）
+    └── pe-startup.md                ← WinPE 启动流程、8项环境限制、3代PE版本差异
 ```
 
 ## 核心特性
 
 - **三层变量系统详解** —— 环境变量 vs PE-局部 vs PE-全局，间接引用、延迟展开、引用返回、十六进制/原始缓冲区分配、二进制比较/转换
-- **110+ 命令参考** —— 每条 PECMD 命令包含语法、返回值、陷阱说明，附 VK 键码表（含新增 BROW、TREE、LAMBDA、SBAR、IPAD、BLOCK）
-- **68 个经过实战验证的代码模式** —— 磁盘枚举、设备IOCTL、Win32 API回调、GUID构造、缓冲区模板、ICO提取、GDI绘图、鼠标模拟等
-- **完整 GUI 参考** —— 所有控件类型（`LABE`、`EDIT`、`CHEK`、`RADI`、`IMAG`、`TABL`、`LIST`、`MEMO`、`IPAD`...）、消息系统、图标、样式
+- **110+ 命令参考** —— 每条 PECMD 命令包含完整语法、返回值、陷阱说明（含新增 BROW、TREE、LAMBDA、SBAR、IPAD、BLOCK、DTIM、SLID、SPIN）
+- **77 个经过实战验证的代码模式** —— 磁盘枚举、设备IOCTL、Win32 API回调、GUID构造、缓冲区模板、ICO提取、GDI绘图、鼠标模拟、TABS跨页访问、线程变量安全
+- **完整 GUI 参考** —— 所有24种控件与子窗口（`LABE`、`EDIT`、`CHEK`、`RADI`、`IMAG`、`TABL`、`LIST`、`MEMO`、`IPAD`、`TREE`、`SBAR`...）、ENVI @ 控件属性大全、消息系统、图标、样式
 - **WinPE 启动流程** —— 从 `winpeshl.exe` → `PECMD MAIN PECMD.INI` 直至 `EXPLORER.EXE`，包含 `WinXShell` 集成、驱动加载和版本特定行为
-- **25 条常见陷阱** —— 注释标记规则、CALC 空格、FIND vs IFEX 行为、线程安全、Visable/Visible 区别、鼠标模拟等
+- **50 个内置变量全表** —— 路径/Shell变量、进程/线程变量、窗口/GUI变量、脚本/运行时变量、命令结果变量
+- **20 个 ENVI^ 运行时控制命令** —— EnviMode、ForceLocal、WndProc、Alias、memvar、LoadPlugin 等
 - **ForceLocal + EnviMode 默认值** —— 确保每个生成的脚本都使用最安全的变量作用域
 - **代码组织规则** —— `_SUB` 声明时解析 vs 运行时调用、`SET^` Win32 回调绑定、`CALL @` 变体速查表
+- **ENVI @ 控件属性大全** —— 通用属性、EDIT/ITEM/窗口专用、TABL 30+ 操作、TREE 10+ 操作、跨进程控制
 
 ## 快速上手
 

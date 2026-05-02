@@ -1,6 +1,6 @@
 ---
 name: pecmd-pro-max
-version: 1.1.0
+version: 1.2.0
 description: |
   PECMD2012 scripting for WinPE — lightweight Windows GUIs, system
   tools, boot/init scripts, and automation. Use for .wcs/.wci/.wce files,
@@ -97,13 +97,22 @@ SET$ &TAB=09
 | Command | Purpose |
 |---------|---------|
 | `ENVI^ EXPORTLOCAL=1\|0\|&1` | Control PE variable inheritance to sub-levels. `1` = propagate all PE vars to child `_SUB`/`CALL`; `0` = isolate; `&1` = propagate to all sub-levels recursively |
-| `ENVI^ EnviBroad=0\|1\|-` | Control `$`/`#` environment variable broadcast. `0` = no broadcast; `1` = broadcast; `-` = query current mode |
+| `ENVI^ EnviBroad=0\|1\|-` | Control `$`/`#` environment variable broadcast. `0` = no broadcast; `1` = broadcast; `-` = background broadcast |
 | `ENVI^ Clipboard=text` | Write text to the Windows clipboard |
 | `ENVI^ Clipboard?=var` | Read clipboard content into a variable (use `?=` to query) |
 | `ENVI^ DisX64=1` | Disable WOW64 filesystem redirection (when 32-bit PECMD runs on 64-bit Windows, prevents automatic `System32`→`SysWOW64` path redirection) |
-| `ENVI^ LoadEnvi=file` | Load environment variables from a file into the process environment block |
-| `ENVI^ Arg=*` | Split words into `%1`, `%2`, etc. parameters |
+| `ENVI^ LoadEnvi [path] [var]` | Reload environment variables from registry. `HKCU\path` or `-` to reload all |
+| `ENVI^ Arg=*[*][chars]str` | Split words into `%1`, `%2`, etc. `**` = delimiters become dummy args |
 | `ENVI^ HelpColor=[*cmdH] [fg][#bg]` | Set HELP display colors |
+| `ENVI^ WndProc[N][C][,ptrVar]` | Bind callback for window procedure (N=1/2/3, C=C convention) |
+| `ENVI^ Alias [-opt] name=[cmdPrefix]` | Define command alias. `-opt` = optimized parsing |
+| `Envi^ __arg=0\|1` | Enable `&&__arg` parameter table (default off) |
+| `ENVI^ memvar=[?ret,][:bytes:]offset,val` | Read/write PECMD internal memory variables |
+| `ENVI^ zero=0\|1` | Privacy mode: clear memory on exit (default off) |
+| `ENVI^ QueryCmd=1` | Enable dynamic command via `ENVI @ctrl.cmd[?]=var\|cmd` |
+| `ENVI^ logs_ln=0\|1` | LOGS: toggle line number display |
+| `ENVI^ logs_np=0\|-` | LOGS: toggle no-pause mode |
+| `ENVI^ LoadPlugin=[basename]` | Set plugin base filename (default = PECMD program name) |
 | `ENVI @@TaskIcoMenu=0\|1\|2` | Toggle default PECMD tray menu (off/on/toggle) |
 | `ENVI @@DeskTopFresh=[clear][;][1\|2\|4\|8\|16][;[-+]path]` | Force desktop refresh |
 
@@ -744,39 +753,81 @@ SET~ &&val=Arr.%&row%.%&col%                          // indirect read
 
 ## $10 BUILT-IN ENVIRONMENT VARIABLES
 
+**Path / Shell variables (use `%name%` or `%&name%`):**
+
 | Variable | Scope | Meaning |
 |----------|-------|---------|
 | `%CurDir%` / `%&CurDir%` | PE/Env | Current script directory |
 | `%CurFile%` / `%&CurFile%` | PE/Env | Current script full path |
+| `%CurDrv%` / `%&CurDrv%` | PE/Env | Drive letter of current script partition |
 | `%MyName%` | Env | PECMD.EXE full path |
-| `%Desktop%` | Env | Desktop directory (use `%&Desktop%` for PE version) |
+| `%Desktop%` | Env | Desktop directory |
 | `%SystemRoot%` | Env | Windows directory |
-| `%&bX64%` | PE | 3=64bit PECMD, 1=32bit on 64, 0=32bit on 32 |
-| `%&PECMDVER%` | PE | PECMD version string |
+| `%StartMenu%` | Env | Start Menu directory |
+| `%Startup%` | Env | Startup menu directory |
+| `%Programs%` | Env | Programs menu directory |
+| `%SendTo%` | Env | SendTo directory |
+| `%Personal%` | Env | My Documents directory |
+| `%Favorites%` | Env | Favorites directory |
+| `%QuickLaunch%` | Env | Quick Launch bar directory |
+| `%IECache%` | Env | IE temporary cache directory |
+
+**Process / Thread variables:**
+
+| Variable | Scope | Meaning |
+|----------|-------|---------|
+| `%&__PID%` | PE | Current process ID |
+| `%&__PPID%` | PE | Parent process ID |
+| `%&__TID%` | PE | Current thread ID |
+| `%&__LastPID%` | PE | Last created process/thread PID |
+| `%&__LastTID%` | PE | Last created thread ID |
+| `%&__HINST%` | PE | Process module handle (HINSTANCE) |
+| `%&bX64%` | PE | 3=64bit PECMD on 64bit OS, 1=32bit PECMD on 64bit OS, 0=32bit on 32bit |
+| `%&ptrlen%` | PE | Pointer size in bytes (4=x86, 8=x64) |
+
+**Window / GUI variables:**
+
+| Variable | Scope | Meaning |
+|----------|-------|---------|
 | `%&__WinID%` | PE | Current window HWND |
 | `%&__LastWinID%` | PE | Last created window HWND |
-| `%&__PID%` | PE | Current process ID |
-| `%&__LastPID%` | PE | Last created process/thread PID |
-| `%&__TID%` | PE | Current thread ID |
-| `%&__LastTID%` | PE | Last created thread ID |
-| `%&&__MAIN__%` | PE | 1 when running as main script (0 when IMPORTed) |
-| `%RANDOM%` | Env | Random 63-bit integer (changes each read) |
-| `%&&ERROR%` / `%&ERROR%` | PE | Last command error code |
-| `%&&ERRORLEVEL%` | PE | Exit code of last EXEC-waited program |
-| `%&__OldDir%` | PE | Directory before LOAD or at startup |
-| `%&_CD%` / `%_CD%` | PE | Real-time current working directory |
-| `%&__PPID%` | PE | Parent process ID |
-| `%&__HINST%` | PE | Process module handle |
-| `%&SYSCODEPAGE%` | PE | System language codepage number |
-| `%&PeExe%` | PE | 1=normal EXE, 0=built-in script, -1=initialization |
 | `%&__THIS%` | PE | Unique cookie identifying current PE call stack |
-| `%&&__RET%` | PE | Convention: function return variable |
 | `%&__NMHDR.idFrom%` | PE | WM_NOTIFY: control ID |
 | `%&__NMHDR.code%` | PE | WM_NOTIFY: notification code |
 | `%&__NMHDR.hwndFrom%` | PE | WM_NOTIFY: sender HWND |
 | `%&__wParam.wID%` | PE | WM_COMMAND: control ID |
 | `%&__wParam.wNotifyCode%` | PE | WM_COMMAND: notification code |
-| `%PECMDBUILD%` | Env | PECMD build date |
+| `%&WM_PE_BASE%` | PE | PE window message base ID |
+| `%&WM_TaskbarRestart%` | PE | Desktop restart notification message ID |
+| `%&WM_TASKBARBUTTONCREATED%` | PE | Taskbar button created message ID |
+| `%&PE_IDBASE%` | PE | PE control ID base value |
+| `%&PE_MENU_IDBASE%` | PE | Menu control ID base value |
+
+**Script / Runtime variables:**
+
+| Variable | Scope | Meaning |
+|----------|-------|---------|
+| `%&&__MAIN__%` | PE | 1 when running as main script (0 when IMPORTed) |
+| `%&__OldDir%` | PE | Directory before LOAD or at startup |
+| `%&_CD%` / `%_CD%` | PE | Real-time current working directory |
+| `%&&ERROR%` / `%&ERROR%` | PE | Last command error code |
+| `%&&ERRORLEVEL%` | PE | Exit code of last EXEC-waited program |
+| `%&&__RET%` | PE | Convention: function return variable |
+| `%RANDOM%` | Env | Random 63-bit integer (changes each read) |
+| `%&SYSCODEPAGE%` | PE | System language codepage number (936=CN, 950=TW, 437=US) |
+| `%&PeExe%` | PE | 1=normal EXE, 0=built-in script, -1=initialization |
+| `%&PECMDVER%` | PE | PECMD version string |
+| `%&PECMDBUILD%` | PE | PECMD build date |
+| `%&__LOGS%` | PE | Current LOGS file path |
+
+**Command result variables (set after specific commands):**
+
+| Variable | Set by | Meaning |
+|----------|--------|---------|
+| `%&YESNO%` | MESS | "YES" or "NO" after Yes/No dialog |
+| `%&PressKey%` | WAIT | Key press result (A-Z, 0-9, or 0xNN hex) |
+| `%&CurDate%` | DATE | Default output variable for date/time |
+| `%&CurRamDisk%` | RAMD | RAM disk drive letter after RAMD command |
 
 ## $11 ADVANCED PATTERNS (from PECMD补充说明.doc)
 
@@ -887,6 +938,275 @@ FIND $1=1, { MESS inline code }! { MESS ELSE block }
 - **HIVE -super_r** for full admin access to offline registry hives
 - **Variable encoding**: `SITE ?-all,VAR=var` / `SITE ?-sys,VAR=var` for obfuscation
 - **LOGS for PE debugging**: `LOGS **2 *D:\PE.LOG` — realtime logging; final line with `[]` = last completed, `{}` = current
+- **WinPE detect**: `ENVI ?ispe=WinPE` — returns 1 in PE, 0 otherwise
+- **Admin check**: `ENVI ?ret=ISADMIN` — returns 1 if running as admin
+- **Win version**: `ENVI ?ret=WinVer[+][;[^][+]*|file]` — query Windows version
+- **32/64 check**: `ENVI ?str,num=PEBIT` — returns architecture info
+- **File version**: `ENVI ?ret=FVER &var,path\to\file.dll` — get DLL/EXE version
+- **UEFI firmware var**: `ENVI ?ret=FVAR,varName;{GUID}` — read UEFI variable
+- **Window at point**: `ENVI ?ret=PWIN,x,y[,flags]` — get window under cursor
+- **File context menu**: `ENVI @@RMENU=var;filename` — get right-click menu handle
+- **Thread count limits**: 32-bit max ~100 threads, 64-bit max ~3500 threads
+
+### ENVI @ Control Properties — Extended Reference
+
+**Universal (all controls):**
+```
+ENVI @ctrl.bkcolor=0xRRGGBB            // background color; frm<R> for rounded corners
+ENVI @ctrl.Cursor=32649                // set cursor (IDC_HAND=32649, system cursor IDs)
+ENVI @ctrl.cmd[?]=var|command          // dynamic command binding (? requires QueryCmd=1)
+ENVI @ctrl.nxp=                        // disable XP visual style
+ENVI @ctrl.InvalidateRect=<L:T:R:B>   // force repaint region
+ENVI @ctrl.percent=[%][RLCVEF][:bg:progress:text:text]  // progress background
+ENVI @ctrl.MouseCapture=1|0           // mouse capture (A mode)
+ENVI @ctrl.MouseCapture=#1|#0         // mouse capture (B mode, by handle)
+```
+
+**EDIT-specific:**
+```
+ENVI @edit.ReadOnly=0|1                // 0=editable, 1=read-only
+ENVI @edit.LINE=0|1|-1|:N              // scroll to line (0/1=top, -1=bottom, :N=relative)
+```
+
+**ITEM/BUTTON-specific:**
+```
+ENVI @item.color=0xRRGGBB              // text color
+```
+
+**Window-level:**
+```
+ENVI @wnd.Paint=callbackFunc           // canvas callback (params: HDC, width, height)
+ENVI @wnd.trans=0|1|2[*]              // 0x1=bkgd transparent, 0x2=fully transparent, *=transparent color
+ENVI @wnd.style=[@*]remove[:add]      // modify window styles
+ENVI @wnd.HitTest=[-]height[:w:x:y]   // drag hit-test region (0=cancel, -=semi-transparent pass-through)
+ENVI @wnd.Font=size[:name[style]]      // set window font
+```
+
+**Cross-process operations (using window handle WID):**
+```
+ENVI @@Enable=?WID:varName             // query cross-process enable state
+ENVI @@IsWindow=?WID:varName           // check if WID is a valid window
+ENVI @@style=%WID%:[@*]remove:add     // cross-process style change
+ENVI @@percent=WID:...                 // cross-process progress
+ENVI @@<win|mess|help|login>.font=     // set font for system dialogs
+```
+
+**CHEK-specific:**
+```
+ENVI @chek.Check=0|1|2                 // 0=unchecked, 1=checked, 2=toggle
+ENVI @chek.scale=[^[^]][H_Dpi][<sW;sH>][:image]  // modify scale/image
+```
+
+**IMAG-specific:**
+```
+ENVI @img.update=w:h[:x:y:border:width][;[*?|][<X:Y:W;H>]file]  // update image
+ENVI @img.stat=varName                 // check if image is valid
+ENVI @img.delay=ms                     // set GIF animation delay
+```
+
+**MEMO-specific:**
+```
+ENVI @memo.sel=start,len               // select text range
+```
+
+**LIST-specific:**
+```
+ENVI @list.ADD=item                    // add item
+ENVI @list.ADD1=item1|item2            // bulk add (pipe-delimited)
+ENVI @list.ADDSEL=item                 // add and select
+ENVI @list.DEL=item                    // delete item
+ENVI @list.QUERY=;&all                 // get all (NL-delimited)
+ENVI @list.QUERY=row;&line             // get specific row
+ENVI @list.isel=N                      // select by index
+ENVI @list.VAL=:\+item                 // insert at top
+ENVI @list.VAL=-item                   // insert at bottom
+ENVI @list.VAL=:=item                  // replace selection
+```
+
+**PBAR-specific:**
+```
+ENVI @pbar.color=0xRRGGBB             // text color
+ENVI @pbar.percent=[-]smooth           // toggle smooth mode
+```
+
+**TABL (table) — major control, 30+ operations:**
+```
+ENVI @tabl.Sel=row[;val]               // select/deselect row
+ENVI @tabl.Sel=?[var]                  // query selection
+ENVI @tabl.Sel=?.[rowVar][;colVar]     // query mouse position
+ENVI @tabl.Sel=+row;col                // set cell position
+ENVI @tabl.Val=[>]row[*[*[*]][#][.col][/rowH];val  // set row (> = insert, * = multi, # = trim)
+ENVI @tabl.Val=row.col;val             // set cell
+ENVI @tabl.Val=-[*]row[#count]         // delete row(s)
+ENVI @tabl.Val=.-col                   // delete column
+ENVI @tabl.Val=+;[#fg][#bg][=width]:title  // add column
+ENVI @tabl.Val=?row[.col];var          // query cell
+ENVI @tabl.Val=?*;[rowVar][;colVar]    // query row/col count
+ENVI @tabl.Val=?*.*;var                // get all data
+ENVI @tabl.Check=row;0|1|2             // set checkbox
+ENVI @tabl.Check=?[*]var               // get checked rows
+ENVI @tabl.Enable=~row;state           // set row enable/disable
+ENVI @tabl.Enable=~?[*]var             // get disabled rows
+ENVI @tabl.Color=[row].[col];fg[;bg]   // set cell/row/col color
+ENVI @tabl.Color=*row;fg[;bg][/rowH]   // set row color+height
+ENVI @tabl.UPos=?[@#][*row][.col];L;T;R;B  // query position
+ENVI @tabl.Percent=[*row]|[row.col];%[C|R|L|F|K][:bg][:prog][:text]  // progress bar in cell
+ENVI @tabl.font=[^[^]]fontParams       // set font
+```
+
+**TREE (tree view) — 10+ operations:**
+```
+ENVI @tree.Sel=nodeChain[;[*~#]val]    // set/get selection (* = multi, ~ = show, # = focus)
+ENVI @tree.Sel=?[.][@*]var[;posName]   // query (.=mouse, @=handle, *=multi)
+ENVI @tree.hID=[~]nodeChain|*hID;var   // get handle from node chain or vice versa
+ENVI @tree.Val=[>+][node][*[*]$][#];val // set node (> = insert, + = append, * = multi, # = trim)
+ENVI @tree.Val=?*[+$][node];var        // query (+ = children, $ = without children)
+ENVI @tree.Val=?**[+$~[~]-#][node];var // get all node data
+ENVI @tree.Check=node;0|1|2            // set checkbox
+ENVI @tree.Enable=~node;val            // set gray state
+ENVI @tree.UPos=?[#]node;L;T;R;B      // query position
+ENVI @tree.Expand=[?]node;val          // 1=collapse, 2=expand, 3=toggle
+```
+
+**TABS-specific:**
+```
+ENVI @tabs.Select=index                // select page (>=1)
+ENVI @tabs.Title1=text                 // set page title
+ENVI @tabs.Tip1=text                   // set page tooltip
+```
+
+**SPIN/SLID-specific:**
+```
+ENVI @spin.VAL=[cur][:start][:end]     // set value info
+ENVI @spin.VAL=?[curName][:startName][:endName]  // query
+```
+
+**DTIM-specific:**
+```
+ENVI @dtim.VAL=val1;val2;val3          // set year/month/day or hour/minute/second
+ENVI @dtim.VAL=?n1;n2;n3;n4;n5        // query (0=valid, 1=unchecked, -1=failed)
+```
+
+**TIME (timer)-specific:**
+```
+ENVI @timer=0                          // stop timer
+ENVI @timer=interval[<;|,>count]       // start with interval and optional count
+ENVI @timer.*del=                      // destroy timer
+```
+
+### TABS Property Table Access (Cross-Page Control References)
+```wcs
+// In a TABS child page's function, use "-" to navigate UP the execution stack:
+ENVI &&PARENT=-:-:                     // two levels up from child function
+ENVI @%&PARENT%PageName:Ctrl.VAL=data  // access sibling page's control
+// Each "-" = one execution stack level up; names navigate DOWN the control tree
+// Shortcut from parent window: ENVI @PageName:Ctrl.VAL=data (no "-" needed)
+```
+
+### FIND/IFEX Advanced Syntax
+```
+FIND --pid &var,ProcessName            // query process PID
+FIND --pid &var                        // get process CPU ticks
+FIND --wid*@ParentWID &var,WinTitle    // query window IDs (* = prefix match)
+FIND --wid#ParentWID &var,ControlID    // query control's window ID
+FIND --menu &var,WindowID              // query window's MENU handle
+FIND --menu#Index &var,MenuID          // query sub-MENU by index
+FIND --class:ClassName --wid*@ &var    // find windows by class
+FIND $!=%var%,                         // compare against literal "!" (special $ behavior)
+IFEX MEMU=?,&var                       // query free memory
+IFEX MEMA=?,&var                       // query total memory
+IFEX C:\=?,&var                        // query free disk space (bytes)
+FIND C:\=?,&var                        // query total disk space (bytes)
+```
+
+### CALL $ DLL — Extended Type System
+```
+CALL $[? --cd --nrcd --c --[[i]v]ret:[~@]retVar] DLL|*handle[,func][,#]p1,...,p20
+// --qd type prefixes: #=int, <=INT64, *=PEvar, $=string, =raw, >=VARIANT, @=narrow, ~=UTF8
+// --qd:perParamTypes  (e.g. --qd:#,$,*  — params 1=int, 2=string, 3=PEvar)
+// --arg:~alternativeTable  (~ strips quotes from params)
+// .vFun:index  — virtual function index
+// .vFun:[?]funcName  — IDispatch function name
+// --get / --put  — COM property get/set
+// --vret:[~@]retVar  — VARIANT return
+// --co / --nco  — DLL registration control
+// --16  — return in hex
+// --sret  — return symbol count
+// --win  — rundll32-style call (auto-fills __WinID, __HINST)
+// --cpl path  — control panel applet
+// ^< prefix on DLL path = COM DLL loading
+// ^ prefix on DLL path = auto-free when scope exits
+// DLL path = # means func is raw address; func *prefix = take address
+// -DllRegisterServer / -DllUnregisterServer built-in
+```
+
+### X64 Detection Pattern
+```wcs
+// Method 1: built-in variable
+IFEX $3=%&bX64%, MESS 64bit PECMD+OS!MESS 32bit PECMD
+// Method 2: API
+ENVI$ &&info=*100 0
+CALL $**qd kernel32.dll,GetNativeSystemInfo,*info
+ENVI?short &info=&V1
+IFEX $0=%&V1%, MESS 32-bit! MESS 64-bit
+```
+
+### Detecting WinPE
+```wcs
+REGI $HKLM\SYSTEM\CurrentControlSet\Control\SystemStartOptions,&&SSO
+SED &&MNT=?:0,MININT,,%&SSO%
+FIND $%&MNT%=0,MESS NOT IN PE!MESS IN PE
+```
+
+### Random String Generation
+```wcs
+SET &CSet=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+STRL * &&LCSET=CSet
+SET &n=10
+LOOP #%n%>0,
+{ CALC n=%n% - 1
+  ^CALC &&i=%RANDOM% % %LCSET% + 1
+  MSTR * &&vi=%i%,1,CSet
+  SET< V=%vi%
+}
+```
+
+### Converting PECMD Variables to CMD
+```wcs
+// Method 1: WRIT output (best for multiple values)
+WRIT -,$+0,a 111
+WRIT -,$+0,b 222
+// In CMD: FOR /F "tokens=1*" %%i IN (`PECMD LOAD ccc.wcs`) DO SET %%i=%%j
+
+// Method 2: Temp file
+SET tmpf=tmp~%RANDOM%.CMD
+WRIT %tmpf%,$+0,set a=bbb
+CALL .\%tmpf%
+FILE -d %tmpf%
+```
+
+### System Resource Reference Tables
+
+**Resource type numbers (for PUTF/EXEC):**
+| Name | # | Name | # |
+|------|---|------|---|
+| CURSOR | 1 | GROUP_CURSOR | 12 |
+| BITMAP | 2 | GROUP_ICON | 14 |
+| ICON | 3 | VERSION | 16 |
+| MENU | 4 | DLGINCLUDE | 17 |
+| DIALOG | 5 | PLUGPLAY | 19 |
+| STRING | 6 | VXD | 20 |
+| FONTDIR | 7 | ANICURSOR | 21 |
+| FONT | 8 | ANIICON | 22 |
+| ACCELERATOR | 9 | HTML | 23 |
+| RCDATA | 10 | MANIFEST | 24 |
+| MESSAGETABLE | 11 | | |
+
+**Font charset constants:**
+ANSI(0), DEFAULT(1), SYMBOL(2), SHIFTJIS(128), HANGEUL(129), GB2312(134), CHINESEBIG5(136), OEM(255)
+
+**System cursor IDs:**
+IDC_ARROW(32512), IDC_IBEAM(32513), IDC_WAIT(32514), IDC_CROSS(32515), IDC_HAND(32649), IDC_SIZEALL(32646)
 
 ## $12 OUTPUT CONVENTIONS
 
