@@ -5,8 +5,8 @@ description: |
   PECMD2012 WinPE 脚本编程 — 轻量级 Windows GUI、系统工具、启动/初始化
   脚本、自动化。适用于 .wcs/.wci/.wce 文件、磁盘分区、批处理转 PECMD、
   系统信息收集、PE/预安装环境工具、PECMD 代码调试。
-  参考文件：commands-full.md、pecmd-gui.md、pe-startup.md、
-  how-tos/storage.md、how-tos/system.md、how-tos/gui.md、how-tos/net.md。
+  参考文件：references/commands-full.md、references/pecmd-gui.md、references/pe-startup.md、
+  references/how-tos/storage.md、references/how-tos/system.md、references/how-tos/gui.md、references/how-tos/net.md。
 compatibility: 需要 PECMD2012 v1.88+ 解释器。脚本运行于 PECMD/WinCMD 环境，非 cmd.exe。
 ---
 
@@ -29,9 +29,9 @@ PECMD 脚本是一组平铺的顶层语句。从上到下顺序执行。`_SUB` �
 - 循环体内 `EXIT -` 继续下一次迭代；`EXIT LOOP` / `EXIT FORX` 跳出循环
 - 脚本文件常用 `.wcs` 扩展名。中文脚本首行加 `#code=65001` 声明 UTF-8 编码。若首行以 `#!` 开头，编码指令放在第二行。
 
-## $2 变量系统 — 最关键的章节
+## $2 变量系统
 
-PECMD 有**三层**变量体系。搞错这一点是绝大多数 bug 的根源。
+PECMD 有**三层**变量体系。搞错这一点是绝大多数错误的根源。
 
 | 层级 | 语法 | 设置方式 | 作用域 |
 |------|------|----------|--------|
@@ -273,7 +273,7 @@ EXEC* -exe:#101 &out=*embedded.exe                        // 从 PECMD 资源运
 IFEX $1=%&exists%,
 {
     REGI $HKCU\Software\MyApp\WID,&&wid
-    IFEX $%&wid%>0, TEAM ENVI @@Visible=%&wid%:2| ENVI @@POS=%&wid%:::::::1
+    IFEX $%&wid%>0, TEAM ENVI @@Visable=%&wid%:2| ENVI @@POS=%&wid%:::::::1
     EXIT FILE
 }
 LOCK #MyAppLock,&ret2
@@ -309,7 +309,7 @@ LPOS &&pos=needle,,%&haystack%                            // 查找首次出现�
 14. **中文变量名**：PECMD 社区的事实标准。为这个生态系统编写脚本时使用中文名称。
 15. **OnShutdown.wcs**：PECMD 在系统关机/重启/注销前自动运行 `%SystemRoot%\System32\OnShutdown.wcs`。
 16. **`^` 预解释**：`^COMMAND` 将变量展开推迟到执行时（循环中必备）。`^^COMMAND` 预解释两次。
-17. **MSG 上的 `_` 前缀**：控件通知用 `_msg#`；窗口级消息省略 `_`。搞错这一点是非常常见的 bug。
+17. **MSG 上的 `_` 前缀**：控件通知用 `_msg#`；窗口级消息省略 `_`。搞错这一点是非常常见的错误。
 18. **THREAD\* 与 THREAD**：只有持久（窗口）栈中的 THREAD* 共享 PE 变量。在 `{}` 块中，两者都复制。
 19. **FIND 展开规则**：FIND 中的裸标识符被视为字面字符串。始终使用 `FIND $%&var%=值` 引用 PE 变量。
 20. **`@@Visable` 与 `@Visible`**：跨进程用 `ENVI @@Visable=窗口ID:值`。进程内用 `ENVI @控件.Visible=0|1`。

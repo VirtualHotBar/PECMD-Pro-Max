@@ -175,7 +175,7 @@ ENVI @Ctrl.Font=size:name
 ENVI @Ctrl.bkcolor=0xRRGGBB
 ENVI @Ctrl.Cursor=32649           // 手型光标
 ENVI @@POS=wid:l:t:w:h:layer:trans:front:activate
-ENVI @@Visible=wid:0|1|*4        // 跨进程可见性
+ENVI @@Visable=wid:0|1|*4        // 跨进程可见性
 ENVI^ Clipboard=text             // 写入剪贴板
 ENVI^ Clipboard?=var             // 读取剪贴板到变量
 ENVI^ EXPORTLOCAL=1|0|&1         // PE 变量继承：1=传播，0=隔离，&=递归
@@ -676,7 +676,6 @@ DISK [varName],[diskNum],[partNum],function,[USBDriveLetters][,options]
 | `-from:D:` | 从 D: 开始分配盘符 |
 | `-from:UW` | USB 盘符表 "UW" |
 | `-cdrom` | 包含 CDROM |
-```
 
 ---
 

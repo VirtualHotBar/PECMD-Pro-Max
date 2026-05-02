@@ -18,10 +18,10 @@ PECMD Pro Max 是一个 **AI 编码助手技能文件**，教会 AI 如何编写
 pecmd-pro-max/
 ├── README.md                        ← 你正在阅读
 ├── README.en.md                     ← English version
-├── SKILL.md                         ← 主技能文件 — 心智模型、变量系统、关键规则、陷阱（353行）
+├── SKILL.md                         ← 主技能文件 — 心智模型、变量系统、关键规则、陷阱（352行）
 └── references/
     ├── commands-full.md             ← 110+ 条命令完整参考（1576行）
-    ├── pecmd-gui.md                 ← 完整 GUI 控件与窗口系统参考（1996行）
+    ├── pecmd-gui.md                 ← 完整 GUI 控件与窗口系统参考（1994行）
     ├── pe-startup.md                ← WinPE 启动流程、环境限制、PE版本差异
     └── how-tos/
         ├── storage.md               ← 磁盘/分区/文件/注册表/设备 写法示例

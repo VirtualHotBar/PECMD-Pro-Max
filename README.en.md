@@ -18,10 +18,10 @@ PECMD Pro Max is a **Claude Code skill** that teaches AI coding assistants to wr
 pecmd-pro-max/
 ├── README.md                        ← Simplified Chinese
 ├── README.en.md                     ← You're reading it
-├── SKILL.md                         ← Main skill file — mental model, variable system, critical rules, traps (353 lines)
+├── SKILL.md                         ← Main skill file — mental model, variable system, critical rules, traps (352 lines)
 └── references/
     ├── commands-full.md             ← Complete 110+ command reference (1576 lines)
-    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (1996 lines)
+    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (1994 lines)
     ├── pe-startup.md                ← WinPE boot flow, environment limitations, PE version differences
     └── how-tos/
         ├── storage.md               ← Disk/partition/file/registry/device how-tos
@@ -75,12 +75,12 @@ Copy the `pecmd-pro-max/` folder into your AI coding assistant's skills director
 - [Claude Code](https://claude.ai), [OpenCode](https://opencode.ai), or any compatible AI coding tool that supports agent skills
 - [PECMD2012](https://pecmd.net) v1.88+ (the interpreter that runs the generated scripts)
 
-## Recognition
+## License
 
 **NonCopyRight** — this skill is free, open source, and unrestricted. Use it, modify it, ship products with it. No attribution required. No restrictions apply.
 
 ---
 
-源码仓库：[github.com/VirtualHotBar/PECMD-Pro-Max](https://github.com/VirtualHotBar/PECMD-Pro-Max)
+Source repository: [github.com/VirtualHotBar/PECMD-Pro-Max](https://github.com/VirtualHotBar/PECMD-Pro-Max)
 
-ClawHub：[clawhub.ai/virtualhotbar/pecmd-pro-max](https://clawhub.ai/virtualhotbar/pecmd-pro-max)
+ClawHub: [clawhub.ai/virtualhotbar/pecmd-pro-max](https://clawhub.ai/virtualhotbar/pecmd-pro-max)
