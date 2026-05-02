@@ -1,6 +1,6 @@
 ---
 name: pecmd-pro-max
-version: 1.2.2
+version: 1.2.3
 description: |
   PECMD2012 WinPE 脚本编程 — 轻量级 Windows GUI、系统工具、启动/初始化
   脚本、自动化。适用于 .wcs/.wci/.wce 文件、磁盘分区、批处理转 PECMD、
