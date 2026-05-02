@@ -1,5 +1,6 @@
 ---
 name: pecmd-pro-max
+version: 1.0.0
 description: |
   PECMD2012 scripting for WinPE — lightweight Windows GUIs, system
   tools, boot/init scripts, and automation. Use for .wcs/.wci/.wce files,
