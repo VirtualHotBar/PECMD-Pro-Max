@@ -42,7 +42,7 @@ pecmd-pro-max/
 ## 快速上手
 
 ```wcs
-#code=936T950
+#code=65001
 ENVI^ EnviMode=1
 ENVI^ ForceLocal=1
 SET$ &NL=0d 0a

@@ -33,7 +33,7 @@ WinXShell reads its configuration from `WinXShell.xml` and can coexist with PECM
 
 ```wcs
 // PECMD.INI — typical WinPE startup configuration
-#code=936T950
+#code=65001
 
 // 1. Show logo / splash
 LOGO %CurDir%\splash.jpg
@@ -183,7 +183,7 @@ IFEX %SystemDrive%\Tools\Setup.cmd, EXEC =!"%SystemDrive%\Tools\Setup.cmd"
 The absolute minimal PE startup script:
 
 ```wcs
-#code=936T950
+#code=65001
 INIT IU
 SHEL %SystemRoot%\explorer.exe
 WAIT -1

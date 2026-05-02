@@ -297,7 +297,7 @@ KILL \WindowName            // kill specific window
 ### Complete window template [CHINESE]
 
 ```wcs
-#code=936T950
+#code=65001
 ENVI^ EnviMode=1
 ENVI^ ForceLocal=1
 SET$ &NL=0d 0a
@@ -1084,7 +1084,7 @@ ENVI @Btn.color=0x000000#0xFFF0E0#0xFF0000#0xFFE0C0
 Complete property-page pattern: define each sub-window as a `_SUB`, embed them with `SWIN` in the parent, use `TABS.SEL` to switch visible page on tab click.
 
 ```wcs
-#code=936T950
+#code=65001
 ENVI^ EnviMode=1
 ENVI^ ForceLocal=1
 SET$ &NL=0d 0a
@@ -1320,7 +1320,7 @@ FORX *NL &cfg,&&line,
 Use `SENDMSG` to send list-view messages for scroll control. Messages apply to the underlying SysListView32 control.
 
 ```wcs
-#code=936T950
+#code=65001
 SET$ &NL=0d 0a
 SET$ &TAB=09
 
@@ -1463,7 +1463,7 @@ Key points:
 Borderless window with fake title bar built from LABE controls. Handles minimize, close, hover color effects, and window dragging via `WM_NCHITTEST`.
 
 ```wcs
-#code=936T950
+#code=65001
 ENVI^ EnviMode=1
 ENVI^ ForceLocal=1
 

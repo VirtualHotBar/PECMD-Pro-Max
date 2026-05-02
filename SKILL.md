@@ -27,7 +27,7 @@ Key runtime facts:
 - You can run PECMD inside itself: `EXEC =!"%MyNAME%" <command>` — useful for isolated sub-operations
 - `EXIT FILE` terminates the entire script; `EXIT _SUB` returns from the current function
 - `EXIT -` in a loop body continues to the next iteration; `EXIT LOOP` / `EXIT FORX` breaks out
-- Script files typically use `.wcs` extension (or `.wci`, `.wce`). INI files also work. Start with `#code=936T950` on line 1 for GBK-encoded files (the default for Chinese PECMD scripts). If line 1 starts with `#!`, the encoding directive goes on line 2.
+- Script files typically use `.wcs` extension (or `.wci`, `.wce`). INI files also work. Start with `#code=65001` on line 1 for UTF-8 encoded files (the recommended encoding for Chinese PECMD scripts). If line 1 starts with `#!`, the encoding directive goes on line 2.
 
 ## $2 VARIABLE SYSTEM — THE MOST CRITICAL SECTION
 
@@ -83,7 +83,7 @@ SET^ FuncName=0                                 // unbind callback
 ### Standard file header
 
 ```wcs
-#code=936T950                // GBK encoding (omit for English-only scripts)
+#code=65001                // UTF-8 encoding (omit for English-only scripts)
 ENVI^ EnviMode=1
 ENVI^ ForceLocal=1
 SET$ &NL=0d 0a
@@ -724,7 +724,7 @@ SET~ &&val=Arr.%&row%.%&col%                          // indirect read
 4. **FIND vs IFEX**: Both can do string AND numeric comparison. `FIND $` = string comparison (default). `FIND |` = numeric comparison. `IFEX $` = numeric comparison. Don't over-think this — just be explicit with the prefix. The `|` in IFEX is only for compound OR conditions like `IFEX [| cond1 | cond2 ]`.
 5. **Drive letter colon**: `FDRV`, `FORM`, `FIND C:\=?` all need `:` suffix. `FDRV &d=C:` is correct.
 6. **Paths with spaces**: `LOAD "C:\Program Files\a.ini"` — require quotes. Variables: `LOAD %CurDir%\a.ini` may work without quotes.
-7. **File encoding**: Chinese/GBK scripts need `#code=936T950` as line 1 AND must be saved as ANSI/GBK, not UTF-8. For English-only scripts, this is unnecessary.
+7. **File encoding**: Chinese scripts need `#code=65001` as line 1 AND must be saved as UTF-8 (with BOM recommended). For English-only scripts, this is unnecessary.
 8. **Comments ON/OFF**: Command-line mode: comments OFF by default. Script (LOAD) mode: comments ON. Use `COME 0` / `COME 1` to toggle.
 9. **`{` positioning**: File-level and function-level `{` must start at column 1. Inside TEAM/LOOP/IFEX, `{` starts a command group.
 10. **Line continuation**: `\` as the first non-space character on a line merges that line with the previous one (continuation).
@@ -1212,7 +1212,7 @@ IDC_ARROW(32512), IDC_IBEAM(32513), IDC_WAIT(32514), IDC_CROSS(32515), IDC_HAND(
 
 When writing PECMD scripts and tools, follow these conventions:
 
-1. Use `#code=936T950` on line 1 for Chinese scripts, then `ENVI^ EnviMode=1`, then `ENVI^ ForceLocal=1`
+1. Use `#code=65001` on line 1 for Chinese scripts, then `ENVI^ EnviMode=1`, then `ENVI^ ForceLocal=1`
 2. Default to Chinese variable names — this is the de facto standard in the PECMD community
 3. Use PE variables (`&varname`) everywhere unless you specifically need environment variables
 4. Use `TEAM` chaining extensively for compact initialization sequences

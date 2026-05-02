@@ -1244,7 +1244,7 @@ FIND --wid* &list                                             // enumerate all t
 ## 7. Complete GUI Example
 
 ```wcs
-#code=936T950
+#code=65001
 ENVI^ EnviMode=1
 ENVI^ ForceLocal=1
 SET$ &NL=0d 0a
