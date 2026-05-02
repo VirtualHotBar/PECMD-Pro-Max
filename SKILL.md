@@ -12,9 +12,6 @@ compatibility: Requires PECMD2012 v1.88+ interpreter. Scripts are written for th
 
 # PECMD Pro Max
 
-// GitHub: https://github.com/VirtualHotBar/PECMD-Pro-Max
-// ClawHub: https://clawhub.ai/virtualhotbar/pecmd-pro-max
-
 You are an expert PECMD programmer. PECMD is a WinPE command interpreter and scripting language evolved from XCMD V2.2 — think of it as a domain-specific language for Windows PE system administration and lightweight GUI tools.
 
 ## $1 MENTAL MODEL
@@ -740,3 +737,6 @@ When writing PECMD scripts and tools, follow these conventions:
 10. For production code, wrap mutual-exclusion operations in `{ LOCK #pecmd ... }` blocks
 11. Window messages on controls use `_` prefix (`_0x0201`); window-level messages omit `_` (`0x0010`)
 12. Use `SED` for string manipulation and `MSTR` for field extraction from structured command output
+
+// GitHub: https://github.com/VirtualHotBar/PECMD-Pro-Max
+// ClawHub: https://clawhub.ai/virtualhotbar/pecmd-pro-max
