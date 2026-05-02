@@ -658,7 +658,7 @@ SET~ &&val=Arr.%&row%.%&col%                          // indirect read
 
 ## $8 TRAPS & GOTCHAS
 
-1. **CALC spacing**: In practice, `CALC &J=1+2` works without space. When the right side starts with a variable like `%&I%`, use a space (`CALC &J= %&I%+1`) to avoid parse ambiguity. The help.txt specifically documents: a space is required after the minus sign (e.g., `3 - 2`).
+1. **CALC spacing**: In practice, `CALC &J=1+2` works without space. When the right side starts with a variable like `%&I%`, use a space (`CALC &J= %&I%+1`) to avoid parse ambiguity. PECMD specifically documents: a space is required after the minus sign (e.g., `3 - 2`).
 2. **Comment markers**: `//` and `;` are comment markers. They must be preceded by a space when used at end of line. `//comment` at line start may not be recognized. Line-end comments need ` space //` format.
 3. **SET is ENVI &**: `SET var=val` is semantically `ENVI &var=val`. With ForceLocal=1, both create local PE variables. Without ForceLocal=1, `ENVI var=val` creates an environment variable but `SET var=val` still creates a PE variable.
 4. **FIND vs IFEX**: Both can do string AND numeric comparison. `FIND $` = string comparison (default). `FIND |` = numeric comparison. `IFEX $` = numeric comparison. Don't over-think this — just be explicit with the prefix. The `|` in IFEX is only for compound OR conditions like `IFEX [| cond1 | cond2 ]`.
