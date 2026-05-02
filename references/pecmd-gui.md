@@ -1,12 +1,12 @@
-# PECMD2012 GUI Window System Reference
+# PECMD2012 GUI 窗口系统参考
 
-Complete reference for PECMD's window/control system. Covers window definition, all 22 control types, message mapping, lifecycle, and advanced GUI patterns.
+PECMD 窗口/控件系统的完整参考。涵盖窗口定义、全部 22 种控件类型、消息映射、生命周期以及高级 GUI 模式。
 
 ---
 
-## 1. Window Definition
+## 1. 窗口定义
 
-### `_SUB` Structure for Windows
+### `_SUB` 窗口结构
 
 ```wcs
 _SUB WinName,<shape>,<title>,[closeCmd],[icon],[style],[mask],[flags]
@@ -14,334 +14,334 @@ _SUB WinName,<shape>,<title>,[closeCmd],[icon],[style],[mask],[flags]
 _END
 ```
 
-| Field | Syntax | Description |
+| Field | 语法 | 说明 |
 |-------|--------|-------------|
-| **shape** | `L<left>T<top>W<width>H<height>` | Window position and size. Omit `L`/`T` to auto-center. `W`/`H` required. |
-| **title** | `"Window Title"` | Title bar text. Empty string `""` for no title. |
-| **closeCmd** | `KILL \` or any command | Executed when window closes (X button or `KILL`). Omit for default close behavior. |
-| **icon** | `path.ico` or `exe#index` | Window icon. File path or EXE/DLL resource reference. |
-| **style** | `[#][$]number` or `,#` | Window style number. `#` = hex, `$` = decimal. `,#` = hidden window. |
-| **mask** | `[color][*][w:h]bitmap` | Shaped/irregular window region from bitmap. `color` = transparency key. |
-| **flags** | `-flag1 -flag2 ...` | Window behavior flags (see table below). |
+| **shape** | `L<left>T<top>W<width>H<height>` | 窗口位置和大小。省略 `L`/`T` 可自动居中。`W`/`H` 为必填。 |
+| **title** | `"窗口标题"` | 标题栏文字。空字符串 `""` 表示无标题。 |
+| **closeCmd** | `KILL \` 或其他命令 | 窗口关闭时（X 按钮或 `KILL`）执行的命令。省略则使用默认关闭行为。 |
+| **icon** | `path.ico` 或 `exe#index` | 窗口图标。文件路径或 EXE/DLL 资源引用。 |
+| **style** | `[#][$]number` 或 `,#` | 窗口样式编号。`#` = 十六进制，`$` = 十进制。`,#` = 隐藏窗口。 |
+| **mask** | `[color][*][w:h]bitmap` | 基于位图的异形/不规则窗口区域。`color` = 透明色键。 |
+| **flags** | `-flag1 -flag2 ...` | 窗口行为标志（参见下表）。 |
 
-### All Window Flags
+### 全部窗口标志
 
-| Flag | Effect |
+| Flag | 效果 |
 |------|--------|
-| `-top` | Always on top (TOPMOST) |
-| `-nocap` | No title bar / caption |
-| `-nosysmenu` | No system menu (no icon in title bar) |
-| `-nofix` | Window position not fixed; allows default OS placement |
-| `-trap` | Close button does NOT exit; fires closeCmd instead |
-| `-size` | Resizable window (sizing border) |
-| `-maxb` | Enable Maximize button |
-| `-minb` | Enable Minimize button |
-| `-disminb` | Disable (grey out) Minimize button |
-| `-discloseb` | Disable (grey out) Close button |
-| `-nfocus` | Window cannot receive keyboard focus |
-| `-ntab` | Window excluded from Alt+Tab list (tool window) |
-| `-disaltmv` | Disable Alt+arrow-key window move |
-| `-forcenomin` | Prevent window from being minimized |
-| `-scalef` | XP-style DPI font scaling |
-| `-scale[:DPI]` | Win8+ Per-Monitor DPI scaling. `-scale:144` for explicit DPI. |
-| `-nxp` | Disable XP visual styles (flat classic look) |
-| `-csize` | Shape dimensions specify **client area** (excluding title bar/borders) |
-| `-na` | Do not activate (no focus steal on creation) |
-| `-nb` | No border |
+| `-top` | 始终置顶 (TOPMOST) |
+| `-nocap` | 无标题栏/标题 |
+| `-nosysmenu` | 无系统菜单（标题栏无图标） |
+| `-nofix` | 窗口位置不固定；允许操作系统默认放置 |
+| `-trap` | 关闭按钮不退出；改为触发 closeCmd |
+| `-size` | 可调整大小的窗口（可调边框） |
+| `-maxb` | 启用最大化按钮 |
+| `-minb` | 启用最小化按钮 |
+| `-disminb` | 禁用（灰掉）最小化按钮 |
+| `-discloseb` | 禁用（灰掉）关闭按钮 |
+| `-nfocus` | 窗口无法获得键盘焦点 |
+| `-ntab` | 窗口排除在 Alt+Tab 列表之外（工具窗口） |
+| `-disaltmv` | 禁用 Alt+方向键 移动窗口 |
+| `-forcenomin` | 阻止窗口被最小化 |
+| `-scalef` | XP 风格的 DPI 字体缩放 |
+| `-scale[:DPI]` | Win8+ 逐显示器 DPI 缩放。`-scale:144` 指定显式 DPI。 |
+| `-nxp` | 禁用 XP 视觉样式（经典扁平外观） |
+| `-csize` | shape 尺寸指定**客户区**（不包括标题栏/边框） |
+| `-na` | 不激活（创建时不抢夺焦点） |
+| `-nb` | 无边框 |
 
-### Style: Transparency and Hidden Windows
-
-```wcs
-_SUB Win,L20T20W300H200,Title,,,#0x80000000       // transparent window (alpha 0x80)
-_SUB Win,L20T20W300H200,Title,,,$0x80C80000       // transparent window (decimal style)
-_SUB Win,L20T20W300H200,Title,,,#                  // hidden window (,# = create hidden)
-```
-
-### Mask: Shaped / Irregular Windows
+### 样式：透明与隐藏窗口
 
 ```wcs
-_SUB Win,L20T20W300H200,Title,,,0xFFFFFF*mask.bmp // color-keyed shaped window
-_SUB Win,L20T20W300H200,Title,,,*300:200:mask.bmp  // sized bitmap mask
-_SUB Win,L20T20W300H200,Title,,,0x00FF00**mask.bmp // colored mask (green=transparent)
+_SUB Win,L20T20W300H200,Title,,,#0x80000000       // 透明窗口 (alpha 0x80)
+_SUB Win,L20T20W300H200,Title,,,$0x80C80000       // 透明窗口 (十进制样式)
+_SUB Win,L20T20W300H200,Title,,,#                  // 隐藏窗口 (,# = 创建时隐藏)
 ```
 
-- `color`: Transparency color for bitmap-sourced windows (RGB hex: `0xFF0000` = red, `0x000000` = black)
-- `*`: Separator between color and size/source
-- `w:h:bitmap`: Explicit dimensions with bitmap file
-- `*bitmap`: Auto-size bitmap; double-`*` = colored mask mode
+### 遮罩：异形/不规则窗口
+
+```wcs
+_SUB Win,L20T20W300H200,Title,,,0xFFFFFF*mask.bmp // 颜色键异形窗口
+_SUB Win,L20T20W300H200,Title,,,*300:200:mask.bmp  // 指定尺寸的位图遮罩
+_SUB Win,L20T20W300H200,Title,,,0x00FF00**mask.bmp // 彩色遮罩（绿色=透明）
+```
+
+- `color`: 位图源窗口的透明色（RGB 十六进制：`0xFF0000` = 红色，`0x000000` = 黑色）
+- `*`: 颜色与尺寸/源之间的分隔符
+- `w:h:bitmap`: 显式尺寸与位图文件
+- `*bitmap`: 自适配尺寸位图；双 `*` = 彩色遮罩模式
 
 ---
 
-## 2. Control Types Overview
+## 2. 控件类型概览
 
-PECMD exposes 22 control types via dedicated commands. Each creates a specific Windows common control.
+PECMD 通过专用命令提供 22 种控件类型。每种控件创建一个特定的 Windows 通用控件。
 
-| # | Command | Windows Control | Purpose |
+| # | 命令 | Windows 控件 | 用途 |
 |---|---------|-----------------|---------|
-| 1 | `ITEM` | Button | Clickable button with text/image, check states, default action |
-| 2 | `EDIT` | Edit Box | Single/multi-line text input, password mode, rich text |
-| 3 | `MEMO` | Multi-line Edit | Large text area with built-in scrollbars |
-| 4 | `CHEK` | Check Box | Binary/tristate on-off toggle |
-| 5 | `RADI` | Radio Button | Mutually exclusive group selection |
-| 6 | `LIST` | Combo Box | Dropdown list or editable combo, text+image items |
-| 7 | `LABE` | Static Text | Display text, multi-color, images, clickable links |
-| 8 | `IMAG` | Picture Control | BMP/JPG/GIF/AVI/ICO display, icon extraction from EXE/DLL |
-| 9 | `PBAR` | Progress Bar | Visual progress indicator with text overlay |
-| 10 | `SLID` | Slider (Trackbar) | Range slider with configurable min/max |
-| 11 | `SPIN` | Spinner (Up-Down) | Numeric spinner with buddy edit control |
-| 12 | `GROU` | Group Box | Visual grouping frame |
-| 13 | `TABL` | ListView (Report) | Multi-column data grid with checkboxes, icons, sorting |
-| 14 | `TABS` | Tab Control | Property page tabs for sub-window embedding |
-| 15 | `SWIN` | (Custom) | Sub-window/pane container for embedding other windows |
-| 16 | `DTIM` | Date-Time Picker | Date/time selection with configurable display format |
-| 17 | `IPAD` | IP Address Control | IP address entry with dot-separated octets |
-| 18 | `TIME` | Timer | Periodic callback timer (not a visual control) |
-| 19 | `HKEY` | Global Hotkey | System-wide keyboard shortcut registration |
-| 20 | `MENU` | Menu | Popup context menu or window menu bar |
-| 21 | `TIPS` | Tray Icon | System tray notification icon with tooltip and callbacks |
-| 22 | `SCRN` | Screen Capture | Screenshot / region capture (non-visual) |
+| 1 | `ITEM` | 按钮 (Button) | 带文字/图片的可点击按钮，支持选中状态和默认操作 |
+| 2 | `EDIT` | 编辑框 (Edit Box) | 单行/多行文本输入，密码模式，富文本 |
+| 3 | `MEMO` | 多行编辑框 (Multi-line Edit) | 带内置滚动条的大文本区域 |
+| 4 | `CHEK` | 复选框 (Check Box) | 二值/三态开关切换 |
+| 5 | `RADI` | 单选按钮 (Radio Button) | 互斥的组内选择 |
+| 6 | `LIST` | 组合框 (Combo Box) | 下拉列表或可编辑组合框，支持文字+图片项 |
+| 7 | `LABE` | 静态文本 (Static Text) | 显示文本、多色彩、图片、可点击链接 |
+| 8 | `IMAG` | 图片控件 (Picture Control) | BMP/JPG/GIF/AVI/ICO 显示，从 EXE/DLL 提取图标 |
+| 9 | `PBAR` | 进度条 (Progress Bar) | 带文字覆盖层的可视化进度指示器 |
+| 10 | `SLID` | 滑块 (Slider/Trackbar) | 可配置最小/最大值的范围滑块 |
+| 11 | `SPIN` | 微调器 (Spinner/Up-Down) | 与编辑框配对使用的数字微调控件 |
+| 12 | `GROU` | 分组框 (Group Box) | 视觉分组框架 |
+| 13 | `TABL` | 列表视图 (ListView/Report) | 多列数据网格，支持复选框、图标、排序 |
+| 14 | `TABS` | 选项卡控件 (Tab Control) | 属性页选项卡，用于嵌入了窗口 |
+| 15 | `SWIN` | （自定义） | 子窗口/面板容器，用于嵌入其他窗口 |
+| 16 | `DTIM` | 日期时间选择器 (Date-Time Picker) | 日期/时间选择，显示格式可配置 |
+| 17 | `IPAD` | IP 地址控件 (IP Address Control) | 点分八位格式的 IP 地址输入 |
+| 18 | `TIME` | 定时器 (Timer) | 周期性回调定时器（非可视化控件） |
+| 19 | `HKEY` | 全局热键 (Global Hotkey) | 系统级键盘快捷键注册 |
+| 20 | `MENU` | 菜单 (Menu) | 弹出式上下文菜单或窗口菜单栏 |
+| 21 | `TIPS` | 托盘图标 (Tray Icon) | 系统托盘通知图标，支持提示和回调 |
+| 22 | `SCRN` | 屏幕捕捉 (Screen Capture) | 截图/区域捕获（非可视化） |
 
 ---
 
-## 3. Common Control Operations
+## 3. 通用控件操作
 
-### `ENVI @` Control Manipulation — All Controls
+### `ENVI @` 控件操作 — 全部控件
 
-All controls support these operations via `ENVI @<Name>.<Operation>`:
+所有控件均通过 `ENVI @<Name>.<Operation>` 支持以下操作：
 
-#### Text and Enable/Visible
+#### 文本与启用/可见
 
 ```wcs
-ENVI @CtrlName=New Text                                // set control text
-ENVI @CtrlName=%&newText%                              // set text from variable
-ENVI @CtrlName.Enable=0                                // disable (grey out)
-ENVI @CtrlName.Enable=1                                // enable
-ENVI @CtrlName.Visible=0                               // hide
-ENVI @CtrlName.Visible=1                               // show
-ENVI @CtrlName.Visible=*4                              // minimize window (window only)
+ENVI @CtrlName=New Text                                // 设置控件文本
+ENVI @CtrlName=%&newText%                              // 从变量设置文本
+ENVI @CtrlName.Enable=0                                // 禁用（灰掉）
+ENVI @CtrlName.Enable=1                                // 启用
+ENVI @CtrlName.Visible=0                               // 隐藏
+ENVI @CtrlName.Visible=1                               // 显示
+ENVI @CtrlName.Visible=*4                              // 最小化窗口（仅窗口）
 ```
 
-#### Position and Size
+#### 位置与大小
 
 ```wcs
-ENVI @CtrlName.POS=left:top:width:height               // move and resize
-ENVI @CtrlName.POS=?;&L:&T:&W:&H                       // query position into variables
-ENVI @CtrlName.POS=?;&L;1;&T;1;&W;1;&H;1               // query, semicolon-delimited output
-ENVI @CtrlName.POS=?%&WinName%;&L:&T:&W:&H             // query window position
+ENVI @CtrlName.POS=left:top:width:height               // 移动并调整大小
+ENVI @CtrlName.POS=?;&L:&T:&W:&H                       // 查询位置到变量
+ENVI @CtrlName.POS=?;&L;1;&T;1;&W;1;&H;1               // 查询，分号分隔输出
+ENVI @CtrlName.POS=?%&WinName%;&L:&T:&W:&H             // 查询窗口位置
 ```
 
-#### Appearance
+#### 外观
 
 ```wcs
-ENVI @CtrlName.Font=12:Tahoma                           // set font size and face
-ENVI @CtrlName.Font=12;Tahoma                          // semicolon separator also works
-ENVI @CtrlName.Font=12:Microsoft YaHei:Bold             // with bold style
-ENVI @CtrlName.Font=:                                    // reset to default font
-ENVI @CtrlName.bkcolor=0xFF0000                         // set background color (BGR hex)
-ENVI @CtrlName.bkcolor=-2                               // transparent background
-ENVI @CtrlName.trans=1                                   // translucent (layered window only)
-ENVI @CtrlName.Cursor=32649                             // hand pointer cursor (IDC_HAND)
-ENVI @CtrlName.Cursor=32514                             // normal arrow (IDC_ARROW)
-ENVI @CtrlName.Cursor=32515                             // I-beam (IDC_IBEAM)
+ENVI @CtrlName.Font=12:Tahoma                           // 设置字体大小与字体名
+ENVI @CtrlName.Font=12;Tahoma                          // 分号分隔符同样有效
+ENVI @CtrlName.Font=12:Microsoft YaHei:Bold             // 带粗体样式
+ENVI @CtrlName.Font=:                                    // 重置为默认字体
+ENVI @CtrlName.bkcolor=0xFF0000                         // 设置背景颜色（BGR 十六进制）
+ENVI @CtrlName.bkcolor=-2                               // 透明背景
+ENVI @CtrlName.trans=1                                   // 半透明（仅分层窗口）
+ENVI @CtrlName.Cursor=32649                             // 手形指针光标 (IDC_HAND)
+ENVI @CtrlName.Cursor=32514                             // 普通箭头 (IDC_ARROW)
+ENVI @CtrlName.Cursor=32515                             // I 形光标 (IDC_IBEAM)
 ```
 
-#### Style Modification
+#### 样式修改
 
 ```wcs
-ENVI @CtrlName.Style=+0x1000                            // add window style bit
-ENVI @CtrlName.Style=-0x1000                            // remove window style bit
-ENVI @CtrlName.Style=?;&styleVar                         // query current style
-ENVI @CtrlName.ExStyle=+0x80                            // add extended style
-ENVI @CtrlName.ExStyle=-0x80                            // remove extended style
+ENVI @CtrlName.Style=+0x1000                            // 添加窗口样式位
+ENVI @CtrlName.Style=-0x1000                            // 移除窗口样式位
+ENVI @CtrlName.Style=?;&styleVar                         // 查询当前样式
+ENVI @CtrlName.ExStyle=+0x80                            // 添加扩展样式
+ENVI @CtrlName.ExStyle=-0x80                            // 移除扩展样式
 ```
 
-#### Destruction and Invalidation
+#### 销毁与失效
 
 ```wcs
-ENVI @CtrlName.*del=                                     // destroy control (remove from window)
-ENVI @CtrlName.InvalidateRect=                          // force full redraw
-ENVI @CtrlName.InvalidateRect=10:20:100:50               // redraw region (l:t:w:h)
-ENVI @CtrlName.InvalidateRect=<L:T:R:B>                  // redraw by LTRB coordinates
-ENVI @CtrlName.InvalidateRect=#WID                       // invalidate by window handle
-ENVI @CtrlName.InvalidateRect=@SubNAME                   // invalidate by sub-window name
+ENVI @CtrlName.*del=                                     // 销毁控件（从窗口移除）
+ENVI @CtrlName.InvalidateRect=                          // 强制完整重绘
+ENVI @CtrlName.InvalidateRect=10:20:100:50               // 重绘区域 (l:t:w:h)
+ENVI @CtrlName.InvalidateRect=<L:T:R:B>                  // 通过 LTRB 坐标重绘
+ENVI @CtrlName.InvalidateRect=#WID                       // 通过窗口句柄使其失效
+ENVI @CtrlName.InvalidateRect=@SubNAME                   // 通过子窗口名称使其失效
 ```
 
-#### Advanced Control Properties
+#### 高级控件属性
 
 ```wcs
-ENVI @CtrlName.cmd=command                                // dynamic command binding
-ENVI @CtrlName.cmd=?var                                   // query command (requires QueryCmd=1)
-ENVI @CtrlName.nxp=                                       // disable XP visual style
-ENVI @CtrlName.trans=1[*]                                 // 0x1=bkgd transparent, 0x2=full, *=transparent color
-ENVI @CtrlName.percent=[%][R|L|C|V|E|F][:bg:prog:text]  // progress background on any control
-ENVI @CtrlName.MouseCapture=1|0                          // mouse capture mode A
-ENVI @CtrlName.MouseCapture=#1|#0                        // mouse capture mode B (by handle)
+ENVI @CtrlName.cmd=command                                // 动态命令绑定
+ENVI @CtrlName.cmd=?var                                   // 查询命令（需要 QueryCmd=1）
+ENVI @CtrlName.nxp=                                       // 禁用 XP 视觉样式
+ENVI @CtrlName.trans=1[*]                                 // 0x1=背景透明，0x2=完全透明，*=透明色
+ENVI @CtrlName.percent=[%][R|L|C|V|E|F][:bg:prog:text]  // 在任意控件上显示进度背景
+ENVI @CtrlName.MouseCapture=1|0                          // 鼠标捕获模式 A
+ENVI @CtrlName.MouseCapture=#1|#0                        // 鼠标捕获模式 B（通过句柄）
 ```
 
-#### EDIT-Specific
+#### EDIT 专用
 
 ```wcs
-ENVI @Ed.ReadOnly=0|1                                     // 0=editable, 1=read-only
-ENVI @Ed.LINE=0|1|-1|:N                                   // scroll to line (0/1=top, -1=bottom, :N=relative)
+ENVI @Ed.ReadOnly=0|1                                     // 0=可编辑，1=只读
+ENVI @Ed.LINE=0|1|-1|:N                                   // 滚动到行（0/1=顶部，-1=底部，:N=相对）
 ```
 
-#### ITEM/BUTTON-Specific
+#### ITEM/BUTTON 专用
 
 ```wcs
-ENVI @Btn.color=0xRRGGBB                                  // set text color
+ENVI @Btn.color=0xRRGGBB                                  // 设置文本颜色
 ```
 
-#### Window-Level Properties
+#### 窗口级属性
 
 ```wcs
-ENVI @Wnd.Paint=callbackFunc                              // canvas callback (params: HDC, width, height)
-ENVI @Wnd.style=[@*]remove[:add]                          // modify window styles (@*=cross-process)
-ENVI @Wnd.HitTest=[-]height[:w:x:y]                       // drag hit-test (0=cancel, -=semi-transparent)
-ENVI @Wnd.Font=size[:name[style]]                         // set window font
-ENVI @Wnd.trans=0|1|2[*]                                 // 0x1=bkgd, 0x2=full, *=transparent color
+ENVI @Wnd.Paint=callbackFunc                              // 画布回调（参数：HDC、宽度、高度）
+ENVI @Wnd.style=[@*]remove[:add]                          // 修改窗口样式（@*=跨进程）
+ENVI @Wnd.HitTest=[-]height[:w:x:y]                       // 拖动命中测试（0=取消，-=半透明）
+ENVI @Wnd.Font=size[:name[style]]                         // 设置窗口字体
+ENVI @Wnd.trans=0|1|2[*]                                 // 0x1=背景透明，0x2=完全透明，*=透明色
 ```
 
-#### Cross-Process Operations (using WID)
+#### 跨进程操作（使用 WID）
 
 ```wcs
-ENVI @@Enable=?WID:varName                                // query cross-process enable state
-ENVI @@IsWindow=?WID:varName                              // check if WID is valid window
-ENVI @@style=%WID%:[@*]remove:add                        // cross-process style change
-ENVI @@percent=WID:...                                     // cross-process progress
-ENVI @@<win|mess|help|login>.font=                         // set font for system dialogs
+ENVI @@Enable=?WID:varName                                // 查询跨进程启用状态
+ENVI @@IsWindow=?WID:varName                              // 检查 WID 是否为有效窗口
+ENVI @@style=%WID%:[@*]remove:add                        // 跨进程样式更改
+ENVI @@percent=WID:...                                     // 跨进程进度
+ENVI @@<win|mess|help|login>.font=                         // 设置系统对话框字体
 ```
 
-#### Multiple Controls Simultaneously
+#### 同时操作多个控件
 
 ```wcs
-ENVI @MultipleCtrl.VAL=%&data%                          // set VAL on controls matching pattern
-ENVI @MultipleCtrl.Enable=0                             // disable all matching controls
-ENVI @MultipleCtrl.Visible=0                            // hide all matching controls
-// MultipleCtrl is a wildcard: @Btn* matches Btn1, Btn2, BtnSave, etc.
+ENVI @MultipleCtrl.VAL=%&data%                          // 对匹配模式的控件设置 VAL
+ENVI @MultipleCtrl.Enable=0                             // 禁用所有匹配的控件
+ENVI @MultipleCtrl.Visible=0                            // 隐藏所有匹配的控件
+// MultipleCtrl 为通配符：@Btn* 匹配 Btn1、Btn2、BtnSave 等
 ```
 
-#### Disable vs Hide vs Grey Out
+#### 禁用 vs 隐藏 vs 灰掉
 
 ```wcs
-ENVI @Ctrl.Enable=0       // greyed out, visible but non-interactive
-ENVI @Ctrl.Visible=0      // hidden, takes no layout space
-ENVI @Ctrl.Enable=1       // fully interactive
+ENVI @Ctrl.Enable=0       // 灰掉，可见但不可交互
+ENVI @Ctrl.Visible=0      // 隐藏，不占用布局空间
+ENVI @Ctrl.Enable=1       // 完全可交互
 ```
 
 ---
 
-## 4. Detailed Per-Control Reference
+## 4. 控件详细参考
 
-### 4.1 ITEM — Button
+### 4.1 ITEM — 按钮
 
 ```wcs
 ITEM [-font:N] [-def] [-right] [-round] [-na] Name,LxTyWwHh,Text,[Command],[State],[Style]
 ```
 
-| Flag | Purpose |
+| Flag | 用途 |
 |------|---------|
-| `-def` | Default button (Enter triggers it), black border |
-| `-right` | Right-aligned button text |
-| `-round` | Rounded corners (only on themed XP+) |
-| `-na` | Do not activate / no focus |
-| `-font:N` | Font size N |
+| `-def` | 默认按钮（回车键触发），黑色边框 |
+| `-right` | 按钮文字右对齐 |
+| `-round` | 圆角（仅限有主题的 XP+） |
+| `-na` | 不激活/不获取焦点 |
+| `-font:N` | 字体大小 N |
 
-**State values:**
-| Value | Meaning |
+**状态值：**
+| Value | 含义 |
 |-------|---------|
-| `0` | Normal push button |
-| `1` | Checked (toggle button, stays down) |
-| `2` | 3-state semi-checked (grey check) |
+| `0` | 普通按钮 |
+| `1` | 选中（切换按钮，保持按下状态） |
+| `2` | 三态半选（灰色勾选） |
 
-**Image button (embedded IMAG):**
+**图片按钮（嵌入 IMAG）：**
 ```wcs
 IMAG Img1,L10T10W32H32,myicon.ico
 ITEM Btn1,L20T10W100H32,Imag1Click me!,CALL OnClick
-// Embedded image: control name of an IMAG used as button face
+// 嵌入图片：将 IMAG 的控件名用作按钮面板
 ```
 
-**Command:** Executed on click. Use `CALL FuncName [args]` for function calls.
+**Command：** 点击时执行。使用 `CALL FuncName [args]` 进行函数调用。
 
 ```wcs
-ENVI @Btn1.Check=1          // set toggle button to checked state
-ENVI @Btn1.Check=?;&state   // query state
+ENVI @Btn1.Check=1          // 设置切换按钮为选中状态
+ENVI @Btn1.Check=?;&state   // 查询状态
 ```
 
 ---
 
-### 4.2 EDIT — Edit Box
+### 4.2 EDIT — 编辑框
 
 ```wcs
 EDIT [-vcenter] [-rich] [-wantTAB] [-pwd|-ipwd] Name,LxTyWwHh,[InitText],[Cmd],[Style],[FontSize]
 ```
 
-| Flag | Purpose |
+| Flag | 用途 |
 |------|---------|
-| `-vcenter` | Vertically center text (single-line only) |
-| `-rich` | Rich Edit control (supports formatting) |
-| `-wantTAB` | Tab key stays in edit (doesn't navigate to next control) |
-| `-pwd` | Password mode: displays `*` for each character |
-| `-ipwd` | Invisible password: no visual feedback at all |
-| (none) | Standard single-line edit |
+| `-vcenter` | 垂直居中文本（仅单行） |
+| `-rich` | 富文本编辑控件（支持格式化） |
+| `-wantTAB` | Tab 键保留在编辑框内（不跳转到下一个控件） |
+| `-pwd` | 密码模式：每个字符显示 `*` |
+| `-ipwd` | 隐形密码：完全无视觉反馈 |
+| (无) | 标准单行编辑框 |
 
-**Scroll bar flags (prefix on EDIT command):**
+**滚动条标志（EDIT 命令的前缀）：**
 ```wcs
-EDIT- Ed,L10T30W200H200          // horizontal scroll bar
-EDIT| Ed,L10T30W200H200          // vertical scroll bar
-EDIT-| Ed,L10T30W200H200         // both scroll bars
+EDIT- Ed,L10T30W200H200          // 水平滚动条
+EDIT| Ed,L10T30W200H200          // 垂直滚动条
+EDIT-| Ed,L10T30W200H200         // 双向滚动条
 ```
 
-**Read-only:** Add `0x0800` (ES_READONLY) to Style.
+**只读：** 在 Style 中添加 `0x0800` (ES_READONLY)。
 
-**Auto line-wrap:** Add `0x0004` (ES_AUTOHSCROLL off) for multi-line wrapping without horizontal scroll.
+**自动换行：** 添加 `0x0004`（关闭 ES_AUTOHSCROLL）实现多行自动换行而不出现水平滚动条。
 
-**Text operations:**
+**文本操作：**
 ```wcs
-ENVI @Ed.QUERY=;&textVar                 // get all text
-ENVI @Ed=New Text                         // set all text (replaces)
-ENVI @Ed.SET=Text to set                 // set text (equivalent to =)
-ENVI @Ed.SEL=start:end                    // select text range (0-based)
-ENVI @Ed.SEL=?;&start;&end               // query selection range
+ENVI @Ed.QUERY=;&textVar                 // 获取全部文本
+ENVI @Ed=New Text                         // 设置全部文本（替换）
+ENVI @Ed.SET=Text to set                 // 设置文本（等同于 =）
+ENVI @Ed.SEL=start:end                    // 选择文本范围（从 0 开始）
+ENVI @Ed.SEL=?;&start;&end               // 查询选择范围
 ```
 
 ---
 
-### 4.3 LABE — Label (Static Text)
+### 4.3 LABE — 标签（静态文本）
 
 ```wcs
 LABE [-vcenter] [-left|-center|-right] [-trans] [-3D] [-ncmd] Name,Shape,Text,[Command],[Color],[FontSize]
 ```
 
-| Flag | Purpose |
+| Flag | 用途 |
 |------|---------|
-| `-vcenter` | Vertically center text |
-| `-left` | Left-aligned (default) |
-| `-center` | Center-aligned |
-| `-right` | Right-aligned |
-| `-trans` | Transparent background (parent shows through) |
-| `-3D` | Sunken 3D border look |
-| `-ncmd` | Label receives click command (makes it clickable) |
+| `-vcenter` | 垂直居中文本 |
+| `-left` | 左对齐（默认） |
+| `-center` | 居中对齐 |
+| `-right` | 右对齐 |
+| `-trans` | 透明背景（透出父窗口） |
+| `-3D` | 下沉式 3D 边框外观 |
+| `-ncmd` | 标签接收点击命令（使其可点击） |
 
-**Multi-color text support:**
+**多色彩文本支持：**
 ```wcs
-ENVI @MyLabel.Color=1:0xFF0000;3:0x00FF00   // word 1 = red, word 3 = green
-ENVI @MyLabel.Color=0x0000FF                 // all text blue
-// Color format: word_position:0xBBGGRR;word_position:0xBBGGRR
-// word_position is 1-based by space-delimited tokens
+ENVI @MyLabel.Color=1:0xFF0000;3:0x00FF00   // 第 1 个词 = 红色，第 3 个词 = 绿色
+ENVI @MyLabel.Color=0x0000FF                 // 全部文本蓝色
+// 颜色格式：词位置:0xBBGGRR;词位置:0xBBGGRR
+// 词位置从 1 开始，按空格分隔的标记计数
 ```
 
-**Image-embedded labels:**
+**嵌入图片的标签：**
 ```wcs
 LABE ImgLbl,L10T10W200H32,#0x0100|image.bmp,Text here,,0x0000FF
-// Prefix text with [image source] to embed image alongside text
+// 在文本前加上 [图片源] 以在文本旁嵌入图片
 ```
 
-**Clickable labels:**
+**可点击标签：**
 ```wcs
-LABE ClickLbl,L10T50W100H20,Click Me,CALL OnLabelClick   // command makes it clickable
+LABE ClickLbl,L10T50W100H20,Click Me,CALL OnLabelClick   // 命令使其可点击
 ```
 
-**Hyperlink/web link labels:**
+**超链接/网页链接标签：**
 ```wcs
 LABE LinkLbl,L10T80W200H20,Visit Site,-href:https://example.com
 LABE LinkLbl,L10T110W200H20,Visit Site,-href:https://example.com|-hovertip:Open in browser
@@ -349,301 +349,301 @@ LABE LinkLbl,L10T110W200H20,Visit Site,-href:https://example.com|-hovertip:Open 
 
 ---
 
-### 4.4 CHEK — Checkbox
+### 4.4 CHEK — 复选框
 
 ```wcs
 CHEK [-right] [-scale] Name,LxTyWwHh,Text,[EventCmd],[State],[Style],[FontSize]
 ```
 
-| Flag | Purpose |
+| Flag | 用途 |
 |------|---------|
-| `-right` | Check mark on right side of text |
-| `-scale` | Scale with DPI |
+| `-right` | 勾选标记在文字右侧 |
+| `-scale` | 随 DPI 缩放 |
 
-**State values:**
-| Value | Meaning |
+**状态值：**
+| Value | 含义 |
 |-------|---------|
-| `0` | Unchecked |
-| `1` | Checked |
-| `2` | Indeterminate / "don't care" (requires BS_3STATE style: `0x0005`) |
+| `0` | 未勾选 |
+| `1` | 已勾选 |
+| `2` | 不确定 / "无所谓"（需要 BS_3STATE 样式：`0x0005`） |
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @Chk.Check=1                  // check
-ENVI @Chk.Check=0                  // uncheck
-ENVI @Chk.Check=?;&var             // query state (semicolon before var name)
-ENVI @Chk.Check=?;0;&var           // query, 0=use semicolon mode
+ENVI @Chk.Check=1                  // 勾选
+ENVI @Chk.Check=0                  // 取消勾选
+ENVI @Chk.Check=?;&var             // 查询状态（分号在变量名前）
+ENVI @Chk.Check=?;0;&var           // 查询，0=使用分号模式
 ```
 
 ---
 
-### 4.5 RADI — Radio Button
+### 4.5 RADI — 单选按钮
 
 ```wcs
 RADI [-right] [-scale] [-center] Name,LxTyWwHh,Text,[EventCmd],[State],[GroupID],[FontSize]
 ```
 
-Radio buttons are mutually exclusive within the same **group**. The group is determined by the **integer group ID** embedded in the shape:
+单选按钮在同一**组**内互斥。组由嵌入在 shape 中的**整数组 ID** 决定：
 ```wcs
-RADI R1,L10T10W100H20:1,Option A,CALL OnSel,1           // Group 1
-RADI R2,L10T30W100H20:1,Option B,,0                     // Group 1 (same group ID)
-RADI R3,L10T60W100H20:1,Option C,,0                     // Group 1
+RADI R1,L10T10W100H20:1,Option A,CALL OnSel,1           // 组 1
+RADI R2,L10T30W100H20:1,Option B,,0                     // 组 1（相同组 ID）
+RADI R3,L10T60W100H20:1,Option C,,0                     // 组 1
 
-RADI R4,L10T90W100H20:2,Option X,CALL OnSel2,1           // Group 2 (different group)
-RADI R5,L10T110W100H20:2,Option Y,,0                     // Group 2
+RADI R4,L10T90W100H20:2,Option X,CALL OnSel2,1           // 组 2（不同组）
+RADI R5,L10T110W100H20:2,Option Y,,0                     // 组 2
 ```
 
-The group ID is appended after Hheight: `H20:1` = group 1. The first radio in a group typically has `State=1` (selected by default).
+组 ID 追加在 Hheight 之后：`H20:1` = 组 1。组中的第一个单选按钮通常设 `State=1`（默认选中）。
 
-**Query:**
+**查询：**
 ```wcs
-ENVI @R1.Check=?;&selectedState        // 1 if this radio is selected, 0 otherwise
-// To find WHICH radio is selected in a group, query each radio's .Check
+ENVI @R1.Check=?;&selectedState        // 若此单选按钮被选中则为 1，否则为 0
+// 要查找组中哪个单选按钮被选中，需逐一查询各单选按钮的 .Check
 ```
 
 ---
 
-### 4.6 LIST — Dropdown / Combo Box
+### 4.6 LIST — 下拉列表/组合框
 
 ```wcs
 LIST [-h] [-edt] Name,LxTyWwHh,item1|item2|item3,[EventCmd],[Style],[FontSize]
 ```
 
-| Flag | Purpose |
+| Flag | 用途 |
 |------|---------|
-| `-h` | Expand/drop-down height in pixels |
-| `-edt` | Editable combo box (user can type custom text) |
+| `-h` | 展开/下拉高度（像素） |
+| `-edt` | 可编辑组合框（用户可输入自定义文本） |
 
-**Initial items:** Pipe-delimited list: `"Apple|Banana|Cherry|Date"`
+**初始项目：** 管道符分隔的列表：`"Apple|Banana|Cherry|Date"`
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @List.VAL=                                    // clear all items
-ENVI @List.ADD=New Item                            // add one item to end
-ENVI @List.ADDSEL=New Item                         // add item and select it
-ENVI @List.DEL=Item Text                           // delete item by text
-ENVI @List.DEL=:3                                   // delete item by 1-based index
-ENVI @List.isel=3                                   // select 1-based index
-ENVI @List.Sel=3                                    // select 1-based index (same)
-ENVI @List.Sel=3;0                                  // deselect
-ENVI @List.Sel=?;&selectedIndex                     // get 1-based selected index
-ENVI @List.QUERY=;&allItems                         // get all items (newline-delimited)
-ENVI @List.Val=?*;&itemCount                        // get item count
-ENVI @List.Val=?;itemText                           // get selected item text
+ENVI @List.VAL=                                    // 清空所有项目
+ENVI @List.ADD=New Item                            // 在末尾添加一个项目
+ENVI @List.ADDSEL=New Item                         // 添加项目并选中
+ENVI @List.DEL=Item Text                           // 按文本删除项目
+ENVI @List.DEL=:3                                   // 按从 1 开始的索引删除项目
+ENVI @List.isel=3                                   // 选中从 1 开始的索引
+ENVI @List.Sel=3                                    // 选中从 1 开始的索引（同上）
+ENVI @List.Sel=3;0                                  // 取消选中
+ENVI @List.Sel=?;&selectedIndex                     // 获取从 1 开始的选中索引
+ENVI @List.QUERY=;&allItems                         // 获取所有项目（换行符分隔）
+ENVI @List.Val=?*;&itemCount                        // 获取项目数量
+ENVI @List.Val=?;itemText                           // 获取选中项目文本
 
-// Access via % variable:
-%List.isel%                                         // selected index (1-based)
-%List.Sel%                                          // same as above
+// 通过 % 变量访问：
+%List.isel%                                         // 选中索引（从 1 开始）
+%List.Sel%                                          // 同上
 ```
 
-**List with images:**
+**带图片的列表：**
 ```wcs
 LIST ImgLst,L10T10W150H200,
-ENVI @ImgLst.ADD=.ico#5|Item with icon             // icon index from resource
+ENVI @ImgLst.ADD=.ico#5|Item with icon             // 从资源中获取图标索引
 ```
 
-**Editable combo:**
+**可编辑组合框：**
 ```wcs
-LIST -edt EdtList,L10T10W150H20,Item1|Item2,,,12   // user can type custom text
-ENVI @EdtList=User typed text                       // get/set the current text
+LIST -edt EdtList,L10T10W150H20,Item1|Item2,,,12   // 用户可输入自定义文本
+ENVI @EdtList=User typed text                       // 获取/设置当前文本
 ```
 
 ---
 
-### 4.7 IMAG — Image / Picture Display
+### 4.7 IMAG — 图片/图像显示
 
 ```wcs
 IMAG [-scale] Name,LxTyWwHh,ImageSource,[EventCmd],[Style],[Alpha]
 ```
 
-**Supported formats:** `.bmp`, `.jpg`, `.jpeg`, `.gif` (animated), `.avi` (animated), `.ico`
+**支持的格式：** `.bmp`、`.jpg`、`.jpeg`、`.gif`（动画）、`.avi`（动画）、`.ico`
 
-**Icon extraction from EXE/DLL:**
+**从 EXE/DLL 提取图标：**
 ```wcs
-IMAG Ico,L10T10W32H32,C:\Windows\System32\shell32.dll#23    // icon index 23
-IMAG Ico,L10T10W32H32,%SystemRoot%\explorer.exe#0           // first icon
+IMAG Ico,L10T10W32H32,C:\Windows\System32\shell32.dll#23    // 图标索引 23
+IMAG Ico,L10T10W32H32,%SystemRoot%\explorer.exe#0           // 第一个图标
 ```
 
-**Dynamic image update:**
+**动态图像更新：**
 ```wcs
-ENVI @Img=NewImage.jpg                              // change image at runtime
-ENVI @Img=shell32.dll#42                            // change to different icon
-ENVI @Img=                                          // clear image
+ENVI @Img=NewImage.jpg                              // 运行时更换图片
+ENVI @Img=shell32.dll#42                            // 更换为不同图标
+ENVI @Img=                                          // 清除图像
 ```
 
-**Background modes (via Style):**
+**背景模式（通过 Style）：**
 ```wcs
-IMAG Img,L10T10W200H200,bg.jpg,,0x0000             // stretch to fit
-IMAG Img,L10T10W200H200,bg.jpg,,0x0001             // center, no resize
-IMAG Img,L10T10W200H200,bg.jpg,,0x0002             // tile repeated
-IMAG Img,L10T10W200H200,bg.jpg,,0x0004             // proportional stretch
-IMAG Img,L10T10W200H200,bg.jpg,,0x0008             // clip to fit
+IMAG Img,L10T10W200H200,bg.jpg,,0x0000             // 拉伸填充
+IMAG Img,L10T10W200H200,bg.jpg,,0x0001             // 居中，不缩放
+IMAG Img,L10T10W200H200,bg.jpg,,0x0002             // 平铺重复
+IMAG Img,L10T10W200H200,bg.jpg,,0x0004             // 等比例拉伸
+IMAG Img,L10T10W200H200,bg.jpg,,0x0008             // 裁剪填充
 ```
 
-**IMAGE with EMBED syntax:**
+**带 EMBED 语法的 IMAGE：**
 ```wcs
-IMAG Img,L10T10W32H32,#0                             // placeholder, embed at runtime
-ENVI @Img=*newimage.jpg                              // replace with new image
+IMAG Img,L10T10W32H32,#0                             // 占位符，运行时嵌入
+ENVI @Img=*newimage.jpg                              // 替换为新图像
 ```
 
 ---
 
-### 4.8 PBAR — Progress Bar
+### 4.8 PBAR — 进度条
 
 ```wcs
 PBAR Name,LxTyWwHh,[InitValue],[Style],[Color]
 ```
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @PBar.Value=50                                 // set to 50%
-ENVI @PBar.Value=?;&percent                          // query current value
-ENVI @PBar.text=Processing...                        // text on progress bar
-ENVI @PBar.bkcolor=0x00FF00                          // bar color (green)
-ENVI @PBar.bkcolor=0xFFFFFF                          // background color (white)
+ENVI @PBar.Value=50                                 // 设为 50%
+ENVI @PBar.Value=?;&percent                          // 查询当前值
+ENVI @PBar.text=Processing...                        // 进度条上的文字
+ENVI @PBar.bkcolor=0x00FF00                          // 进度条颜色（绿色）
+ENVI @PBar.bkcolor=0xFFFFFF                          // 背景颜色（白色）
 ```
 
-**Range:** Default 0–100. Can be changed via Windows message.
+**范围：** 默认 0–100。可通过 Windows 消息更改。
 
 ---
 
-### 4.9 TABL — Table / Data Grid (MOST DETAILED)
+### 4.9 TABL — 表格/数据网格（最详细）
 
 ```wcs
 TABL [-font:N] Name,LxTyWwHh,[HeaderString],[Flags],[Style],[FontSize]
 ```
 
-**Header format:**
+**表头格式：**
 ```
 HeaderString = "col1_text:col1_width col2_text:col2_width ..."
 ```
-Width prefixes:
-| Prefix | Meaning |
+宽度前缀：
+| 前缀 | 含义 |
 |--------|---------|
-| `*` | Left-aligned (default) |
-| `=` | Right-aligned column |
-| `+` | Center-aligned column |
-| (none) | Left-aligned (default) |
-| (blank name) | No header text for this column |
+| `*` | 左对齐（默认） |
+| `=` | 右对齐列 |
+| `+` | 居中对齐列 |
+| (无) | 左对齐（默认） |
+| (空名称) | 此列无表头文本 |
 
 ```wcs
 TABL Tbl,L10T10W400H200,=100:Name +80:Size =120:Date *30,0x40
-// Column 1: "Name", width 100, right-aligned
-// Column 2: "Size", width 80, centered
-// Column 3: "Date", width 120, right-aligned
-// Column 4: (empty), width 30, checkbox
+// 第 1 列："Name"，宽度 100，右对齐
+// 第 2 列："Size"，宽度 80，居中
+// 第 3 列："Date"，宽度 120，右对齐
+// 第 4 列：（空），宽度 30，复选框
 ```
 
-**Complete Status Flag Table:**
+**完整状态标志表：**
 
-| Flag (Hex) | Flag (Dec) | Name | Description |
+| Flag (十六进制) | Flag (十进制) | 名称 | 说明 |
 |------------|------------|------|-------------|
-| `0x10` | 16 | Checkboxes | Each row has a checkbox |
-| `0x20` | 32 | Per-row color | Custom row background colors supported |
-| `0x40` | 64 | Icons | Icon per row via `.ico#id` |
-| `0x80` | 128 | Full row select | Entire row highlights on selection |
-| `0x100` | 256 | No column resize | Fixed column widths |
-| `0x200` | 512 | Single selection | Only one row selectable at a time (default) |
-| `0x400` | 1024 | Multi-selection | Multiple rows selectable (Ctrl+Click) |
-| `0x800` | 2048 | Grid lines | Visible grid lines between cells |
-| `0x1000` | 4096 | No header | Hide column headers |
-| `0x2000` | 8192 | Editable | Cells can be edited in-place |
-| `0x4000` | 16384 | Owner draw | Custom drawing via callback |
-| `0x8000` | 32768 | Drag-drop | Rows can be reordered by dragging |
-| `0x10000` | 65536 | Sort headers | Click header to sort column |
-| `0x40000` | 262144 | No mouse select | Disable mouse-based row selection |
+| `0x10` | 16 | 复选框 | 每行有复选框 |
+| `0x20` | 32 | 逐行颜色 | 支持自定义行背景颜色 |
+| `0x40` | 64 | 图标 | 通过 `.ico#id` 每行显示图标 |
+| `0x80` | 128 | 整行选择 | 选中时整行高亮 |
+| `0x100` | 256 | 禁止调整列宽 | 固定列宽 |
+| `0x200` | 512 | 单选 | 一次只能选中一行（默认） |
+| `0x400` | 1024 | 多选 | 可选多行（Ctrl+点击） |
+| `0x800` | 2048 | 网格线 | 单元格之间显示网格线 |
+| `0x1000` | 4096 | 无表头 | 隐藏列标题 |
+| `0x2000` | 8192 | 可编辑 | 可原地编辑单元格 |
+| `0x4000` | 16384 | 自绘 (Owner draw) | 通过回调自定义绘制 |
+| `0x8000` | 32768 | 拖放 | 可拖拽重新排序行 |
+| `0x10000` | 65536 | 排序表头 | 点击表头排序列 |
+| `0x40000` | 262144 | 禁止鼠标选择 | 禁用基于鼠标的行选择 |
 
 ```wcs
-// Common flag combinations:
-TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x40    // icons only
-TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x50    // checkboxes + icons
-TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x2C0   // single-select + full-row-select + icons
-TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x10C30 // sort-headers + grid + multi-select + color + checkboxes
+// 常用标志组合：
+TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x40    // 仅图标
+TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x50    // 复选框 + 图标
+TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x2C0   // 单选 + 整行选择 + 图标
+TABL Tbl,L10T10W400H200,Col1:100 Col2:80,0x10C30 // 排序表头 + 网格 + 多选 + 颜色 + 复选框
 ```
 
-**Data Operations:**
+**数据操作：**
 
 ```wcs
-// --- Set data ---
-ENVI @Tbl.Val=1*;%&allData%                         // bulk-set ALL rows from variable
-// allData format: row1col1\trow1col2\nrow2col1\trow2col2\n...
-// \t = TAB between columns, \n = newline between rows
+// --- 设置数据 ---
+ENVI @Tbl.Val=1*;%&allData%                         // 从变量批量设置所有行
+// allData 格式：row1col1\trow1col2\nrow2col1\trow2col2\n...
+// \t = 列之间的 TAB，\n = 行之间的换行
 
-ENVI @Tbl.Val=%row%;col1%&TAB%col2%&TAB%col3       // set single row (1-based)
-ENVI @Tbl.Val=%row%;*                                // delete single row
+ENVI @Tbl.Val=%row%;col1%&TAB%col2%&TAB%col3       // 设置单行（从 1 开始）
+ENVI @Tbl.Val=%row%;*                                // 删除单行
 
-// --- Get data ---
-ENVI @Tbl.Val=?%row%.%col%;&cellValue               // get cell (semicolon before var)
-ENVI @Tbl.Val=?*;&rowCount                           // get total row count
-ENVI @Tbl.Val=?%row%;&fullRowData                   // get entire row (TAB-delimited)
+// --- 获取数据 ---
+ENVI @Tbl.Val=?%row%.%col%;&cellValue               // 获取单元格（分号在变量前）
+ENVI @Tbl.Val=?*;&rowCount                           // 获取总行数
+ENVI @Tbl.Val=?%row%;&fullRowData                   // 获取整行（TAB 分隔）
 
-// --- Clear ---
-ENVI @Tbl.Val=-*                                     // clear ALL rows
+// --- 清除 ---
+ENVI @Tbl.Val=-*                                     // 清空所有行
 
-// --- Selection ---
-ENVI @Tbl.Sel=%row%                                  // select row (highlight)
-ENVI @Tbl.Sel=%row%;0                                 // deselect row
-ENVI @Tbl.Sel=?;&selectedRow                          // get selected row number
-ENVI @Tbl.Sel=?*;&allSelected                         // get all selected rows
-ENVI @Tbl.Sel=?*;&count                               // get selected row count
+// --- 选择 ---
+ENVI @Tbl.Sel=%row%                                  // 选中行（高亮）
+ENVI @Tbl.Sel=%row%;0                                 // 取消选中行
+ENVI @Tbl.Sel=?;&selectedRow                          // 获取选中行号
+ENVI @Tbl.Sel=?*;&allSelected                         // 获取所有选中行
+ENVI @Tbl.Sel=?*;&count                               // 获取选中行数量
 
-// --- Check-state ---
-ENVI @Tbl.Check=%row%;1                               // check row checkbox
-ENVI @Tbl.Check=%row%;0                               // uncheck row checkbox
-ENVI @Tbl.Check=?%row%;&checkState                    // query row checkbox (1/0)
+// --- 勾选状态 ---
+ENVI @Tbl.Check=%row%;1                               // 勾选行复选框
+ENVI @Tbl.Check=%row%;0                               // 取消勾选行复选框
+ENVI @Tbl.Check=?%row%;&checkState                    // 查询行复选框 (1/0)
 
-// --- Row color ---
-ENVI @Tbl.Color=%row%;0xFF0000                        // set row text color (BGR)
-ENVI @Tbl.Color=%row%;0xFF0000;0xFFFFFF              // text color;background color
+// --- 行颜色 ---
+ENVI @Tbl.Color=%row%;0xFF0000                        // 设置行文本颜色 (BGR)
+ENVI @Tbl.Color=%row%;0xFF0000;0xFFFFFF              // 文本颜色;背景颜色
 
-// --- Row icon ---
-ENVI @Tbl.Val=%row%;.ico#5;col1%&TAB%col2           // set row with icon #5
+// --- 行图标 ---
+ENVI @Tbl.Val=%row%;.ico#5;col1%&TAB%col2           // 设置带图标 #5 的行
 
-// --- Position / Scroll ---
-ENVI @Tbl.UPOS=?;&rowIndex                           // get top visible row index
+// --- 位置 / 滚动 ---
+ENVI @Tbl.UPOS=?;&rowIndex                           // 获取顶部可见行索引
 
-// --- Percent operations (for PBAR-style columns) ---
-ENVI @Tbl.Percent=?%row%;&percentVal                  // query percent column
+// --- 百分比操作（用于类似 PBAR 的列） ---
+ENVI @Tbl.Percent=?%row%;&percentVal                  // 查询百分比列
 ```
 
 ---
 
-### 4.10 TABS — Tab Control / Property Pages
+### 4.10 TABS — 选项卡控件/属性页
 
 ```wcs
 TABS Name,LxTyWwHh,Page1|Page2|Page3,[EventCmd]
 ```
 
-TABS embeds **sub-windows** (SWIN) for each page:
+TABS 为每个页面嵌入**子窗口** (SWIN)：
 
 ```wcs
 TABS Tabs1,L10T10W400H300,General|Advanced|About,CALL OnTabChange
 
-SWIN Swin1,L20T40W380H260,Page1Win         // positioned inside the tab area
-SWIN Swin2,L20T40W380H260,Page2Win         // occupies same space
+SWIN Swin1,L20T40W380H260,Page1Win         // 位于选项卡区域内
+SWIN Swin2,L20T40W380H260,Page2Win         // 占据相同空间
 SWIN Swin3,L20T40W380H260,Page3Win
 
-// Page switching:
-ENVI @Tabs1.SEL=2                            // switch to page 2 (1-based)
-ENVI @Tabs1.SEL=?;&currentPage               // query current page
+// 页面切换：
+ENVI @Tabs1.SEL=2                            // 切换到第 2 页（从 1 开始）
+ENVI @Tabs1.SEL=?;&currentPage               // 查询当前页面
 
-// In the tab change handler:
+// 在选项卡切换处理函数中：
 _SUB OnTabChange
     ENVI @Tabs1.SEL=?;&sel
-    ENVI @Swin1.Visible=%&sel%=1?1:0         // show/hide corresponding SWIN
+    ENVI @Swin1.Visible=%&sel%=1?1:0         // 显示/隐藏对应的 SWIN
     ENVI @Swin2.Visible=%&sel%=2?1:0
 _END
 ```
 
 ---
 
-### 4.11 SWIN — Sub-Window / Pane Embedding
+### 4.11 SWIN — 子窗口/面板嵌入
 
 ```wcs
 SWIN Name,LxTyWwHh,SubWinDef,[flags]
 ```
 
-`SubWinDef` is the name of a `_SUB` defining the embedded window. SWIN creates a child window and embeds the `_SUB`'s controls inside it.
+`SubWinDef` 是定义嵌入窗口的 `_SUB` 名称。SWIN 创建一个子窗口并将该 `_SUB` 的控件嵌入其中。
 
 ```wcs
 _SUB Page1
@@ -651,20 +651,20 @@ _SUB Page1
     ITEM Btn,L10T40W80H28,Click,CALL OnClick1
 _END
 
-SWIN SwinPg1,L20T40W380H260,Page1     // embed Page1 as child window
+SWIN SwinPg1,L20T40W380H260,Page1     // 将 Page1 作为子窗口嵌入
 ```
 
-**Multi-panel management:**
+**多面板管理：**
 ```wcs
-// Create multiple SWINs, show only the active one
+// 创建多个 SWIN，只显示当前活动的那一个
 SWIN Panel1,L20T40W380H260,Page1Win
 SWIN Panel2,L20T40W380H260,Page2Win
 SWIN Panel3,L20T40W380H260,Page3Win
 
-ENVI @Panel2.Visible=0                 // hide unused panels
+ENVI @Panel2.Visible=0                 // 隐藏不用的面板
 ENVI @Panel3.Visible=0
 
-// Switch panel:
+// 切换面板：
 _SUB SwitchToPanel2
     ENVI @Panel1.Visible=0
     ENVI @Panel2.Visible=1
@@ -673,87 +673,87 @@ _END
 
 ---
 
-### 4.12 SLID — Slider / Trackbar
+### 4.12 SLID — 滑块/轨道条
 
 ```wcs
 SLID [-right] [-left] [*] Name,LxTyWwHh,[InitVal:EndVal:CurVal:PageSize],[CmdParamName],[EventCmd],[Style]
 ```
 
 ```wcs
-SLID Sld,L10T10W200H30,0:100:50:10,CALL OnSlide       // init at 50, range 0-100, page=10
-SLID Sld,L10T10W200H30,1:10:5                          // init at 5, range 1-10
-SLID Sld,L10T50W200H30,-20:80:0                         // negative min supported
+SLID Sld,L10T10W200H30,0:100:50:10,CALL OnSlide       // 初始 50，范围 0-100，页步长=10
+SLID Sld,L10T10W200H30,1:10:5                          // 初始 5，范围 1-10
+SLID Sld,L10T50W200H30,-20:80:0                         // 支持负的最小值
 ```
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @Sld.VAL=75                                     // set slider position
-ENVI @Sld.VAL=?;&value                                // query slider value
+ENVI @Sld.VAL=75                                     // 设置滑块位置
+ENVI @Sld.VAL=?;&value                                // 查询滑块值
 ```
 
 ---
 
-### 4.13 SPIN — Spinner / Up-Down Control
+### 4.13 SPIN — 微调器/上下控件
 
 ```wcs
 SPIN [-right] [-left] [*] Name,LxTyWwHh,[BuddyEdit:InitVal:EndVal:CurVal],[CmdParamName],[EventCmd],[Style]
 ```
 
-SPIN automatically pairs with a buddy EDIT control for numeric input:
+SPIN 自动与一个配对 EDIT 控件组合用于数字输入：
 
 ```wcs
 EDIT Edit1,L10T10W60H20,0
 SPIN Spin1,L70T10W16H20,Edit1:0:100:0,CALL OnSpin
 
-// Explicit buddy:
+// 显式配对：
 EDIT Edit2,L10T40W60H20,0
 SPIN Spin2,L70T40W16H20,Edit2:0:255:0
 ```
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @Spin1.VAL=50                                    // set spinner value
-ENVI @Spin1.VAL=?;&value                              // query value
+ENVI @Spin1.VAL=50                                    // 设置微调器值
+ENVI @Spin1.VAL=?;&value                              // 查询值
 ```
 
 ---
 
-### 4.14 DTIM — Date-Time Picker
+### 4.14 DTIM — 日期时间选择器
 
 ```wcs
 DTIM Name,LxTyWwHh,[InitDateTime],[EventCmd],[Style]
 ```
 
-Type is set via bit flags in the Style parameter:
+类型通过 Style 参数中的位标志设置：
 
-| Bit | Hex | Description |
+| 位 | 十六进制 | 说明 |
 |-----|-----|-------------|
-| — | 0x00 | Short date format (default) |
-| 0x20 | 0x20 | Long date format |
-| 0x40 | 0x40 | Time format |
-| 0x80 | 0x80 | Short century date format |
-| 0x100 | 0x100 | Up/down key adjustment |
-| 0x200 | 0x200 | Checkbox picker |
-| 0x10 | 0x10 | Invisible |
-| <0 | (negative) | Grayed (disabled) |
+| — | 0x00 | 短日期格式（默认） |
+| 0x20 | 0x20 | 长日期格式 |
+| 0x40 | 0x40 | 时间格式 |
+| 0x80 | 0x80 | 短世纪日期格式 |
+| 0x100 | 0x100 | 上/下键调整 |
+| 0x200 | 0x200 | 复选框选择器 |
+| 0x10 | 0x10 | 不可见 |
+| <0 | (负数) | 灰掉（禁用） |
 
 ```wcs
-DTIM Dt1,L10T10W120H22,,CALL OnDateChange,0x20         // long date format
-DTIM Dt2,L10T40W80H22,,,0x40                             // time format
-DTIM Dt3,L10T70W180H22                                    // default: short date
-DTIM Dt4,L10T100W180H22,,,0x240                           // long date + time (0x20|0x40)
+DTIM Dt1,L10T10W120H22,,CALL OnDateChange,0x20         // 长日期格式
+DTIM Dt2,L10T40W80H22,,,0x40                             // 时间格式
+DTIM Dt3,L10T70W180H22                                    // 默认：短日期
+DTIM Dt4,L10T100W180H22,,,0x240                           // 长日期 + 时间 (0x20|0x40)
 ```
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @Dt1.VAL=2025-01-15                                // set date (YYYY-MM-DD)
-ENVI @Dt1.VAL=?;&dateValue                              // query date string
-ENVI @Dt2.VAL=14:30:00                                   // set time
+ENVI @Dt1.VAL=2025-01-15                                // 设置日期 (YYYY-MM-DD)
+ENVI @Dt1.VAL=?;&dateValue                              // 查询日期字符串
+ENVI @Dt2.VAL=14:30:00                                   // 设置时间
 ```
 
 ---
 
-### 4.15 IPAD — IP Address Control
+### 4.15 IPAD — IP 地址控件
 
 ```wcs
 IPAD Name,LxTyWwHh,[InitIP],[EventCmd],[Style]
@@ -761,45 +761,45 @@ IPAD Name,LxTyWwHh,[InitIP],[EventCmd],[Style]
 
 ```wcs
 IPAD Ip1,L10T10W140H22,192.168.1.1,CALL OnIPChange
-IPAD Ip2,L10T40W140H22,,CALL OnIPChange                 // defaults to 0.0.0.0
+IPAD Ip2,L10T40W140H22,,CALL OnIPChange                 // 默认为 0.0.0.0
 ```
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @Ip1.VAL=10.0.0.1                                  // set IP
-ENVI @Ip1.VAL=?;&ipString                               // query: "192.168.1.100"
+ENVI @Ip1.VAL=10.0.0.1                                  // 设置 IP
+ENVI @Ip1.VAL=?;&ipString                               // 查询："192.168.1.100"
 ```
 
 ---
 
-### 4.16 TIME — Timer
+### 4.16 TIME — 定时器
 
 ```wcs
 TIME TimerName,interval,[EventCmd]
 ```
 
-`TimerName` must be **prefixed with `Timer`** (e.g., `Timer1`, `TimerMain`).
+`TimerName` 必须**以 `Timer` 为前缀**（例如 `Timer1`、`TimerMain`）。
 
 ```wcs
-TIME Timer1,1000,CALL OnTick                            // fire every 1000ms
-TIME Timer1,500,                                        // every 500ms, no command (must query)
-TIME Timer2,*500,CALL OnTick                            // * = auto-recycle (restart after fire)
-TIME Timer3,0,CALL OnFire                               // 0 = fire immediately once
+TIME Timer1,1000,CALL OnTick                            // 每 1000ms 触发
+TIME Timer1,500,                                        // 每 500ms，无命令（必须主动查询）
+TIME Timer2,*500,CALL OnTick                            // * = 自动循环（触发后重新启动）
+TIME Timer3,0,CALL OnFire                               // 0 = 立即触发一次
 ```
 
-**Timer flags via `-t:N`:**
-| Flag | Purpose |
+**定时器标志 `-t:N`：**
+| Flag | 用途 |
 |------|---------|
-| `-t:1` | One-shot timer (fires once, then stops) |
+| `-t:1` | 单次定时器（触发一次后停止） |
 
-**Operations:**
+**操作：**
 ```wcs
-ENVI @Timer1=500                                        // change interval
-ENVI @Timer1=0                                           // pause / stop
-ENVI @Timer1=-del                                        // destroy timer
-ENVI @Timer1=-1                                          // restart with current interval
+ENVI @Timer1=500                                        // 更改间隔
+ENVI @Timer1=0                                           // 暂停/停止
+ENVI @Timer1=-del                                        // 销毁定时器
+ENVI @Timer1=-1                                          // 以当前间隔重新启动
 
-// Multi-timer:
+// 多定时器：
 TIME TimerPulse,100,CALL Heartbeat
 TIME TimerLong,5000,CALL PeriodicCheck
 TIME TimerOnce,0,CALL DelayedInit
@@ -807,22 +807,22 @@ TIME TimerOnce,0,CALL DelayedInit
 
 ---
 
-### 4.17 TIPS* — System Tray Icon
+### 4.17 TIPS* — 系统托盘图标
 
 ```wcs
 TIPS* WindowName,[Content],[timeout],[iconStyleID],[trayIcon],[#WID]
 ```
 
-| Param | Description |
+| 参数 | 说明 |
 |-------|-------------|
-| `WindowName` | Window name (for private tray, requires prior `_SUB`) |
-| `Content` | Tooltip text / tray label (max 256 chars, `\n` for multi-line) |
-| `timeout` | Bubble lifetime in ms (default 10s, 0=permanent) |
-| `iconStyleID` | 0=none, 1=info icon, 2=warning icon, 3=error icon, 4+=tray icon |
-| `trayIcon` | Icon file path or `#resID` (e.g., `shell32.dll#94`) |
-| `#WID` | Window handle for association |
+| `WindowName` | 窗口名称（用于私有托盘，需要先定义 `_SUB`） |
+| `Content` | 工具提示文本/托盘标签（最大 256 字符，`\n` 换行） |
+| `timeout` | 气泡存活时间（毫秒）（默认 10 秒，0=永久） |
+| `iconStyleID` | 0=无，1=信息图标，2=警告图标，3=错误图标，4+=托盘图标 |
+| `trayIcon` | 图标文件路径或 `#resID`（如 `shell32.dll#94`） |
+| `#WID` | 关联的窗口句柄 |
 
-Click handling is done via `WM_TRAYNOTIFY` (1109) message map — there are NO click handler parameters:
+点击处理通过 `WM_TRAYNOTIFY` (1109) 消息映射完成——没有点击处理参数：
 
 ```wcs
 SET &WM_TRAYNOTIFY=1109
@@ -836,7 +836,7 @@ _SUB WinMain,#
 _END
 
 _SUB DoTrayClick
-    IFEX $%&WM_RBUTTONDOWN%=%2, CALL @--popmenu TrayMenu    // right-click → popup menu
+    IFEX $%&WM_RBUTTONDOWN%=%2, CALL @--popmenu TrayMenu    // 右键 → 弹出菜单
 _END
 
 _SUB TrayMenu
@@ -847,64 +847,64 @@ _SUB TrayMenu
 _END
 ```
 
-**Bubble notification:**
+**气泡通知：**
 ```wcs
-TIPS MyTitle,Hello World\nLine 2,5000,1                     // info icon, 5 seconds
-TIPS* WinMain,Status update,,2,#1                            // warning icon, resource icon
+TIPS MyTitle,Hello World\nLine 2,5000,1                     // 信息图标，5 秒
+TIPS* WinMain,Status update,,2,#1                            // 警告图标，资源图标
 ```
 
-**Clear:**
+**清除：**
 ```wcs
-TIPS -                                                       // clear bubble
-TIPS *                                                       // clear all tray + bubble
+TIPS -                                                       // 清除气泡
+TIPS *                                                       // 清除所有托盘 + 气泡
 ```
 
 ---
 
-### 4.18 HKEY — Hotkey Registration
+### 4.18 HKEY — 热键注册
 
 ```wcs
 HKEY [modifiers+][#]keycode,[eventCmd],[args]
 ```
 
-| Prefix | Scope |
+| 前缀 | 作用域 |
 |--------|-------|
-| `$` | Program-level hotkey (system-wide, registered via RegisterHotKey) |
-| `*` | Window-level hotkey (only active when window has focus) |
-| (none) | Default = window-level |
+| `$` | 程序级热键（系统级，通过 RegisterHotKey 注册） |
+| `*` | 窗口级热键（仅当窗口有焦点时激活） |
+| (无) | 默认 = 窗口级 |
 
-**Modifier keys:**
+**修饰键：**
 ```wcs
 HKEY Ctrl+#0x41,CALL OnHotKeyA                           // Ctrl+A
 HKEY Ctrl+Shift+#0x42,CALL OnHotKeyB                     // Ctrl+Shift+B
 HKEY Ctrl+Alt+#0x43,CALL OnHotKeyC                       // Ctrl+Alt+C
 HKEY Ctrl+Shift+Alt+#0x44,CALL OnHotKeyD                 // Ctrl+Shift+Alt+D
 
-// Virtual key codes can be numeric:
+// 虚拟键码可以是数字：
 HKEY #0x0D,CALL OnEnter                                  // Enter key (VK_RETURN = 0x0D)
 HKEY #0x1B,CALL OnEscape                                 // Escape (VK_ESCAPE = 0x1B)
 
-// Win key modifier:
+// Win 键修饰符：
 HKEY Win+#0x45,CALL OnWinE                               // Win+E
 HKEY Win+Ctrl+#0x46,CALL OnWinCtrlF                      // Win+Ctrl+F
 ```
 
-**Deletion:**
+**删除：**
 ```wcs
-HKEY Ctrl+#0x41,--del                                     // delete specific hotkey
-HKEY --del                                               // delete ALL hotkeys
-HKEY --del:0x41                                           // delete by key code
+HKEY Ctrl+#0x41,--del                                     // 删除特定热键
+HKEY --del                                               // 删除全部热键
+HKEY --del:0x41                                           // 按键码删除
 ```
 
 ---
 
-### 4.19 GROU — Group Box
+### 4.19 GROU — 分组框
 
 ```wcs
 GROU [-center] Name,LxTyWwHh,[Text],[Style]
 ```
 
-Visual grouping frame only — does not enforce mutual exclusion (use RADI groups for that).
+仅为视觉分组框架——不强制互斥（请使用 RADI 组实现互斥）。
 
 ```wcs
 GROU Grp1,L10T10W200H100,Settings
@@ -914,13 +914,13 @@ GROU Grp1,L10T10W200H100,,0x0007                          // no text, sunken sty
 
 ---
 
-### 4.20 MEMO — Multi-line Text Box
+### 4.20 MEMO — 多行文本框
 
 ```wcs
 MEMO [-vcenter] [-rich] Name,LxTyWwHh,[InitText],[EventCmd],[Style],[FontSize]
 ```
 
-Multi-line edit with built-in scroll support. Same operations as EDIT.
+带内置滚动支持的多行编辑框。操作与 EDIT 相同。
 
 ```wcs
 MEMO Mem,L10T10W300H200,Initial text here,,0x0030        // VSCROLL + HSCROLL
@@ -929,27 +929,27 @@ ENVI @Mem=New multi-line\ntext                             // set with NL for ne
 
 ---
 
-### 4.21 MENU — Popup Menu / Window Menu Bar
+### 4.21 MENU — 弹出菜单 / 窗口菜单栏
 
-#### Popup Menu
+#### 弹出菜单
 
 ```wcs
 _SUB MyPopupMenu
     MENU Open,Open File...,CALL OnOpen
     MENU Save,Save,CALL OnSave
-    MENU -                                                // separator line
+    MENU -                                                // 分隔线
     MENU Exit,Exit,KILL \
 _END
 
-// Show at mouse position:
+// 在鼠标位置显示：
 ENVI @Ctrl.MSG=_%&::WM_RBUTTONDOWN%: CALL @--popmenu MyPopupMenu
 
-// Show at specific coordinates:
+// 在指定坐标显示：
 CALL @--popmenu MyPopupMenu 100:200                        // (x:y)
-CALL @--popmenu MyPopupMenu 100:200:4                      // align right (1=left,2=up,4=right,8=down)
+CALL @--popmenu MyPopupMenu 100:200:4                      // 右对齐 (1=左,2=上,4=右,8=下)
 ```
 
-#### Window Menu Bar
+#### 窗口菜单栏
 
 ```wcs
 _SUB WinName,L10T10W400H300,Title,,,#,, -bar               // -bar = has menu bar
@@ -962,46 +962,46 @@ _SUB WinName,L10T10W400H300,Title,,,#,, -bar               // -bar = has menu ba
 _END
 ```
 
-**Cascading sub-menus:**
+**级联子菜单：**
 ```wcs
 MENU -sub:ParentMenuItem ChildItem,Child Text,Command
-MENU -sub:ParentMenuItem -                                 // separator in submenu
+MENU -sub:ParentMenuItem -                                 // 子菜单中的分隔线
 ```
 
 ---
 
-### 4.22 TREE — Tree View Control
+### 4.22 TREE — 树形视图控件
 
 ```wcs
 TREE [-font:... -color:...] [*] [Name],LxTyWwHh,[ImageSource],[Data],[Status]
 ```
 
-Hierarchical tree with expandable/collapsible nodes. `*` = auto-recycle. Must be inside a `_SUB` window.
+带可展开/折叠节点的层次树。`*` = 自动回收。必须位于 `_SUB` 窗口内。
 
-**Status flags:**
+**状态标志：**
 
-| Flag | Description |
+| Flag | 说明 |
 |------|-------------|
-| `0x1` | HASBUTTONS — show +/- buttons |
-| `0x2` | HASLINES — show lines between nodes |
-| `0x4` | LINESATROOT — lines connect to root |
-| `0x8` | EDITLABELS — user can edit node labels |
-| `0x100` | CHECKBOXES — each node has a checkbox |
-| `0x400` | SINGLEEXPAND — single-click expand |
-| `0x800` | INFOTIP — info tooltips on hover |
-| `0x1000` | FULLROWSELECT — entire row highlights |
-| `0x2000` | NOSCROLL — no scrollbars |
-| `0x4200` | TRACKSELECT — hot tracking |
-| `0x40000` | NONEVENHEIGHT — variable row heights |
-| `0x80000` | NOHSCROLL — no horizontal scrollbar |
+| `0x1` | HASBUTTONS — 显示 +/- 按钮 |
+| `0x2` | HASLINES — 显示节点间连线 |
+| `0x4` | LINESATROOT — 连线连接到根节点 |
+| `0x8` | EDITLABELS — 用户可编辑节点标签 |
+| `0x100` | CHECKBOXES — 每个节点有复选框 |
+| `0x400` | SINGLEEXPAND — 单击展开 |
+| `0x800` | INFOTIP — 悬停显示信息提示 |
+| `0x1000` | FULLROWSELECT — 整行高亮 |
+| `0x2000` | NOSCROLL — 无滚动条 |
+| `0x4200` | TRACKSELECT — 热追踪 |
+| `0x40000` | NONEVENHEIGHT — 可变行高度 |
+| `0x80000` | NOHSCROLL — 无水平滚动条 |
 
-**Data format:** `<iconIdx:selIconIdx>Text`, nodes separated by `0x09` (TAB), child start `0x0b`, child end `0x0c`.
+**数据格式：** `<iconIdx:selIconIdx>Text`，节点以 `0x09` (TAB) 分隔，子节点起始 `0x0b`，子节点结束 `0x0c`。
 
 ```wcs
 TREE Tr1,L10T10W300H200,shell32.dll,<0:1>Root\t<1:2>Child1\x0b<2:3>Grandchild\x0c<1:2>Child2,0x100
 ```
 
-**Operations:**
+**操作：**
 ```wcs
 // Selection
 ENVI @Tr1.Sel=nodeChain[;[*~#]val]    // set selection (*=multi, ~=show, #=focus)
@@ -1031,21 +1031,21 @@ ENVI @Tr1.hID=[~]nodeChain|*hID;var   // node chain ↔ tree item handle
 
 ---
 
-### 4.23 SBAR — Standalone Scrollbar
+### 4.23 SBAR — 独立滚动条
 
 ```wcs
 SBAR [-left|-right|-color:barColor:thumbColor:[*]bindTarget] [*] Name,LxTyWwHh,[ValueInfo],[EventCmd],[Status]
 ```
 
-Standalone scrollbar control. `*` = auto-recycle. Must be inside a `_SUB` window.
+独立滚动条控件。`*` = 自动回收。必须位于 `_SUB` 窗口内。
 
-**Value info:** `[initialValue][:endValue][:initValue][:pageSize]`, default `0:100:0`.
+**值信息：** `[initialValue][:endValue][:initValue][:pageSize]`，默认 `0:100:0`。
 
-**Status:** negative=disabled, `0x10`=invisible, `0x40`=horizontal.
+**Status：** 负数=禁用，`0x10`=不可见，`0x40`=水平。
 
-**Bind target:** `-color:fg:bg:*TargetName` attaches scrollbar to a control for scrolling.
+**绑定目标：** `-color:fg:bg:*TargetName` 将滚动条附加到控件以便滚动。
 
-**Operations:**
+**操作：**
 ```wcs
 ENVI @Sbar.VAL=[cur][:start][:end][:pageSize]  // set value info
 ENVI @Sbar.VAL=?[curVar][:startVar][:endVar]   // query
@@ -1053,62 +1053,62 @@ ENVI @Sbar.VAL=?[curVar][:startVar][:endVar]   // query
 
 ---
 
-### 4.24 SCRN — Screen Capture
+### 4.24 SCRN — 屏幕捕获
 
 ```wcs
 SCRN [-cap] [-gui] Name,[filePath],[shape],[flags]
 ```
 
-Captures screen or region to a file.
+将屏幕或区域捕获到文件。
 
 ```wcs
-SCRN -cap Scr,shot.bmp,L0T0W1920H1080                     // capture region
-SCRN -cap Scr,shot.jpg                                    // capture full screen
-SCRN -gui Scr,,                                            // interactive selection mode
+SCRN -cap Scr,shot.bmp,L0T0W1920H1080                     // 捕获区域
+SCRN -cap Scr,shot.jpg                                    // 捕获全屏
+SCRN -gui Scr,,                                            // 交互式选择模式
 ```
 
 ---
 
-## 5. Message Mapping & Event Handling
+## 5. 消息映射与事件处理
 
-### `ENVI @Name.MSG=` — Message Handlers
+### `ENVI @Name.MSG=` — 消息处理
 
 ```wcs
-ENVI @ControlName.MSG=_msgId:command                      // control notification
-ENVI @ControlName.MSG=msgId:command                       // direct window message
-ENVI @WinName.MSG=msgId:command                           // window-level message
-ENVI @this.MSG=msgId:command                              // "this" = current window
+ENVI @ControlName.MSG=_msgId:command                      // 控件通知
+ENVI @ControlName.MSG=msgId:command                       // 直接窗口消息
+ENVI @WinName.MSG=msgId:command                           // 窗口级消息
+ENVI @this.MSG=msgId:command                              // "this" = 当前窗口
 ```
 
-### Prefix Conventions
+### 前缀约定
 
-| Prefix | Meaning | Execution |
+| 前缀 | 含义 | 执行方式 |
 |--------|---------|-----------|
-| `_` | Control notification (eg `_0x004E` = `_WM_NOTIFY`) | **Post** system handler. Use `_` for all WM_COMMAND/WM_NOTIFY subtypes. |
-| (none) | Direct window message | Handler runs, then message is **discarded** (not passed to system) |
-| `$` | Replace system handler | Handler runs **instead of** default window procedure |
-| `*` | Chain handler | Handler runs **then** message is passed to default window procedure |
-| `+` | Post handler | Handler is **posted** (asynchronous, runs after current processing) |
+| `_` | 控件通知（例如 `_0x004E` = `_WM_NOTIFY`） | **后于**系统处理。对所有 WM_COMMAND/WM_NOTIFY 子类型使用 `_`。 |
+| (无) | 直接窗口消息 | 处理函数运行后，消息被**丢弃**（不传递给系统） |
+| `$` | 替换系统处理 | 处理函数**代替**默认窗口过程运行 |
+| `*` | 链式处理 | 处理函数运行**然后**消息传递给默认窗口过程 |
+| `+` | 投递处理 | 处理函数被**投递**（异步，在当前处理完成后运行） |
 
 ```wcs
-ENVI @Btn1.MSG=_0x0201: CALL OnLeftClick                   // _ = control notification (WM_LBUTTONDOWN)
-ENVI @Win.MSG=0x0010: CALL OnClose                          // WM_CLOSE, discard after handler
-ENVI @Win.MSG=$0x0111: CALL OnCommand                        // replace system WM_COMMAND handler
-ENVI @Win.MSG=*0x0005: CALL OnResize                         // chain: handle then pass to system
-ENVI @Btn1.MSG=+0x0201: CALL OnClickDelayed                  // post: async handler
+ENVI @Btn1.MSG=_0x0201: CALL OnLeftClick                   // _ = 控件通知 (WM_LBUTTONDOWN)
+ENVI @Win.MSG=0x0010: CALL OnClose                          // WM_CLOSE，处理函数运行后丢弃
+ENVI @Win.MSG=$0x0111: CALL OnCommand                        // 替换系统 WM_COMMAND 处理函数
+ENVI @Win.MSG=*0x0005: CALL OnResize                         // 链式：先处理后传递给系统
+ENVI @Btn1.MSG=+0x0201: CALL OnClickDelayed                  // 投递：异步处理函数
 ```
 
-### Post / Send Messages
+### 投递/发送消息
 
 ```wcs
-ENVI @Ctrl.POSTMSG=#1                                       // post custom message #1
-ENVI @Ctrl.POSTMSG=#2;wParam                                // post with wParam
-ENVI @Ctrl.SENDMSG=#3;wParam;lParam                         // synchronous send
-ENVI @@SENDMSG=wid;msg#;wParam;lParam                        // cross-process send
-ENVI @@POSTMSG=wid;msg#;wParam;lParam                        // cross-process post
+ENVI @Ctrl.POSTMSG=#1                                       // 投递自定义消息 #1
+ENVI @Ctrl.POSTMSG=#2;wParam                                // 投递并携带 wParam
+ENVI @Ctrl.SENDMSG=#3;wParam;lParam                         // 同步发送
+ENVI @@SENDMSG=wid;msg#;wParam;lParam                        // 跨进程发送
+ENVI @@POSTMSG=wid;msg#;wParam;lParam                        // 跨进程投递
 ```
 
-### Common Win32 Message IDs
+### 常用 Win32 消息 ID
 
 ```wcs
 SET &::WM_CREATE=0x0001
@@ -1142,13 +1142,13 @@ SET &::WM_HSCROLL=0x0116
 SET &::WM_TRAYNOTIFY=1109
 ```
 
-### WM_COMMAND Subfield Access
+### WM_COMMAND 子字段访问
 
-When handling WM_COMMAND (`0x0111`):
+处理 WM_COMMAND (`0x0111`) 时：
 
 ```wcs
-%&__wParam.wID%              // Control ID (the numeric ID of the control that sent the message)
-%&__wParam.wNotifyCode%      // Notification code (BN_CLICKED=0, EN_CHANGE=0x300, LBN_SELCHANGE=1, etc.)
+%&__wParam.wID%              // 控件 ID（发送消息的控件的数字 ID）
+%&__wParam.wNotifyCode%      // 通知代码（BN_CLICKED=0, EN_CHANGE=0x300, LBN_SELCHANGE=1 等）
 ```
 
 ```wcs
@@ -1163,14 +1163,14 @@ _SUB OnWM_COMMAND
 _END
 ```
 
-### WM_NOTIFY Subfield Access
+### WM_NOTIFY 子字段访问
 
-When handling WM_NOTIFY (`0x004E`):
+处理 WM_NOTIFY (`0x004E`) 时：
 
 ```wcs
-%&__NMHDR.idFrom%            // Control ID that sent the notification
-%&__NMHDR.code%              // Notification code (LVN_ITEMCHANGED=-100, NM_CLICK=-2, etc.)
-%&__NMHDR.hwndFrom%          // HWND of the control
+%&__NMHDR.idFrom%            // 发送通知的控件 ID
+%&__NMHDR.code%              // 通知代码（LVN_ITEMCHANGED=-100, NM_CLICK=-2 等）
+%&__NMHDR.hwndFrom%          // 控件的 HWND
 ```
 
 ```wcs
@@ -1192,21 +1192,21 @@ _END
 
 ---
 
-## 6. Window Instantiation & Lifecycle
+## 6. 窗口实例化与生命周期
 
-### CALL @ Variants
+### CALL @ 变体
 
-| Variant | Behavior |
+| 变体 | 行为 |
 |---------|----------|
-| `CALL @WinName` | **Modal** — blocks caller until window closes |
-| `CALL @*WinName` | **Parallel** — both caller and window run simultaneously |
-| `CALL @-WinName` | **Background** — window runs; caller continues WITHOUT entering message loop |
-| `CALL @~WinName` | **Background non-blocking** — fully decoupled; caller continues immediately |
-| `CALL @+WinName` | **Abandoned child** — program can exit without waiting for this window |
-| `CALL @^WinName` | **Parallel with parent priority** — like `@*` but parent doesn't block child's message loop |
-| `CALL @WinName` (called twice) | If window exists, brings it to foreground |
+| `CALL @WinName` | **模态** — 阻塞调用方直到窗口关闭 |
+| `CALL @*WinName` | **并行** — 调用方与窗口同时运行 |
+| `CALL @-WinName` | **后台** — 窗口运行；调用方继续但不进入消息循环 |
+| `CALL @~WinName` | **后台非阻塞** — 完全解耦；调用方立即继续 |
+| `CALL @+WinName` | **放弃的子窗口** — 程序可以退出而不等待此窗口 |
+| `CALL @^WinName` | **并行且父窗口优先** — 类似 `@*` 但父窗口不阻塞子窗口的消息循环 |
+| `CALL @WinName`（调用两次） | 如果窗口存在，将其置于前台 |
 
-### Class / Instance Pattern with `this`
+### 使用 `this` 的类/实例模式
 
 ```wcs
 _SUB MyDialog
@@ -1218,10 +1218,10 @@ _SUB MyDialog
 _END
 ```
 
-`%&__WinID%` contains the current window's HWND.
-`%&__LastWinID%` contains the last-created window's HWND.
+`%&__WinID%` 包含当前窗口的 HWND。
+`%&__LastWinID%` 包含最后创建的窗口的 HWND。
 
-### Window Destruction
+### 窗口销毁
 
 ```wcs
 CALL @--WinName             // destroy the window environment (closes window)
@@ -1230,7 +1230,7 @@ KILL WinName                // close named window
 KILL PidOrHwnd              // kill process or window by ID
 ```
 
-### Window Enumeration
+### 窗口枚举
 
 ```wcs
 FIND --wid*@[parentWID] &list,[titleFilter]                   // enumerate all windows
@@ -1241,7 +1241,7 @@ FIND --wid* &list                                             // enumerate all t
 
 ---
 
-## 7. Complete GUI Example
+## 7. 完整 GUI 示例
 
 ```wcs
 #code=65001
@@ -1329,32 +1329,31 @@ _END
 CALL @MainWin
 ```
 
-This example demonstrates:
-- Window with resizing (`-size`)
-- Group boxes (GROU)
-- Labels (LABE), Edit boxes (EDIT), Browse button
-- Dropdown list (LIST) with items
-- Checkboxes (CHEK) with enable/disable logic
-- Radio button group (RADI)
-- Progress bar (PBAR)
-- Data table (TABL) with grid lines and multi-select
-- Timer (TIME) for periodic updates
-- OK/Cancel buttons with event handlers
-- Full message flow through CALL handlers
+本示例演示了：
+- 可调整大小的窗口（`-size`）
+- 分组框（GROU）
+- 标签（LABE）、编辑框（EDIT）、浏览按钮
+- 下拉列表（LIST）含选项
+- 复选框（CHEK）含启用/禁用逻辑
+- 单选按钮组（RADI）
+- 进度条（PBAR）
+- 数据表格（TABL）含网格线和多选
+- 定时器（TIME）用于周期性更新
+- 确定/取消按钮含事件处理器
+- 通过 CALL 处理器的完整消息流
 
 
 ---
 
-## 8. GUI Code Recipes
+## 8. GUI 写法示例
 
-For practical GUI patterns (dynamic controls, tab pages, custom titlebar, GDI drawing, drag-drop, etc.), see [recipes/gui.md](recipes/gui.md).
+有关实用 GUI 模式（动态控件、选项卡页面、自定义标题栏、GDI 绘图、拖放等），请参见 [how-tos/gui.md](how-tos/gui.md)。
 
 ---
 
-## 9. Advanced Techniques
-## 9. Advanced Techniques
+## 9. 高级技巧
 
-### 9.1 Window-to-Tray Lifecycle
+### 9.1 窗口到托盘的生命周期
 
 ```wcs
 _SUB OnSize                                         // WM_SIZE handler
@@ -1373,9 +1372,9 @@ _SUB OnSwitch                                       // toggle visibility
 _END
 ```
 
-### 9.2 SendMessage: ListView EnsureVisible
+### 9.2 SendMessage：ListView EnsureVisible
 
-Scroll a TABL to ensure a specific row is visible:
+滚动 TABL 确保指定行可见：
 
 ```wcs
 set lvm_first=0x1000
@@ -1387,9 +1386,9 @@ _SUB 滚动到行
 _END
 ```
 
-### 9.3 Window Auto-Position at Screen Edge
+### 9.3 窗口自动定位到屏幕边缘
 
-Position a window at the right edge of the screen (used in WiFi tools):
+将窗口定位到屏幕右边缘（用于 WiFi 工具）：
 
 ```wcs
 SCRN ScrW,ScrH                                       // get screen size
@@ -1403,7 +1402,7 @@ _SUB Win,L%WinL%T%WinT%W%WinW%H%WinH%,Title
 _END
 ```
 
-### 9.4 Taskbar Height Detection
+### 9.4 任务栏高度检测
 
 ```wcs
 ENVI &B_TRIM=40                                       // fallback
@@ -1420,9 +1419,9 @@ SCRN ScrW,ScrH
 CALC #ScrH=%ScrH% - %B_TRIM%                         // usable screen height
 ```
 
-### 9.5 Network Adapter Enumeration
+### 9.5 网卡枚举
 
-Iterate all valid NICs (skip virtual adapters):
+遍历所有有效网卡（跳过虚拟适配器）：
 
 ```wcs
 _SUB GetNetStatus
@@ -1446,7 +1445,7 @@ _SUB GetNetStatus
 _END
 ```
 
-### 9.6 Disk / Partition Info
+### 9.6 磁盘/分区信息
 
 ```wcs
 // Enumerate all drive letters:
@@ -1465,47 +1464,47 @@ EXEC!=!mountvol.exe Z: /S                              // mount ESP as Z:
 SUBJ -Z:                                                // dismount
 ```
 
-### 9.7 Stealth / Hidden Taskbar
+### 9.7 隐藏任务栏
 
 ```wcs
-// Hide taskbar:
+// 隐藏任务栏：
 FIND --class:Shell_TrayWnd --wid*@ &任务栏
 MSTR* id=<2>%&任务栏%
 ENVI @@visible=%id%:0                                   // hide
-// ENVI @@visible=%id%:1                                // show
+// ENVI @@visible=%id%:1                                // 显示
 ```
 
 ---
 
-## 10. API Call Integration
+## 10. API 调用集成
 
-Calling Win32 APIs directly from PECMD scripts for deep system access.
+直接从 PECMD 脚本调用 Win32 API 以进行深层系统访问。
 
-### 10.1 DLL Function Call Syntax
+### 10.1 DLL 函数调用语法
 
 ```wcs
 CALL $--qd --ret:&&ReturnVar DLL_Path,FunctionName,[param1],[param2],...
 ```
 
-**Common flags:**
+**常用标志：**
 
-| Flag | Purpose |
+| 标志 | 用途 |
 |------|---------|
-| `--qd` | Quiet mode (suppress errors) |
-| `--bool` | Function returns BOOL type |
-| `--ret:var` | Save return value to variable |
-| `--cd` | Switch to DLL directory before calling |
+| `--qd` | 静默模式（抑制错误） |
+| `--bool` | 函数返回 BOOL 类型 |
+| `--ret:var` | 保存返回值到变量 |
+| `--cd` | 调用前切换到 DLL 目录 |
 
-**Parameter types:**
+**参数类型：**
 
-| Prefix | Type | Example |
+| 前缀 | 类型 | 示例 |
 |--------|------|---------|
-| `#N` | Integer | `#0`, `#%&handle%` |
-| `$string` | Wide string (UTF-16) | `$一些文字` |
-| `@string` | ANSI string | `@text` |
-| `*buffer` | Pointer to buffer | `*&buf` |
+| `#N` | 整数 | `#0`、`#%&handle%` |
+| `$string` | 宽字符串（UTF-16） | `$一些文字` |
+| `@string` | ANSI 字符串 | `@text` |
+| `*buffer` | 缓冲区指针 | `*&buf` |
 
-### 10.2 Buffer Operations
+### 10.2 缓冲区操作
 
 ```wcs
 // Allocate zero-filled buffer
@@ -1529,9 +1528,9 @@ SET-make &str=&buf@offset;length          // copy null-terminated string
 SET-copy &dest=&src;srcOff;len;destOff    // copy between buffers
 ```
 
-### 10.3 SCROLLINFO Structure Pattern
+### 10.3 SCROLLINFO 结构体模式
 
-A recurring pattern for scrollbar control (7 DWORDs = 28 bytes):
+滚动条控件的常用模式（7 个 DWORD = 28 字节）：
 
 ```wcs
 // SCROLLINFO: cbSize, fMask, nMin, nMax, nPage, nPos, nTrackPos
@@ -1548,9 +1547,9 @@ CALL $--qd --bool --ret:&&bret User32.dll,SetScrollInfo,
 SET?int &lpsi=&&nPos:20                   // nPos at offset 20
 ```
 
-### 10.4 GetIfTable (Network Traffic)
+### 10.4 GetIfTable（网络流量）
 
-Two-call pattern: get required size → allocate → get data:
+两次调用模式：获取所需大小 → 分配 → 获取数据：
 
 ```wcs
 // 1st call: get size
@@ -1571,7 +1570,7 @@ SET?int &pIfTable=&&dwOut:(4 + %i% * 860 + 576)
 CALC &&down_bps=(%&dwIn% - %&lastIn%) * 8
 ```
 
-### 10.5 DeviceIoControl (Disk Control)
+### 10.5 DeviceIoControl（磁盘控制）
 
 ```wcs
 // Open physical drive
@@ -1598,7 +1597,7 @@ CALL $--qd --ret:&&ret Kernel32.dll,DeviceIoControl,
 CALL $--qd --bool Kernel32.dll,CloseHandle,#%&h%
 ```
 
-### 10.6 SetupAPI (Device Enumeration)
+### 10.6 SetupAPI（设备枚举）
 
 ```wcs
 // GUID for disk drives: {53f56307-b6bf-11d0-94af-0000c09ef10b}
@@ -1631,7 +1630,7 @@ LOOP #1=1,
 CALL $--qd --bool Setupapi.dll,SetupDiDestroyDeviceInfoList,#%&h%
 ```
 
-### 10.7 EnumResourceNames Callback Pattern
+### 10.7 EnumResourceNames 回调模式
 
 ```wcs
 // Bind callback function
@@ -1659,7 +1658,7 @@ _SUB OnEnumProc
 _END
 ```
 
-### 10.8 COM / GUID Operations
+### 10.8 COM / GUID 操作
 
 ```wcs
 // Create GUID (16-byte buffer)
@@ -1689,20 +1688,19 @@ CALC &DPI=%&LogPx% / 96
 
 ---
 
-## 11. System & Disk Operations
+## 11. 系统与磁盘操作
 
-For disk/partition/file/registry operations, see [commands-full.md](commands-full.md).
+有关磁盘/分区/文件/注册表操作，请参见 [commands-full.md](commands-full.md)。
 
-For code recipes, see [recipes/storage.md](recipes/storage.md) and [recipes/system.md](recipes/system.md).
+有关代码示例，请参见 [how-tos/storage.md](how-tos/storage.md) 和 [how-tos/system.md](how-tos/system.md)。
 
 ---
 
-## 12. Supplementary Techniques
-## 12. Supplementary Techniques
+## 12. 补充技巧
 
-### 12.1 Execution Lock Pattern
+### 12.1 执行锁模式
 
-Prevents re-entry while an operation is in progress:
+防止操作进行中重入：
 
 ```wcs
 _SUB StartOperation
@@ -1722,7 +1720,7 @@ _SUB StartOperation
 _END
 ```
 
-### 12.2 THREAD* Background Work
+### 12.2 THREAD* 后台工作
 
 ```wcs
 _SUB MainWin,W300H200,Title
@@ -1744,9 +1742,9 @@ _SUB OnTaskDone
 _END
 ```
 
-### 12.3 ENVI-ret Return Value Pattern
+### 12.3 ENVI-ret 返回值模式
 
-Pass a variable name as parameter and set it via `ENVI-ret`:
+将变量名作为参数传递，并通过 `ENVI-ret` 设置：
 
 ```wcs
 // Calling code:
@@ -1759,9 +1757,9 @@ _SUB GetDriveInfo
 _END
 ```
 
-### 12.4 SET^ Callback Binding
+### 12.4 SET^ 回调绑定
 
-Bind a `_SUB` function as a Win32 callback (for EnumResourceNames, EnumWindows, etc.):
+将 `_SUB` 函数绑定为 Win32 回调（用于 EnumResourceNames、EnumWindows 等）：
 
 ```wcs
 // 1. Bind: creates a callable address from a _SUB
@@ -1783,7 +1781,7 @@ _SUB OnMyCallback
 _END
 ```
 
-### 12.5 Scroll Bar Pixel Control (SendMessage)
+### 12.5 滚动条像素控制（SendMessage）
 
 ```wcs
 CALC &&LVM_SCROLL=0x1000 + 20
@@ -1797,7 +1795,7 @@ CALC #&&idx=%targetRow% - 1              // 0-based index
 SET @@sendmsg=%&hwnd%;%&LVM_ENSUREVISIBLE%;%&idx%;0
 ```
 
-### 12.6 DPI Aware Window
+### 12.6 DPI 感知窗口
 
 ```wcs
 _SUB MainWin,L0T0W500H400,Title,,,,#,-ntab
@@ -1820,9 +1818,9 @@ _SUB MainWin,L0T0W500H400,Title,,,,#,-ntab
 _END
 ```
 
-### 12.7 Timer Countdown + Auto-Revert
+### 12.7 定时器倒计时 + 自动恢复
 
-From the resolution adjustment tool:
+来自分辨率调节工具：
 
 ```wcs
 TEAM ENVI &&COUNT=0|ENVI &&SECONDS=20
@@ -1856,26 +1854,26 @@ _END
 
 ---
 
-## Appendix A: Control Style Flags Quick Reference
+## 附录 A：控件样式标志速查表
 
-| Control | Style (Hex) | Meaning | Source |
+| 控件 | 样式（十六进制） | 含义 | 来源 |
 |---------|-------------|---------|--------|
-| **EDIT** | `0x10` | Read-only | DISMGUI |
-| **EDIT** | `0x18` | Read-only + border | 打开方式 |
-| **EDIT** | `0x224` | Password + sunken border | WiFi_NEW |
-| **LIST** | `0x10` | Dropdown (non-editable) | 打开方式 |
-| **SWIN** | `0x100` | Auto vertical scrollbar | 打开方式 |
-| **TABL** | `0x416280` | Grid + full-row-select + sort-header + multi | 打开方式-TABL |
-| **TABL** | `0x10010` | Icons + single-select | WiFi_NEW |
-| **TABL** | `0x820` | Grid lines + full-row-select | demo |
-| **TABL** | `0x2000` | Editable cells | — |
-| **TABL** | `0x10000` | Sort by clicking header | 打开方式 |
-| **LABE** | (clickable) | Omit `-ncmd` for clickable | 打开方式 |
-| **LABE** | `-ncmd` | Non-clickable (static) | 打开方式 |
+| **EDIT** | `0x10` | 只读 | DISMGUI |
+| **EDIT** | `0x18` | 只读 + 边框 | 打开方式 |
+| **EDIT** | `0x224` | 密码 + 凹陷边框 | WiFi_NEW |
+| **LIST** | `0x10` | 下拉（不可编辑） | 打开方式 |
+| **SWIN** | `0x100` | 自动垂直滚动条 | 打开方式 |
+| **TABL** | `0x416280` | 网格 + 整行选择 + 排序表头 + 多选 | 打开方式-TABL |
+| **TABL** | `0x10010` | 图标 + 单选 | WiFi_NEW |
+| **TABL** | `0x820` | 网格线 + 整行选择 | demo |
+| **TABL** | `0x2000` | 可编辑单元格 | — |
+| **TABL** | `0x10000` | 点击表头排序 | 打开方式 |
+| **LABE** | (可点击) | 省略 `-ncmd` 即可点击 | 打开方式 |
+| **LABE** | `-ncmd` | 不可点击（静态） | 打开方式 |
 
 ---
 
-## Appendix D: File Header Standard Template
+## 附录 D：文件头标准模板
 
 ```wcs
 #code=65001                                         // UTF-8 encoding
@@ -1923,74 +1921,74 @@ _END
 
 ---
 
-## Appendix E: Best Practices Summary
+## 附录 E：最佳实践总结
 
-### Variable Management
+### 变量管理
 
-| Scope | Pattern | Usage |
+| 作用域 | 模式 | 用法 |
 |-------|---------|-------|
-| Global constants | `SET &::NAME=value` | Cross-thread, readonly after init |
-| Module-level | `SET &var=value` | Within same `_SUB` scope |
-| Local (preferred) | `SET &&var=value` or `ENVI &&var=value` | Function-local, auto-cleaned |
-| Parameters | `%~1`, `%~2` | Use `%~N` for safe access |
-| Return value | `ENVI-ret %~N=%value%` | Caller: `CALL func &&result` |
-| Thread comms | `&::` prefix | Global vars for THREAD* coordination |
+| 全局常量 | `SET &::NAME=value` | 跨线程，初始化后只读 |
+| 模块级 | `SET &var=value` | 同一 `_SUB` 作用域内 |
+| 局部（推荐） | `SET &&var=value` 或 `ENVI &&var=value` | 函数局部，自动清理 |
+| 参数 | `%~1`、`%~2` | 使用 `%~N` 安全访问 |
+| 返回值 | `ENVI-ret %~N=%value%` | 调用方：`CALL func &&result` |
+| 线程通信 | `&::` 前缀 | THREAD* 协调用的全局变量 |
 
-### Safety & Error Handling
+### 安全与错误处理
 
-- **Admin check**: `SET ?adminMODE=isadmin` → `IFEX $%adminMODE%<>1, MESS ... | EXIT`
-- **User confirm before destructive ops**: `MESS 确定要格式化？ #YN $N` + `FIND $%YESNO%=NO, EXIT`
-- **Disk number validation**: `CALC -err=-1 #disk=(%n%)+0` — if negative, invalid
-- **Lock running flag**: Prevent double-execution with `ENVI @Btn.Enable=0` + flag var
-- **Temp cleanup**: Always clean temp files after operations
+- **管理员检查**：`SET ?adminMODE=isadmin` → `IFEX $%adminMODE%<>1, MESS ... | EXIT`
+- **破坏性操作前确认**：`MESS 确定要格式化？ #YN $N` + `FIND $%YESNO%=NO, EXIT`
+- **磁盘号验证**：`CALC -err=-1 #disk=(%n%)+0` — 若为负数则无效
+- **锁定运行标志**：使用 `ENVI @Btn.Enable=0` + 标志变量防止双重执行
+- **临时文件清理**：操作后始终清理临时文件
 
-### UI Performance
+### UI 性能
 
-- **Batch table data**: Use `ENVI @Tbl.Val=1*;%data%` not row-by-row `ADD`
-- **Background loading**: `THREAD* CALL LoadData` + `POSTMSG` when done
-- **Destroy dynamic controls**: Before recreating, `ENVI @Ctrl.*del=` each old instance
-- **Timer cleanup**: `ENVI @TimerName=0` when no longer needed
+- **批量表格数据**：使用 `ENVI @Tbl.Val=1*;%data%` 而非逐行 `ADD`
+- **后台加载**：`THREAD* CALL LoadData` + 完成后 `POSTMSG`
+- **销毁动态控件**：重建前先 `ENVI @Ctrl.*del=` 每个旧实例
+- **定时器清理**：不再需要时 `ENVI @TimerName=0`
 
-### Layout Conventions (from real code)
+### 布局约定（来自实际代码）
 
-- Group box: x = margin(9), y = 16, width = `(totalWidth - 2*margin)/N` - gap
-- Label inside group: x = group_x + 12, y = group_y + 27
-- Edit box: x = label_x + 70, same y as label
-- Browse button: right-aligned in group (group_x + group_width - 60)
-- Bottom buttons: right-aligned, y = window_height - 40
+- 分组框：x = 边距(9)，y = 16，宽度 = `(总宽度 - 2*边距)/N` - 间隙
+- 分组内标签：x = 分组_x + 12，y = 分组_y + 27
+- 编辑框：x = 标签_x + 70，与标签同 y
+- 浏览按钮：分组内右对齐（分组_x + 分组_宽 - 60）
+- 底部按钮：右对齐，y = 窗口高度 - 40
 
 ---
 
-## Appendix F: ENVI @ Operation Quick Reference
+## 附录 F：ENVI @ 操作速查表
 
-| Operation | Purpose | Example |
+| 操作 | 用途 | 示例 |
 |-----------|---------|---------|
-| `ENVI @Ctrl=Text` | Set text | `ENVI @Label1=Hello` |
-| `ENVI @Ctrl.Enable=0` | Disable | `ENVI @Btn1.Enable=0` |
-| `ENVI @Ctrl.Visible=0` | Hide | `ENVI @Panel1.Visible=0` |
-| `ENVI @Ctrl.Visible=1` | Show | `ENVI @Panel1.Visible=1` |
-| `ENVI @Ctrl.POS=L:T:W:H` | Move/resize | `ENVI @Btn1.POS=10:20:80:28` |
-| `ENVI @Ctrl.POS=?L:T:W:H` | Query position | `ENVI @this.POS=?;&l;&t;&w;&h` |
-| `ENVI @Ctrl.bkcolor=0xRRGGBB` | Background color | `ENVI @Lbl1.bkcolor=0xf0f0f0` |
-| `ENVI @Ctrl.Font=12:微软雅黑` | Font | `ENVI @this.Font=10:Tahoma` |
-| `ENVI @Ctrl.Check=1` | Checkbox on | `ENVI @Chk1.Check=1` |
-| `ENVI @Ctrl.Check=?&v` | Query checkbox | `ENVI @Chk1.Check=?;&st` |
-| `ENVI @Ctrl.Val=1*;%data%` | Batch set table | `ENVI @Tbl.Val=1*;%&rows%` |
-| `ENVI @Ctrl.Val=?*;&n` | Get row count | `ENVI @Tbl.Val=?*;&cnt` |
-| `ENVI @Ctrl.Sel=%n%` | Select row | `ENVI @Tbl.Sel=3` |
-| `ENVI @Ctrl.Sel=?&r` | Get selection | `ENVI @Tbl.Sel=?;&row` |
-| `ENVI @Ctrl.ADD=Item` | Append to list | `ENVI @List1.ADD=New Item` |
-| `ENVI @Ctrl.DEL=:n` | Delete by index | `ENVI @List1.DEL=:2` |
-| `ENVI @Ctrl.*del=` | Destroy control | `ENVI @Labe5A.*del=` |
-| `ENVI @Ctrl.MSG=msg:Cmd` | Message map | `ENVI @Btn1.MSG=_0x0201:CALL Fn` |
-| `ENVI @Ctrl.POSTMSG=#N` | Post message | `ENVI @Win.POSTMSG=#1` |
-| `ENVI @Ctrl.SENDMSG=#N;w;l` | Send message | `ENVI @Tbl.SENDMSG=#0x1000+19;%i%;0` |
-| `ENVI @Ctrl.Style=+0x1000` | Add style | `ENVI @Ed1.Style=+0x0800` |
-| `ENVI @Ctrl.Style=-0x1000` | Remove style | `ENVI @Ed1.Style=-0x0800` |
-| `ENVI @this.HitTest=31` | Drag window | `ENVI @this.HitTest=31` |
-| `ENVI @Ctrl.id=?&var` | Get HWND | `ENVI @Panel1.id=?&hwnd` |
-| `ENVI @Ctrl.InvalidateRect=` | Force redraw | `ENVI @Tbl.InvalidateRect=` |
-| `ENVI @@Visable=WID:0` | Cross-proc hide | `ENVI @@Visable=%&wid%:0` |
-| `ENVI @@POS=WID:L:T:W:H` | Cross-proc move | `ENVI @@POS=%&wid%:0:0:300:200` |
-| `ENVI @@style=WID:*remove:add` | Cross-proc style | `ENVI @@style=%&wid%:*:0x00800000` |
-| `SET @@sendmsg=WID;msg;w;l` | Cross-proc msg | `SET @@sendmsg=%&hwnd%;0x0111;%id%;0` |
+| `ENVI @Ctrl=Text` | 设置文本 | `ENVI @Label1=Hello` |
+| `ENVI @Ctrl.Enable=0` | 禁用 | `ENVI @Btn1.Enable=0` |
+| `ENVI @Ctrl.Visible=0` | 隐藏 | `ENVI @Panel1.Visible=0` |
+| `ENVI @Ctrl.Visible=1` | 显示 | `ENVI @Panel1.Visible=1` |
+| `ENVI @Ctrl.POS=L:T:W:H` | 移动/调整大小 | `ENVI @Btn1.POS=10:20:80:28` |
+| `ENVI @Ctrl.POS=?L:T:W:H` | 查询位置 | `ENVI @this.POS=?;&l;&t;&w;&h` |
+| `ENVI @Ctrl.bkcolor=0xRRGGBB` | 背景色 | `ENVI @Lbl1.bkcolor=0xf0f0f0` |
+| `ENVI @Ctrl.Font=12:微软雅黑` | 字体 | `ENVI @this.Font=10:Tahoma` |
+| `ENVI @Ctrl.Check=1` | 复选框选中 | `ENVI @Chk1.Check=1` |
+| `ENVI @Ctrl.Check=?&v` | 查询复选框 | `ENVI @Chk1.Check=?;&st` |
+| `ENVI @Ctrl.Val=1*;%data%` | 批量设置表格 | `ENVI @Tbl.Val=1*;%&rows%` |
+| `ENVI @Ctrl.Val=?*;&n` | 获取行数 | `ENVI @Tbl.Val=?*;&cnt` |
+| `ENVI @Ctrl.Sel=%n%` | 选择行 | `ENVI @Tbl.Sel=3` |
+| `ENVI @Ctrl.Sel=?&r` | 获取选择 | `ENVI @Tbl.Sel=?;&row` |
+| `ENVI @Ctrl.ADD=Item` | 添加到列表 | `ENVI @List1.ADD=New Item` |
+| `ENVI @Ctrl.DEL=:n` | 按索引删除 | `ENVI @List1.DEL=:2` |
+| `ENVI @Ctrl.*del=` | 销毁控件 | `ENVI @Labe5A.*del=` |
+| `ENVI @Ctrl.MSG=msg:Cmd` | 消息映射 | `ENVI @Btn1.MSG=_0x0201:CALL Fn` |
+| `ENVI @Ctrl.POSTMSG=#N` | 投递消息 | `ENVI @Win.POSTMSG=#1` |
+| `ENVI @Ctrl.SENDMSG=#N;w;l` | 发送消息 | `ENVI @Tbl.SENDMSG=#0x1000+19;%i%;0` |
+| `ENVI @Ctrl.Style=+0x1000` | 添加样式 | `ENVI @Ed1.Style=+0x0800` |
+| `ENVI @Ctrl.Style=-0x1000` | 移除样式 | `ENVI @Ed1.Style=-0x0800` |
+| `ENVI @this.HitTest=31` | 拖动窗口 | `ENVI @this.HitTest=31` |
+| `ENVI @Ctrl.id=?&var` | 获取 HWND | `ENVI @Panel1.id=?&hwnd` |
+| `ENVI @Ctrl.InvalidateRect=` | 强制重绘 | `ENVI @Tbl.InvalidateRect=` |
+| `ENVI @@Visable=WID:0` | 跨进程隐藏 | `ENVI @@Visable=%&wid%:0` |
+| `ENVI @@POS=WID:L:T:W:H` | 跨进程移动 | `ENVI @@POS=%&wid%:0:0:300:200` |
+| `ENVI @@style=WID:*remove:add` | 跨进程样式 | `ENVI @@style=%&wid%:*:0x00800000` |
+| `SET @@sendmsg=WID;msg;w;l` | 跨进程消息 | `SET @@sendmsg=%&hwnd%;0x0111;%id%;0` |

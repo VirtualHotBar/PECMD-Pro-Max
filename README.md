@@ -4,7 +4,7 @@
 
 简体中文 | [English](./README.en.md)
 
-[![Version](https://img.shields.io/badge/version-1.2-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.2.2-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
@@ -23,18 +23,18 @@ pecmd-pro-max/
     ├── commands-full.md             ← 110+ 条命令完整参考（1576行）
     ├── pecmd-gui.md                 ← 完整 GUI 控件与窗口系统参考（1996行）
     ├── pe-startup.md                ← WinPE 启动流程、环境限制、PE版本差异
-    └── recipes/
-        ├── storage.md               ← 磁盘/分区/文件/注册表/设备 代码配方
-        ├── system.md                ← 进程/线程/系统/工具/回调 代码配方
-        ├── gui.md                   ← GUI 控件/窗口/绘制 代码配方
-        └── net.md                   ← 网络/SOCK/COM/WMI 代码配方
+    └── how-tos/
+        ├── storage.md               ← 磁盘/分区/文件/注册表/设备 写法示例
+        ├── system.md                ← 进程/线程/系统/工具/回调 写法示例
+        ├── gui.md                   ← GUI 控件/窗口/绘制 写法示例
+        └── net.md                   ← 网络/SOCK/COM/WMI 写法示例
 ```
 
 ## 核心特性
 
 - **三层变量系统详解** —— 环境变量 vs PE-局部 vs PE-全局，间接引用、延迟展开、引用返回、十六进制/原始缓冲区分配、二进制比较/转换
 - **110+ 命令参考** —— 每条 PECMD 命令包含完整语法、返回值、陷阱说明（含 BROW、TREE、LAMBDA、SBAR、IPAD、BLOCK、DTIM、SLID、SPIN）
-- **按域组织的代码配方** —— 磁盘/分区、进程/线程、GUI控件/绘制、网络/COM，按主题独立文件，AI按需加载
+- **按域组织的写法示例** —— 磁盘/分区、进程/线程、GUI控件/绘制、网络/COM，按主题独立文件，AI按需加载
 - **完整 GUI 参考** —— 所有 22 种控件与子窗口（`LABE`、`EDIT`、`CHEK`、`RADI`、`IMAG`、`TABL`、`LIST`、`MEMO`、`TREE`...）、ENVI @ 控件属性大全、消息系统、窗口管理
 - **WinPE 启动流程** —— 从 `winpeshl.exe` → `PECMD MAIN PECMD.INI` 直至 `EXPLORER.EXE`，包含 `WinXShell` 集成
 - **50 个内置变量全表** —— 路径/Shell变量、进程/线程变量、窗口/GUI变量、脚本/运行时变量、命令结果变量

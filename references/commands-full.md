@@ -1,615 +1,615 @@
-# PECMD Command Reference
+# PECMD 命令参考
 
-Full command reference organized by category. All commands are case-insensitive.
-Syntax conventions: `<required>`, `[optional]`, `|` = alternatives.
+按类别组织的完整命令参考。所有命令不区分大小写。
+语法约定：`<required>` 为必填，`[optional]` 为可选，`|` 表示多选一。
 
 ---
 
-## SCRIPT STRUCTURE
+## 脚本结构
 
 ### _END
-End of a `_SUB` function or code block.
+结束一个 `_SUB` 函数或代码块。
 ```
 _END
 ```
-Must be on its own line. Each `_SUB` requires one `_END`.
+必须单独一行。每个 `_SUB` 需要一个对应的 `_END`。
 
 ### _ENDFILE
-End of script file. Code after this line is never loaded.
+脚本文件结束。该行之后的代码不会被加载。
 ```
 _ENDFILE[-IMPORT]
 ```
-`-IMPORT`: Only effective when the file is IMPORTed.
+`-IMPORT`：仅在文件被 IMPORT 时生效。
 
-### _SUB — Define function / class / window
+### _SUB — 定义函数 / 类 / 窗口
 ```
-_SUB FuncName [*]                   // function (* = this-call, caller's stack)
-_SUB FuncName,*,,destroyCmd         // function with destructor command
-_SUB WinName,<shape>,[title],[closeCmd],[icon],[style],[mask],[flags]  // window
+_SUB FuncName [*]                   // 函数 (* = this-call，使用调用者栈)
+_SUB FuncName,*,,destroyCmd         // 带析构命令的函数
+_SUB WinName,<shape>,[title],[closeCmd],[icon],[style],[mask],[flags]  // 窗口
 ```
-Window shape: `LleftTtopWwidthHheight`. Omit L/T for centered.
-Window flags:
-`-top` (always on top), `-nocap` (no title bar), `-nosysmenu` (no system menu),
-`-trap` (close doesn't exit), `-size` (resizable), `-maxb` (enable maximize),
-`-minb` (enable minimize), `-disminb` (disable minimize button),
-`-discloseb` (disable close button), `-nfocus` (no keyboard focus),
-`-ntab` (no tab stop), `-disaltmv` (disable ALT-drag),
-`-nb` (no border), `-nofix` (non-fixed position),
-`-forcenomin` (prevent minimize), `-scalef` (XP-style DPI scaling),
-`-scale[:DPI]` (Win8+ DPI scaling), `-nxp` (no XP visual style),
-`-csize` (size=client area), `-na` (don't activate on creation)
-Style: `[#][$]`number for transparency, `,#` for hidden window.
-Mask: `[color][*][w:h]bmpname` for shaped window.
+窗口形状：`LleftTtopWwidthHheight`。省略 L/T 为居中。
+窗口标志：
+`-top`（始终置顶），`-nocap`（无标题栏），`-nosysmenu`（无系统菜单），
+`-trap`（关闭时不退出），`-size`（可调整大小），`-maxb`（启用最大化），
+`-minb`（启用最小化），`-disminb`（禁用最小化按钮），
+`-discloseb`（禁用关闭按钮），`-nfocus`（不接受键盘焦点），
+`-ntab`（无 Tab 键导航），`-disaltmv`（禁用 ALT 拖动），
+`-nb`（无边框），`-nofix`（非固定位置），
+`-forcenomin`（阻止最小化），`-scalef`（XP 风格 DPI 缩放），
+`-scale[:DPI]`（Win8+ DPI 缩放），`-nxp`（无 XP 视觉样式），
+`-csize`（尺寸=客户区），`-na`（创建时不激活）
+样式：`[#][$]`数字 表示透明度，`,#` 表示隐藏窗口。
+遮罩：`[color][*][w:h]bmpname` 用于异形窗口。
 
-### CALL — Call function/window/DLL
+### CALL — 调用函数/窗口/DLL
 ```
-CALL FuncName [args...]               // call function
-CALL *FuncName [args...]              // this-call (caller's stack)
-CALL @WinName [args...]              // create/show window (modal, blocks)
-CALL @*WinName [args...]             // parallel window
-CALL @-WinName [args...]             // background window
-CALL @~WinName [args...]             // background, non-blocking
-CALL @+WinName [args...]             // abandoned child window
-CALL @^WinName [args...]             // parallel, parent doesn't block child
-CALL @--popmenu WinName [x.y[:align]] // popup menu
-CALL @--WinName                      // destroy Win environment
-CALL @WinName                        // initialize Win environment
+CALL FuncName [args...]               // 调用函数
+CALL *FuncName [args...]              // this-call（使用调用者栈）
+CALL @WinName [args...]              // 创建/显示窗口（模态，会阻塞）
+CALL @*WinName [args...]             // 并行窗口
+CALL @-WinName [args...]             // 后台窗口
+CALL @~WinName [args...]             // 后台，非阻塞
+CALL @+WinName [args...]             // 抛弃式子窗口
+CALL @^WinName [args...]             // 并行，父窗口不阻塞子窗口
+CALL @--popmenu WinName [x.y[:align]] // 弹出菜单
+CALL @--WinName                      // 销毁 Win 环境
+CALL @WinName                        // 初始化 Win 环境
 
-// DLL calling
+// DLL 调用
 CALL $[? --cd --nrcd --c --[[i]v]ret:[~@]retVar] DLL|*hDll,Func,[#]p1,[#]p2...
-CALL $--ret:retVar [--cd],[--nrcd],-LoadLibrary,[^]DLLpath     // load DLL (^=auto-free)
-CALL $--ret:retVar [&&memVar],-LoadLibrary,*[file]#resID[|type] // load from memory
-CALL $--ret:retVar ,-GetProcAddress,*hDll,FuncName             // get function address
-CALL $[--ret:retVar] ,-FreeLibrary,*hDll                        // free DLL
+CALL $--ret:retVar [--cd],[--nrcd],-LoadLibrary,[^]DLLpath     // 加载 DLL（^=自动释放）
+CALL $--ret:retVar [&&memVar],-LoadLibrary,*[file]#resID[|type] // 从内存加载
+CALL $--ret:retVar ,-GetProcAddress,*hDll,FuncName             // 获取函数地址
+CALL $[--ret:retVar] ,-FreeLibrary,*hDll                        // 释放 DLL
 CALL $--win [--qd@ --cd --nrcd --ret:retVar] DLL,Func,cmdLine   // rundll32
-CALL $--cpl CPLpath                                             // control panel
-CALL $--ret:var ,-LoadLibrary,^<DLLpath                         // COM DLL load
+CALL $--cpl CPLpath                                             // 控制面板
+CALL $--ret:var ,-LoadLibrary,^<DLLpath                         // COM DLL 加载
 ```
-DLL flags: `--cd`=chdir, `--nrcd`=don't restore, `--c`=C convention (default=PASCAL/stdcall),
-`--bool`=BOOL return, `--ret:*`=return via pointer, `--m`=in-memory,
-`--1`=all remaining as one param, `--co`=register DLL (default), `--nco`=don't register.
+DLL 标志：`--cd`=切换目录，`--nrcd`=不恢复目录，`--c`=C 调用约定（默认 PASCAL/stdcall），
+`--bool`=BOOL 返回，`--ret:*`=通过指针返回，`--m`=内存中，
+`--1`=剩余全部作为一个参数，`--co`=注册 DLL（默认），`--nco`=不注册 DLL。
 
-**Type prefix system (--qd):** Per-parameter type overrides with `--qd:type1,type2,...`
-| Prefix | Type | Description |
+**类型前缀系统（--qd）：** 每个参数的类型覆盖，使用 `--qd:类型1,类型2,...`
+| 前缀 | 类型 | 描述 |
 |--------|------|-------------|
-| `#` | integer | Pass as int (default for numbers) |
-| `<` | INT64 | 64-bit integer |
-| `*` | PE variable | Pass as PE variable pointer |
-| `$` | string | Pass as string (Unicode) |
-| `=` | raw | Pass as raw data |
-| `>` | VARIANT | Pass as VARIANT |
-| `@` | narrow | ANSI narrow string |
-| `~` | UTF8 | UTF-8 string |
+| `#` | integer | 按整数传递（数字的默认方式） |
+| `<` | INT64 | 64位整数 |
+| `*` | PE variable | 按 PE 变量指针传递 |
+| `$` | string | 按字符串传递（Unicode） |
+| `=` | raw | 按原始数据传递 |
+| `>` | VARIANT | 按 VARIANT 传递 |
+| `@` | narrow | ANSI 窄字符串 |
+| `~` | UTF8 | UTF-8 字符串 |
 
-Additional flags:
+附加标志：
 ```
---sret           // return symbol count
---16             // return in hex
---iret:retVar    // return as INT
---vret:[~@]var   // return VARIANT (~=strip, @=raw)
---arg:~.table    // alternative parameter format (~=strip quotes)
-.vFun:index      // virtual function index
-.vFun:[?]name    // IDispatch function name ([propget] prefix removed)
---get / --put    // COM property get/set
-?                // query DLL function address (store in ret var)
-^<               // COM DLL loading prefix
-^                // auto-free when variable goes out of scope
-```
-
-Address call: DLL path=`#`, function=raw address. `*` prefix on func = take address. `&` prefix on param = group variable address.
-Built-in: `-DllRegisterServer` / `-DllUnregisterServer`.
-DLL architecture must match PECMD process (x86/x64).
-
-### EXIT — Terminate
-```
-EXIT FILE      // terminate entire script
-EXIT _SUB      // exit current function
-EXIT LOOP      // break out of loop
-EXIT FORX      // break out of FORX
-EXIT BLOCK     // exit current {} block
-EXIT -         // continue (skip to next iteration)
+--sret           // 返回符号数量
+--16             // 以十六进制返回
+--iret:retVar    // 以 INT 返回
+--vret:[~@]var   // 返回 VARIANT（~=剥离，@=原始）
+--arg:~.table    // 参数备选格式（~=去除引号）
+.vFun:index      // 虚函数索引
+.vFun:[?]name    // IDispatch 函数名（[propget] 前缀已移除）
+--get / --put    // COM 属性 获取/设置
+?                // 查询 DLL 函数地址（存入返回变量）
+^<               // COM DLL 加载前缀
+^                // 变量超出作用域时自动释放
 ```
 
-### IMPORT — Include library
+地址调用：DLL 路径=`#`，函数=原始地址。函数名加 `*` 前缀 = 取地址。参数加 `&` 前缀 = 组合变量地址。
+内置：`-DllRegisterServer` / `-DllUnregisterServer`。
+DLL 架构必须与 PECMD 进程（x86/x64）匹配。
+
+### EXIT — 终止
+```
+EXIT FILE      // 终止整个脚本
+EXIT _SUB      // 退出当前函数
+EXIT LOOP      // 跳出循环
+EXIT FORX      // 跳出 FORX 循环
+EXIT BLOCK     // 退出当前 {} 代码块
+EXIT -         // continue（跳到下一次迭代）
+```
+
+### IMPORT — 包含库文件
 ```
 IMPORT path\to\library.wcs
 ```
-Imports functions from another file. `_ENDFILE-IMPORT` in the imported file excludes trailing content.
+从另一个文件导入函数。被导入文件中 `_ENDFILE-IMPORT` 会排除尾部内容。
 
-### LOAD — Execute script file
+### LOAD — 执行脚本文件
 ```
 LOAD path\to\script.ini [args]
-LOAD #101 [args]                           // built-in script from EXE resources
-LOAD --mem &var [args]                     // execute code stored in variable
-LOAD --Local --EnviMode path.ini           // run as ForceLocal=1 + EnviMode=1
+LOAD #101 [args]                           // 从 EXE 资源中执行内置脚本
+LOAD --mem &var [args]                     // 执行变量中存储的代码
+LOAD --Local --EnviMode path.ini           // 以 ForceLocal=1 + EnviMode=1 模式运行
 ```
 
-### THREAD / THRD — Create thread
+### THREAD / THRD — 创建线程
 ```
 THREAD[*][&][+][$][#] [-exp] [-wait[x][-here]] [-tid:var] [--st:stackSize] command
 ```
-`*` = immediate, `&` = force PE var mode, `$` = pre-interpret, `+` = abandoned thread,
-`-wait` = wait for completion, `-tid:var` = get thread ID
+`*` = 立即执行，`&` = 强制 PE 变量模式，`$` = 预解释，`+` = 抛弃式线程，
+`-wait` = 等待完成，`-tid:var` = 获取线程 ID
 
-Additional flags:
-`-link` = maintain parent-child window connection,
-`-waitp` = wait for process end before thread,
-`-here` = current stack child (modify execution stack),
-`-htid:var` = get thread handle
+附加标志：
+`-link` = 维护父子窗口连接，
+`-waitp` = 线程前等待进程结束，
+`-here` = 当前栈子线程（修改执行栈），
+`-htid:var` = 获取线程句柄
 
 ---
 
-## VARIABLES & DATA
+## 变量与数据
 
-### ENVI / SET — Set / query variables
+### ENVI / SET — 设置/查询变量
 ```
 ENVI (SET) [&][$][@]VarName=Value
 ENVI^ EnviMode=1|ForceLocal=1|FORCELOCAL=1|LoadEnvi [...]
-ENVI $var=val              // set environment variable
-ENVI &var=val  (alias: SET var=val)   // set local PE variable
-SET &::var=val             // set class/global PE variable
-ENVI-def var=val  (alias: SET-def var=val)  // only if not already defined
-ENVI-ret[level] %~1=%val%  // return-by-reference (default level=1)
-ENVI~ &&Dst=Source.Key     // ~ = indirect expansion
+ENVI $var=val              // 设置环境变量
+ENVI &var=val  (alias: SET var=val)   // 设置局部 PE 变量
+SET &::var=val             // 设置类/全局 PE 变量
+ENVI-def var=val  (alias: SET-def var=val)  // 仅当变量尚未定义时设置
+ENVI-ret[level] %~1=%val%  // 按引用返回（默认 level=1）
+ENVI~ &&Dst=Source.Key     // ~ = 间接展开
 ```
-Control operations:
+控件操作：
 ```
-ENVI @Ctrl=Text                   // set control text
-ENVI @Ctrl.Enable=0|1             // disable/enable
-ENVI @Ctrl.Visible=0|1|*4        // hide/show/minimize
-ENVI @Ctrl.POS=l:t:w:h            // move/size
-ENVI @Ctrl.POS=?&L:&T:&W:&H     // query position
-ENVI @Ctrl.Check=0|1|2|-1|-2       // checkbox state (1/-1=checked, 0/2/-2=unchecked, <0=grayed, ±16=invisible)
-ENVI @Ctrl.Val=data               // set content
-ENVI @Ctrl.Val=?row.col;&var      // get cell (semicolon)
-ENVI @Ctrl.Val=?*;&count          // get row count
-ENVI @Ctrl.Val=-*                 // clear all rows
-ENVI @Ctrl.Val=1*;%&data%         // bulk-set from variable
-ENVI @Ctrl.Sel=idx|idx;0          // select/deselect
-ENVI @Ctrl.MSG=_msgId:cmd         // message map (control notifications use _)
-ENVI @Ctrl.POSTMSG=#msg;wp;lp     // async post message
-ENVI @Ctrl.SENDMSG=#msg;wp;lp     // sync send message
-ENVI @Ctrl.*del=                  // destroy control
-ENVI @Ctrl.ID=?&hwnd               // get control HWND
+ENVI @Ctrl=Text                   // 设置控件文本
+ENVI @Ctrl.Enable=0|1             // 禁用/启用
+ENVI @Ctrl.Visible=0|1|*4        // 隐藏/显示/最小化
+ENVI @Ctrl.POS=l:t:w:h            // 移动/调整大小
+ENVI @Ctrl.POS=?&L:&T:&W:&H     // 查询位置
+ENVI @Ctrl.Check=0|1|2|-1|-2       // 复选框状态（1/-1=选中，0/2/-2=未选，<0=灰色，±16=不可见）
+ENVI @Ctrl.Val=data               // 设置内容
+ENVI @Ctrl.Val=?row.col;&var      // 获取单元格（分号分隔）
+ENVI @Ctrl.Val=?*;&count          // 获取行数
+ENVI @Ctrl.Val=-*                 // 清除所有行
+ENVI @Ctrl.Val=1*;%&data%         // 从变量批量设置
+ENVI @Ctrl.Sel=idx|idx;0          // 选中/取消选中
+ENVI @Ctrl.MSG=_msgId:cmd         // 消息映射（控件通知使用 _）
+ENVI @Ctrl.POSTMSG=#msg;wp;lp     // 异步发送消息
+ENVI @Ctrl.SENDMSG=#msg;wp;lp     // 同步发送消息
+ENVI @Ctrl.*del=                  // 销毁控件
+ENVI @Ctrl.ID=?&hwnd               // 获取控件 HWND
 ENVI @Ctrl.Font=size:name
 ENVI @Ctrl.bkcolor=0xRRGGBB
-ENVI @Ctrl.Cursor=32649           // hand cursor
+ENVI @Ctrl.Cursor=32649           // 手型光标
 ENVI @@POS=wid:l:t:w:h:layer:trans:front:activate
-ENVI @@Visible=wid:0|1|*4        // cross-process visibility
-ENVI^ Clipboard=text             // write to clipboard
-ENVI^ Clipboard?=var             // read clipboard to variable
-ENVI^ EXPORTLOCAL=1|0|&1         // PE variable inheritance: 1=propagate, 0=isolate, &=recursive
-ENVI^ DisX64=1                   // disable WOW64 filesystem redirection
-ENVI^ Arg=*                      // split words into parameters
-ENVI^ DeskTopFresh=[clearicon][;][1|2|4|8|16][;[-+]path]  // desktop refresh
-ENVI @@TaskIcoMenu=0|1|2         // tray menu toggle
-ENVI^ HelpColor=[*cmdHeight] [fgColor][#bgColor]  // HELP display colors
+ENVI @@Visible=wid:0|1|*4        // 跨进程可见性
+ENVI^ Clipboard=text             // 写入剪贴板
+ENVI^ Clipboard?=var             // 读取剪贴板到变量
+ENVI^ EXPORTLOCAL=1|0|&1         // PE 变量继承：1=传播，0=隔离，&=递归
+ENVI^ DisX64=1                   // 禁用 WOW64 文件系统重定向
+ENVI^ Arg=*                      // 将单词拆分为参数
+ENVI^ DeskTopFresh=[clearicon][;][1|2|4|8|16][;[-+]path]  // 桌面刷新
+ENVI @@TaskIcoMenu=0|1|2         // 托盘菜单切换
+ENVI^ HelpColor=[*cmdHeight] [fgColor][#bgColor]  // HELP 显示颜色
 ```
 
-### CALC — Calculate / evaluate
+### CALC — 计算/求值
 ```
 CALC [#][变量=]表达式[#[#][小数位][E|F|G]]
 ```
-`#` prefix = integer mode. Supports: `+ - * / % ^`, bitwise `& | @`, comparison `= <> > >= < <=`,
-logic `&& ||`. Functions (34 total): `abs sin cos tan ctg sqrt ln lg log pow exp pow10`,
-`floor ceil round int frac div mod rand shl shr xor not lnot`,
-`arcsin arccos arctan arcctg deg rad hypot max min`.
-`lnot` = logical NOT (`!a`), `not` = bitwise NOT (`~a`). Constants: `e`, `pi`.
-Size suffixes: `K`=1024, `M`=1024^2, `G`=1024^3, `T`=1024^4, `S`=512.
-`#` on result = integer, `$` on result = double (INT64/float).
-`-base=[u]2|8|10|16|N` — output base (`u` = unsigned). `-gui` — graphical calc.
-`-err=defaultValue` — return value on error.
-`CALC -base=16 #&hex=shl(0x07,16)|0x20` — hex bitwise.
-`CALC &sz=%&bytes%/1G#3` — bytes to GB, 3 decimal places.
-Multiple expressions: separate with `;`, sub-variables: `$subName=expr`.
+`#` 前缀 = 整数模式。支持：`+ - * / % ^`，位运算 `& | @`，比较 `= <> > >= < <=`，
+逻辑 `&& ||`。函数（共34个）：`abs sin cos tan ctg sqrt ln lg log pow exp pow10`，
+`floor ceil round int frac div mod rand shl shr xor not lnot`，
+`arcsin arccos arctan arcctg deg rad hypot max min`。
+`lnot` = 逻辑非（`!a`），`not` = 按位非（`~a`）。常量：`e`，`pi`。
+尺寸后缀：`K`=1024，`M`=1024^2，`G`=1024^3，`T`=1024^4，`S`=512。
+结果加 `#` = 整数，结果加 `$` = 双精度（INT64/float）。
+`-base=[u]2|8|10|16|N` — 输出进制（`u` = 无符号）。`-gui` — 图形界面计算器。
+`-err=defaultValue` — 出错时返回默认值。
+`CALC -base=16 #&hex=shl(0x07,16)|0x20` — 十六进制位运算。
+`CALC &sz=%&bytes%/1G#3` — 字节转 GB，3 位小数。
+多个表达式：用 `;` 分隔，子变量：`$subName=expr`。
 
-### CODE — Encoding conversion
+### CODE — 编码转换
 ```
 CODE -srcFmt,srcFile,-dstFmt,dstFile
 CODE **-GBK,&src,**-UNI,&dst
 ```
-Formats: `-ANSI`, `-UNICODE`, `-UTF8`, `-UTF7`, `-GBK`, `-BIG5`, `-UNICODEB`, `-BOM`
+格式：`-ANSI`，`-UNICODE`，`-UTF8`，`-UTF7`，`-GBK`，`-BIG5`，`-UNICODEB`，`-BOM`
 
-### SET$ / ENVI$ — Create string from hex
+### SET$ / ENVI$ — 从十六进制创建字符串
 ```
-SET$ &Var=0d 0a                   // variable = CR+LF (Unicode wide string)
-SET$# &Buf=*4096 0                 // allocate zero-filled raw byte buffer
-ENVI$ &data=*1M 30 0d 0a          // variable-length allocation
+SET$ &Var=0d 0a                   // 变量 = CR+LF（Unicode 宽字符串）
+SET$# &Buf=*4096 0                 // 分配零填充的原始字节缓冲区
+ENVI$ &data=*1M 30 0d 0a          // 可变长度分配
 ```
 
-### SET-def — Set only if not defined
+### SET-def — 仅当未定义时设置
 ```
 SET-def Var=DefaultValue
 ```
 
-### SET-copy — Raw byte copy
+### SET-copy — 原始字节复制
 ```
 SET-copy Dst=&src;srcOff;len;dstOff
 ```
 
-### SET-long / SET-short / SET-ptr — Write typed values
+### SET-long / SET-short / SET-ptr — 写入类型化值
 ```
-SET-long &buf=value:offset         // 32-bit int at buffer offset
-SET-short &buf=value:offset        // 16-bit
-SET-ptr &buf=value:offset           // pointer-sized
+SET-long &buf=value:offset         // 在缓冲区偏移处写入 32 位整数
+SET-short &buf=value:offset        // 16 位
+SET-ptr &buf=value:offset           // 指针大小
 ```
 
-### SET?int / SET?longlong / SET?char — Read typed values
+### SET?int / SET?longlong / SET?char — 读取类型化值
 ```
 SET?int &buf=&&Var:offset
 SET?longlong &buf=&&Var:offset
 SET?char &buf=&&Var:offset
 ```
 
-### SET-make / ENVI-make — Substring from buffer
+### SET-make / ENVI-make — 从缓冲区取子串
 ```
 SET-make &&Str=&buf@offset;$length
 ```
 
-### SET< / ENVI< — Append to variable
+### SET< / ENVI< — 追加到变量
 ```
 SET< Var=text to append
 ```
 
-### ENVI-addr — Get buffer address
+### ENVI-addr — 获取缓冲区地址
 ```
 ENVI-addr &&ptr=&buf
 ```
 
-### ENVI-mkdummy — Dummy pointer/length descriptor
+### ENVI-mkdummy — 虚拟指针/长度描述符
 ```
 ENVI-mkdummy &&Name=&buf@offset;length
 ```
 
-### SET-cmp — Binary compare
+### SET-cmp — 二进制比较
 ```
 SET-cmp dst=src;srcOff;len;dstOff;[S|s|I|i]
 ```
-S/I = wide chars, s/i = narrow chars, I/i = case-insensitive.
+S/I = 宽字符，s/i = 窄字符，I/i = 不区分大小写。
 
-### SET-tom / SET-tow — Encoding conversion
+### SET-tom / SET-tow — 编码转换
 ```
-SET-tom dst=src       // UNICODE to multibyte (e.g. GBK)
-SET-tow dst=src       // multibyte to UNICODE
+SET-tom dst=src       // UNICODE 转多字节（如 GBK）
+SET-tow dst=src       // 多字节转 UNICODE
 ```
 
-### SET-swap — Swap variable contents
+### SET-swap — 交换变量内容
 ```
 SET-swap var1=var2
 ```
 
-### SET-zero — Clear variable memory
+### SET-zero — 清除变量内存
 ```
 SET-zero var=[value][@offset][;count]
 ```
-`$` prefix for wide-char mode.
+`$` 前缀用于宽字符模式。
 
-### ENVI-ex — Check variable existence
+### ENVI-ex — 检查变量是否存在
 ```
 ENVI-ex retVar=varName
 ```
 
-### ENVI-tom — String-to-pointer conversion
+### ENVI-tom — 字符串转指针
 ```
-ENVI-tom &&dst=&src    // convert string to memory pointer
+ENVI-tom &&dst=&src    // 将字符串转换为内存指针
 ```
 
 ---
 
-## FLOW CONTROL
+## 流程控制
 
-### FIND — String comparison
+### FIND — 字符串比较
 ```
-FIND $str1=str2, command        // equal (case-sensitive)
-FIND $str1<>str2, command       // not equal
-FIND $=%var%, command           // var is empty
-FIND $%var%=, command           // var is empty (same, variable on left)
-FIND *=var, command              // IDIOM: var is empty (primary source pattern)
-FIND *<>var, command             // IDIOM: var is NOT empty
-FIND $str1=str2,! cmd1! cmd2   // if else (separated by !)
-FIND $str1=str2,!! command      // else only
-FIND |num1>num2, command        // numeric comparison
-FIND $'%var%'='', command       // safe empty check (single quotes)
-FIND [$][A & B], command         // compound AND (& between conditions)
-FIND [$][A | B], command         // compound OR (| between conditions)
-FIND --pid &var,ProcessName            // get process PID
-FIND --pid &var                        // get process CPU ticks
-FIND --pid*@[.ext|#parentPID] &var,    // process list (opt: extension filter or parent PID)
-FIND --wid*@[parentWID] &var,[title]   // window list (* = prefix match on title)
-FIND --wid#ParentWID &var,ControlID    // query control's window ID
-FIND --class:ClassName --wid*@ &var    // window list filtered by window class
-FIND --menu &var,WindowID              // query window's MENU handle
-FIND --menu#Index &var,MenuID          // query sub-MENU by index
-FIND $!=%var%,                         // compare against literal "!" (special: $ followed by comparison op)
-FIND C:\=?,&var                        // query total disk space (bytes)
-```
-
-### IFEX — File test / numeric comparison / system query
-```
-IFEX path\|file, command         // file exists
-IFEX path\|file,! command        // NOT exists
-IFEX x:\, command                // drive letter exists AND has filesystem
-IFEX $num1>=num2, command        // numeric comparison
-IFEX #num1=#num2, command        // force integer
-IFEX [ cond1 & cond2 ], command  // AND compound (& and | or @ between conditions)
-IFEX [ cond1 | cond2 ], command  // OR compound
-IFEX [ cond1 @ cond2 ], command  // XOR compound
-IFEX MEMU=?,&var                 // query free memory
-IFEX MEMA=?,&var                 // query total memory
-IFEX drv:\=?,&var               // query disk free space
-IFEX KEY=?                       // wait for key press
+FIND $str1=str2, command        // 等于（区分大小写）
+FIND $str1<>str2, command       // 不等于
+FIND $=%var%, command           // 变量为空
+FIND $%var%=, command           // 变量为空（同上，变量在左侧）
+FIND *=var, command              // 惯用法：变量为空（主要源模式）
+FIND *<>var, command             // 惯用法：变量非空
+FIND $str1=str2,! cmd1! cmd2   // if else（用 ! 分隔）
+FIND $str1=str2,!! command      // 仅 else
+FIND |num1>num2, command        // 数值比较
+FIND $'%var%'='', command       // 安全的空值检查（单引号保护）
+FIND [$][A & B], command         // 复合 AND（条件之间用 &）
+FIND [$][A | B], command         // 复合 OR（条件之间用 |）
+FIND --pid &var,ProcessName            // 获取进程 PID
+FIND --pid &var                        // 获取进程 CPU 滴答数
+FIND --pid*@[.ext|#parentPID] &var,    // 进程列表（可选：扩展名过滤或父进程 PID）
+FIND --wid*@[parentWID] &var,[title]   // 窗口列表（* = 标题前缀匹配）
+FIND --wid#ParentWID &var,ControlID    // 查询控件的窗口 ID
+FIND --class:ClassName --wid*@ &var    // 按窗口类名过滤窗口列表
+FIND --menu &var,WindowID              // 查询窗口的 MENU 句柄
+FIND --menu#Index &var,MenuID          // 按索引查询子 MENU
+FIND $!=%var%,                         // 与字面量 "!" 比较（特殊：$ 后跟比较操作符）
+FIND C:\=?,&var                        // 查询磁盘总空间（字节）
 ```
 
-### LOOP — While loop
+### IFEX — 文件测试 / 数值比较 / 系统查询
+```
+IFEX path\|file, command         // 文件存在
+IFEX path\|file,! command        // 不存在
+IFEX x:\, command                // 盘符存在且有文件系统
+IFEX $num1>=num2, command        // 数值比较
+IFEX #num1=#num2, command        // 强制整数
+IFEX [ cond1 & cond2 ], command  // AND 复合（条件间用 &、| 或 @）
+IFEX [ cond1 | cond2 ], command  // OR 复合
+IFEX [ cond1 @ cond2 ], command  // XOR 复合
+IFEX MEMU=?,&var                 // 查询可用内存
+IFEX MEMA=?,&var                 // 查询总内存
+IFEX drv:\=?,&var               // 查询磁盘可用空间
+IFEX KEY=?                       // 等待按键
+```
+
+### LOOP — While 循环
 ```
 LOOP [#]condition,
 {
-    // body
+    // 循环体
 }
-// BREAK: EXIT LOOP or EXIT -
-// CONTINUE: EXIT -
+// BREAK：EXIT LOOP 或 EXIT -
+// CONTINUE：EXIT -
 ```
 
-### FORX — Iterate
+### FORX — 迭代
 ```
-FORX * list,&&item,                              // space-delimited iteration
-FORX *NL &multiLine,&&line,                      // newline-delimited
-FORX *v &a &b &c,&&name,                          // iterate variable names
-FORX /S[:depth] path\*.ext,&&name,0               // file enumeration (0=files, 1=dirs)
-FORX /S:3 /O:N path\*.ext,&&f,0                  // max depth 3, sorted by name
-FORX /S /O:-N path\*.ext,&&f,0                   // depth unlimited, reverse sort
-FORX /S /size:0:1048576:512 path\*.ext,&&f,0     // size 0-1MB, 512-aligned
-FORX @\Windows,&&dir,1                            // search for directory root
-FORX !\*.ext,&&f,0                                // reverse directory order
-FORX @\*.ext,&&d,1                                // dirs only (@ prefix)
-FORX *ab \*.ext,&&f,0                             // exclude A/B removable drives
-FORX *cur \*.ext,&&f,0                            // current drive preferred in search
-FORX *qu[~] \*.ext,&&name,0                       // support quoting in paths
-FORX *off \*.ext,&&name,0                         // return changed portion only
-FORX *bf \*.ext,&&name,0                          // breadth-first directory search
-FORX *L start step end,&&val,                     // numeric loop: FORX *L 0 2 10,&&val,
-FORX . \*.ext,&&f,0                               // ; can replace , as separator
-FORX : \*.ext,&&f,0                               // : can replace , as separator
+FORX * list,&&item,                              // 空格分隔迭代
+FORX *NL &multiLine,&&line,                      // 换行分隔
+FORX *v &a &b &c,&&name,                          // 迭代变量名
+FORX /S[:depth] path\*.ext,&&name,0               // 文件枚举（0=文件，1=目录）
+FORX /S:3 /O:N path\*.ext,&&f,0                  // 最大深度 3，按名称排序
+FORX /S /O:-N path\*.ext,&&f,0                   // 深度不限，反向排序
+FORX /S /size:0:1048576:512 path\*.ext,&&f,0     // 大小 0-1MB，512 对齐
+FORX @\Windows,&&dir,1                            // 搜索目录根
+FORX !\*.ext,&&f,0                                // 反向目录顺序
+FORX @\*.ext,&&d,1                                // 仅目录（@ 前缀）
+FORX *ab \*.ext,&&f,0                             // 排除 A/B 可移动驱动器
+FORX *cur \*.ext,&&f,0                            // 搜索时优先当前驱动器
+FORX *qu[~] \*.ext,&&name,0                       // 支持路径中的引号
+FORX *off \*.ext,&&name,0                         // 仅返回变化部分
+FORX *bf \*.ext,&&name,0                          // 广度优先目录搜索
+FORX *L start step end,&&val,                     // 数值循环：FORX *L 0 2 10,&&val,
+FORX . \*.ext,&&f,0                               // ; 可替代 , 作为分隔符
+FORX : \*.ext,&&f,0                               // : 可替代 , 作为分隔符
 ```
 
-### TEAM — Multi-command
+### TEAM — 多命令
 ```
 TEAM cmd1 | cmd2 | cmd3 ...
 ```
-Nested separators: `|` (level 1), `||` (level 2), `|||` (level 3).
+嵌套分隔符：`|`（第1层），`||`（第2层），`|||`（第3层）。
 
-### LOCK — Critical section / mutex
+### LOCK — 临界区 / 互斥锁
 ```
-LOCK #lockName,&retVar           // create/acquire named lock
-LOCK --exist #lockName,&retVar   // check if lock exists (1=yes, 0=no)
-{ LOCK #pecmd ... }              // wrap in braces for atomic scope
+LOCK #lockName,&retVar           // 创建/获取命名锁
+LOCK --exist #lockName,&retVar   // 检查锁是否存在（1=是，0=否）
+{ LOCK #pecmd ... }              // 用花括号包裹以创建原子作用域
 ```
 
 ---
 
-## FILE I/O
+## 文件 I/O
 
-### READ — Read file
+### READ — 读取文件
 ```
-READ path,*r,&var     // raw (no line-end conversion)
-READ path,*,&var      // UNIX LF -> native
-READ path,**,&var     // DOS CRLF -> native
-READ -,-1,&count,&var // get line count
-READ -,lineNo,&line,&var  // read specific line
+READ path,*r,&var     // 原始（不转换行尾符）
+READ path,*,&var      // UNIX LF -> 本地
+READ path,**,&var     // DOS CRLF -> 本地
+READ -,-1,&count,&var // 获取行数
+READ -,lineNo,&line,&var  // 读取指定行
 ```
 
-### WRIT — Write to file
+### WRIT — 写入文件
 ```
 WRIT[-UNICODE|-UNICODEB|-UTF8|-GBK|-BIG5|-ANSI|-<codepage>] [*fix] [*-nl] [*v] [*fv] [*c] [*nobom]
     path,[$][+|-]lineID,text
 ```
-Encoding flags (before filename): `-UNICODE`=UTF-16LE with BOM, `-UNICODEB`=UTF-16BE, `-UTF8`=UTF-8 with BOM, `-GBK`, `-BIG5`, `-ANSI`, `-<code_number>`=specific codepage. When existing file has BOM, BOM takes precedence.
+编码标志（在文件名之前）：`-UNICODE`=带 BOM 的 UTF-16LE，`-UNICODEB`=UTF-16BE，`-UTF8`=带 BOM 的 UTF-8，`-GBK`，`-BIG5`，`-ANSI`，`-<code_number>`=指定代码页。当现有文件有 BOM 时，BOM 优先。
 
-Star-prefix modifiers: `*fix`=lone CR as newline, `*-nl`=no trailing newline, `*v`=write to variable, `*fv`=FileData is a variable name, `*c`=clear file first, `*nobom`=write without BOM.
+星号前缀修饰符：`*fix`=单独的 CR 视为换行，`*-nl`=不添加尾部换行，`*v`=写入变量，`*fv`=FileData 是变量名，`*c`=先清空文件，`*nobom`=写入时不添加 BOM。
 
-Position: `$`=expand env vars, `+`=insert new line, `-`=delete line, plain number=replace line. `0` = last line.
-Special filenames: `-`=stdout, `--`=stderr, `CONOUT$`=debug terminal.
+位置：`$`=展开环境变量，`+`=插入新行，`-`=删除行，纯数字=替换行。`0` = 最后一行。
+特殊文件名：`-`=stdout，`--`=stderr，`CONOUT$`=调试终端。
 
 ```
-WRIT C:\BOOT.INI,+0,text              // append new line
-WRIT path,$0,a=%var%                  // replace last line, expand vars
-WRIT -,$+0,result                     // write to stdout
-WRIT path,$-3,                        // delete line 3
-```
-
-### GETF — Binary file read
-```
-GETF# path,offset#size,&var       // read raw bytes at offset, size bytes
-GETF# path,0#*,&var               // read entire file
+WRIT C:\BOOT.INI,+0,text              // 追加新行
+WRIT path,$0,a=%var%                  // 替换最后一行，展开变量
+WRIT -,$+0,result                     // 写入 stdout
+WRIT path,$-3,                        // 删除第 3 行
 ```
 
-### PUTF — Binary file write
+### GETF — 二进制文件读取
 ```
-PUTF -dd -len=0 path,0,zero       // create/truncate
-PUTF path,offset,#&data            // write at offset
-PUTF -dd -bs=1M src,0,dst,0,-len=size  // disk-to-disk copy
-```
-
-### FILE — File/directory operations
-```
-FILE src -> dst               // copy
-FILE -force src -> dst        // force overwrite
-FILE src                      // delete
-FILE -r dir                   // recursive delete
-FILE -md dir                  // create directory
-FILE -simpleprogress src -> dst  // with progress
+GETF# path,offset#size,&var       // 从偏移读取原始字节，共 size 字节
+GETF# path,0#*,&var               // 读取整个文件
 ```
 
-### DIR — List directory
+### PUTF — 二进制文件写入
 ```
-DIR &var /s /b path            // get listing into variable
-```
-
-### FDIR / FEXT / FNAM / NAME — Path parts
-```
-FDIR &var=fullPath              // directory part
-FEXT &var=fullPath              // extension (e.g. "EXE")
-FNAM &var=fullPath              // filename with extension
-NAME &var=fullPath              // filename without extension
+PUTF -dd -len=0 path,0,zero       // 创建/截断
+PUTF path,offset,#&data            // 在偏移处写入
+PUTF -dd -bs=1M src,0,dst,0,-len=size  // 磁盘到磁盘复制
 ```
 
-### SIZE — File size
+### FILE — 文件/目录操作
+```
+FILE src -> dst               // 复制
+FILE -force src -> dst        // 强制覆盖
+FILE src                      // 删除
+FILE -r dir                   // 递归删除
+FILE -md dir                  // 创建目录
+FILE -simpleprogress src -> dst  // 带进度条
+```
+
+### DIR — 列出目录
+```
+DIR &var /s /b path            // 获取目录列表到变量
+```
+
+### FDIR / FEXT / FNAM / NAME — 路径各部分
+```
+FDIR &var=fullPath              // 目录部分
+FEXT &var=fullPath              // 扩展名（如 "EXE"）
+FNAM &var=fullPath              // 带扩展名的文件名
+NAME &var=fullPath              // 不带扩展名的文件名
+```
+
+### SIZE — 文件大小
 ```
 SIZE &var=filePath
 ```
 
-### HASH — Compute hash
+### HASH — 计算哈希
 ```
 HASH filePath,&var,MD5|SHA1|SHA256|CRC32
-HASH $string,&var,SHA1          // hash string content
+HASH $string,&var,SHA1          // 对字符串内容计算哈希
 ```
-Default algorithm: MD5. Without variable, displays result in message box and copies to clipboard.
+默认算法：MD5。不指定变量时，在消息框中显示结果并复制到剪贴板。
 
-### MDIR — Create directory
+### MDIR — 创建目录
 ```
 MDIR dirPath
 ```
 
-### FLNK — Symbolic/hard link
+### FLNK — 符号链接/硬链接
 ```
 FLNK linkPath,targetPath
-FLNK -h linkPath,targetPath     // hard link
+FLNK -h linkPath,targetPath     // 硬链接
 ```
 
 ---
 
-## DISK & PARTITION
+## 磁盘与分区
 
-### PART — Partition management (comprehensive)
+### PART — 分区管理（全面）
 ```
-// List/info operations
-PART list disk,&var                         // list all disk numbers
-PART list disk N,&var                       // disk info (size, cylinders, heads, media type, signature, bus, type, removable)
-PART list part N,&var                       // list partition numbers on disk N
-PART -hextp list part N#M,&var              // partition info (hex type 0xNN)
-PART -hextp -phy list part N#M,&var         // partition info with physical numbering (1-4 primary, 5-N logical)
-PART -hextp -phy# list part N#M,&var        // partition info + physical# field appended
-PART -fill list part N#M,&var               // use * placeholder for empty drive letter
-PART -devid list disk N,&var                // device path/ID (like \\.\PHYSICALDRIVE0)
-PART -devidx list disk N,&var               // model + serial
-PART -devidn list disk N,&var               // name only
-PART -devida list disk N,&var               // full: product# + serial + version + DeviceType + RemovableMedia + CommandQueueing + VendorId + ProductRevision
-PART -iv=N list disk N,&var                 // query sub-field N of disk info
-PART -raw list disk N,&var                  // raw disk info (device path, media GUID, volume name)
-PART list drv D:,&var                       // drive letter → disk# partition# type bus drive media
-PART list volume volumeName,&var            // volume info
-PART -drv list volume N,&var                // volumes by drive number
-PART -report[:retvar][diskNum]              // show/list report (ignores other args)
-PART -floppy list disk N,&var               // list floppy devices
+// 列出/信息操作
+PART list disk,&var                         // 列出所有磁盘号
+PART list disk N,&var                       // 磁盘信息（大小、柱面、磁头、介质类型、签名、总线、类型、可移动）
+PART list part N,&var                       // 列出磁盘 N 上的分区号
+PART -hextp list part N#M,&var              // 分区信息（十六进制类型 0xNN）
+PART -hextp -phy list part N#M,&var         // 分区信息，含物理编号（1-4 主分区，5-N 逻辑分区）
+PART -hextp -phy# list part N#M,&var        // 分区信息 + 追加物理#字段
+PART -fill list part N#M,&var               // 空盘符用 * 占位
+PART -devid list disk N,&var                // 设备路径/ID（如 \\.\PHYSICALDRIVE0）
+PART -devidx list disk N,&var               // 型号 + 序列号
+PART -devidn list disk N,&var               // 仅名称
+PART -devida list disk N,&var               // 完整：产品号 + 序列号 + 版本 + 设备类型 + 可移动介质 + 命令队列 + 供应商ID + 产品修订版
+PART -iv=N list disk N,&var                 // 查询磁盘信息的第 N 个子字段
+PART -raw list disk N,&var                  // 原始磁盘信息（设备路径、介质 GUID、卷名）
+PART list drv D:,&var                       // 盘符 → 磁盘号 分区号 类型 总线 驱动器 介质
+PART list volume volumeName,&var            // 卷信息
+PART -drv list volume N,&var                // 按驱动器号列出卷
+PART -report[:retvar][diskNum]              // 显示/列出报告（忽略其他参数）
+PART -floppy list disk N,&var               // 列出软盘设备
 
-// Modify operations
-PART -super -up -xup N#M type [attr]        // set partition type+attribute (both -super -up required)
-PART -super -up -axup N#M type [attr]       // enhanced xupdate for removable disks
-PART -super -up -swap:M N#P                 // swap physical partition numbers
-PART -super -up N#M a|A|-a|-A type start len// create (a=active, A=extended, -a=inactive)
-PART -super -up del N#M                     // delete partition
-PART -super -up N#M a|A|-a|-A               // toggle active on existing
-PART -super -up -fs0 N#M init               // initialize as raw (no filesystem)
-PART -super -up -force N#M ...              // force dangerous operation
-PART update N                               // refresh disk info from system
-PART hupdate[f] N                           // hard disk refresh (f=force with renumber)
-PART -ahup -up N#M ...                      // additional hard update for removable renumber
+// 修改操作
+PART -super -up -xup N#M type [attr]        // 设置分区类型+属性（-super 和 -up 均需指定）
+PART -super -up -axup N#M type [attr]       // 可移动磁盘的增强 xupdate
+PART -super -up -swap:M N#P                 // 交换物理分区号
+PART -super -up N#M a|A|-a|-A type start len// 创建（a=活动，A=扩展，-a=非活动）
+PART -super -up del N#M                     // 删除分区
+PART -super -up N#M a|A|-a|-A               // 切换现有分区的活动标志
+PART -super -up -fs0 N#M init               // 初始化为原始状态（无文件系统）
+PART -super -up -force N#M ...              // 强制执行危险操作
+PART update N                               // 从系统刷新磁盘信息
+PART hupdate[f] N                           // 硬盘刷新（f=强制重新编号）
+PART -ahup -up N#M ...                      // 可移动磁盘重新编号的额外硬更新
 
-// MBR/PBR operations
-PART /mbr[=nt6|=win|=nt5|=dos|=file] N      // rewrite MBR on disk N
-PART /pbr[=nt6|=win|=nt5|=dos|=file] N#M    // rewrite PBR on partition
-PART -img=[*offs*len*]file|disk[/mbr|/pbr]  // operate on image file instead of physical disk
+// MBR/PBR 操作
+PART /mbr[=nt6|=win|=nt5|=dos|=file] N      // 重写磁盘 N 上的 MBR
+PART /pbr[=nt6|=win|=nt5|=dos|=file] N#M    // 重写分区上的 PBR
+PART -img=[*offs*len*]file|disk[/mbr|/pbr]  // 对镜像文件而非物理磁盘操作
 
-// GPT operations
-PART -gpt init N                            // initialize as GPT
-PART -super -up -gpt N#M a type start len guid attr name  // create GPT partition
-PART -super -up -gpt -fs0 -mbr init N       // init GPT+MBR hybrid, raw FS
-PART -gpt -cmp N                            // compress GPT table (make 1-based, contiguous)
-PART fix N                                  // fix GPT: correct checksums, flags, partition count
+// GPT 操作
+PART -gpt init N                            // 初始化为 GPT
+PART -super -up -gpt N#M a type start len guid attr name  // 创建 GPT 分区
+PART -super -up -gpt -fs0 -mbr init N       // 初始化 GPT+MBR 混合，原始文件系统
+PART -gpt -cmp N                            // 压缩 GPT 表（从1开始编号，连续排列）
+PART fix N                                  // 修复 GPT：纠正校验和、标志、分区计数
 
-// Smart drive letter control
-PART -lock[:\\\\.\D:] N                     // lock drive letter (prevent auto-assign)
-PART -locku[:\\\\.\D:] N                    // unlock
-PART -lock *                                // lock all volumes
-PART -dvol N#M,&volGUID                     // dynamic corrected VolumeGUID
-PART -mount-                                // don't show labels for unassigned partitions
-PART -fill                                  // fill empty drive letter slots
+// 智能盘符控制
+PART -lock[:\\\\.\D:] N                     // 锁定盘符（阻止自动分配）
+PART -locku[:\\\\.\D:] N                    // 解锁
+PART -lock *                                // 锁定所有卷
+PART -dvol N#M,&volGUID                     // 动态校正的 VolumeGUID
+PART -mount-                                // 不显示未分配分区的标签
+PART -fill                                  // 填充空盘符槽位
 
-// Utility
-PART -gui                                   // launch GUI partition manager
-PART -usb                                   // USB-only mode
-PART -admin                                 // advanced mode (dangerous)
-PART -align[=size]                          // alignment (default or specify)
-PART -CHS=C:H:S                             // override cylinder/head/sector geometry
-```
-
-PART MBR output fields: `分区号 类型(hex) 激活 起始(字节) 长度(字节) 隐藏扇区 结束(字节) 物理# 盘符`
-PART GPT output fields: `分区号 GUID 属性 起始(字节) 长度(字节) 结束(字节) 物理# 盘符`
-
-### SHOW — Show/hide partitions
-```
-SHOW -1:-1                                // show all partitions
-SHOW * hd:part,driveLetter                 // assign drive letter (hd=disk, part=partition)
-SHOW *- hd:part,                           // remove drive letter
-SHOW & hd:part,driveLetter                 // local-mode assign
-SHOW =1 * hd:part,driveLetter              // skip if already loaded
-SHOW -check * hd:part,driveLetter          // skip if no valid filesystem
-SHOW * F:,driveLetter                      // fixed disk
-SHOW * U:,driveLetter                      // USB disk
-SHOW * #physicalPart,driveLetter            // physical partition number
-SHOW * -1,driveLetter                       // all unlettered partitions
-SHOW * hd:part,ChineseChar                  // assign Chinese-character drive letter
-SHOW * hd:part,letter,WaitMs               // assign with wait time for device readiness
+// 实用工具
+PART -gui                                   // 启动 GUI 分区管理器
+PART -usb                                   // 仅 USB 模式
+PART -admin                                 // 高级模式（危险）
+PART -align[=size]                          // 对齐（默认或指定值）
+PART -CHS=C:H:S                             // 覆盖柱面/磁头/扇区几何参数
 ```
 
-### SUBJ — Mount/unmount
+PART MBR 输出字段：`分区号 类型(hex) 激活 起始(字节) 长度(字节) 隐藏扇区 结束(字节) 物理# 盘符`
+PART GPT 输出字段：`分区号 GUID 属性 起始(字节) 长度(字节) 结束(字节) 物理# 盘符`
+
+### SHOW — 显示/隐藏分区
 ```
-SUBJ D:,\Device\Harddisk0\Partition1       // mount
-SUBJ -D:                                   // unmount
+SHOW -1:-1                                // 显示所有分区
+SHOW * hd:part,driveLetter                 // 分配盘符（hd=磁盘，part=分区）
+SHOW *- hd:part,                           // 移除盘符
+SHOW & hd:part,driveLetter                 // 本地模式分配
+SHOW =1 * hd:part,driveLetter              // 已加载则跳过
+SHOW -check * hd:part,driveLetter          // 无有效文件系统则跳过
+SHOW * F:,driveLetter                      // 固定磁盘
+SHOW * U:,driveLetter                      // USB 磁盘
+SHOW * #physicalPart,driveLetter            // 物理分区号
+SHOW * -1,driveLetter                       // 所有未分配盘符的分区
+SHOW * hd:part,ChineseChar                  // 分配中文字符盘符
+SHOW * hd:part,letter,WaitMs               // 分配并等待设备就绪（等待毫秒数）
 ```
 
-### FDRV — Drive enumeration
+### SUBJ — 挂载/卸载
 ```
-FDRV &var=*:                               // all drive letters with volumes
-FDRV *idle &var=*:                         // idle (unassigned) drive letters
-FDRV *vol &label,&fs=D:                   // get volume label and filesystem
-FDRV *rsort &var=*:                        // reversed sort order
+SUBJ D:,\Device\Harddisk0\Partition1       // 挂载
+SUBJ -D:                                   // 卸载
 ```
 
-### FORM — Drive type (comprehensive)
+### FDRV — 驱动器枚举
 ```
-// Basic filesystem query
-FORM &var=D:                               // filesystem type string (e.g. "NTFS", "FAT32", "CDFS")
-FORM -raw &var=D:                          // drive type constant (see table below)
-FORM TYPE,&var,BUS=D:                      // bus type string (e.g. "USB", "SATA", "SCSI", "NVMe")
-FORM -raw &type,&bus,&drvType=&dsk,<drive>  // comprehensive: all type info in one call
+FDRV &var=*:                               // 所有有卷的盘符
+FDRV *idle &var=*:                         // 空闲（未分配）盘符
+FDRV *vol &label,&fs=D:                   // 获取卷标和文件系统
+FDRV *rsort &var=*:                        // 反向排序
+```
 
-// Drive type constants (returned by FORM -raw)
+### FORM — 驱动器类型（全面）
 ```
-| Constant | Value | Description |
+// 基本文件系统查询
+FORM &var=D:                               // 文件系统类型字符串（如 "NTFS"、"FAT32"、"CDFS"）
+FORM -raw &var=D:                          // 驱动器类型常量（见下表）
+FORM TYPE,&var,BUS=D:                      // 总线类型字符串（如 "USB"、"SATA"、"SCSI"、"NVMe"）
+FORM -raw &type,&bus,&drvType=&dsk,<drive>  // 全面：一次调用获取所有类型信息
+
+// 驱动器类型常量（FORM -raw 返回）
+```
+| 常量 | 值 | 描述 |
 |---|---|---|
-| DRIVE_UNKNOWN | 0 | Unknown drive type |
-| DRIVE_NO_ROOT_DIR | 1 | Invalid/not mounted |
-| DRIVE_REMOVABLE | 2 | Removable media (USB flash, floppy) |
-| DRIVE_FIXED | 3 | Fixed disk (HDD, SSD) |
-| DRIVE_REMOTE | 4 | Network/mapped drive |
-| DRIVE_CDROM | 5 | Optical disc (CD/DVD/BD) |
-| DRIVE_RAMDISK | 6 | RAM disk |
-| DRIVE_CDROMUSB | 7 | USB optical disc |
-| DRIVE_USBFLASH | 8+ | USB flash drive |
-| DRIVE_USBDISK | 9+ | USB disk |
-| FUNCTION_ERROR | -1 | API error |
+| DRIVE_UNKNOWN | 0 | 未知驱动器类型 |
+| DRIVE_NO_ROOT_DIR | 1 | 无效/未挂载 |
+| DRIVE_REMOVABLE | 2 | 可移动介质（U盘、软盘） |
+| DRIVE_FIXED | 3 | 固定磁盘（HDD、SSD） |
+| DRIVE_REMOTE | 4 | 网络/映射驱动器 |
+| DRIVE_CDROM | 5 | 光盘（CD/DVD/BD） |
+| DRIVE_RAMDISK | 6 | RAM 磁盘 |
+| DRIVE_CDROMUSB | 7 | USB 光盘 |
+| DRIVE_USBFLASH | 8+ | USB 闪存驱动器 |
+| DRIVE_USBDISK | 9+ | USB 磁盘 |
+| FUNCTION_ERROR | -1 | API 错误 |
 
-### Bus Type Constants (FORM -raw &busType,&bus,drvType=&id,D:)
-| Constant | Value | Description |
+### 总线类型常量（FORM -raw &busType,&bus,drvType=&id,D:）
+| 常量 | 值 | 描述 |
 |---|---|---|
-| BusTypeUnknown | 0x00 | Unknown |
+| BusTypeUnknown | 0x00 | 未知 |
 | BusTypeScsi | 0x01 | SCSI |
 | BusTypeAtapi | 0x02 | ATAPI |
 | BusTypeAta | 0x03 | ATA |
 | BusType1394 | 0x04 | 1394 (FireWire) |
 | BusTypeSsa | 0x05 | SSA |
-| BusTypeFibre | 0x06 | Fibre Channel |
+| BusTypeFibre | 0x06 | 光纤通道 |
 | BusTypeUsb | 0x07 | USB |
 | BusTypeRAID | 0x08 | RAID |
 | BusTypeiScsi | 0x09 | iSCSI |
@@ -617,810 +617,810 @@ FORM -raw &type,&bus,&drvType=&dsk,<drive>  // comprehensive: all type info in o
 | BusTypeSata | 0x0B | SATA |
 | BusTypeSd | 0x0C | SD |
 | BusTypeMmc | 0x0D | MMC |
-| BusTypeVirtual | 0x0E | Virtual |
-| BusTypeFileBackedVirtual | 0x0F | File-backed Virtual |
-| BusTypeSpaces | 0x10 | Storage Spaces |
+| BusTypeVirtual | 0x0E | 虚拟 |
+| BusTypeFileBackedVirtual | 0x0F | 文件支持虚拟 |
+| BusTypeSpaces | 0x10 | 存储空间 |
 | BusTypeNvme | 0x11 | NVMe |
 | BusTypeSCM | 0x12 | SCM |
 | BusTypeUfs | 0x13 | UFS |
 | BusTypeMax | 0x14 | |
-| BusTypeMaxReserved | 0x7F | Reserved max |
+| BusTypeMaxReserved | 0x7F | 保留最大值 |
 
-### DFMT — Format
+### DFMT — 格式化
 ```
 DFMT d:,NTFS,label,quick
 DFMT d:,FAT32,,quick
 ```
 
-### EJEC — Eject
+### EJEC — 弹出
 ```
-EJEC D:                       // eject optical drive D:
-EJEC * D:                     // eject removable USB disk D:
-EJEC C-                       // close all optical drive trays
-EJEC U-                       // eject all USB disks
-EJEC C- X:                    // close tray on X:
-EJEC U- X:                    // eject USB disk X:
-EJEC C- HDD#1                 // close tray on disk 1
-EJEC U- HDD#1                 // eject USB disk on disk 1
+EJEC D:                       // 弹出光驱 D:
+EJEC * D:                     // 弹出可移动 USB 磁盘 D:
+EJEC C-                       // 关闭所有光驱托盘
+EJEC U-                       // 弹出所有 USB 磁盘
+EJEC C- X:                    // 关闭 X: 的托盘
+EJEC U- X:                    // 弹出 USB 磁盘 X:
+EJEC C- HDD#1                 // 关闭磁盘 1 的托盘
+EJEC U- HDD#1                 // 弹出磁盘 1 上的 USB 磁盘
 ```
 
-### DISK — Disk operations
+### DISK — 磁盘操作
 ```
 DISK [varName],[diskNum],[partNum],function,[USBDriveLetters][,options]
-  // function 1=allocate, 2=free, 3=reallocate, 22=first primary partition
-  // USBDriveLetters: e.g. "UW" means start from W: for USB (drive letter table)
+  // function 1=分配，2=释放，3=重新分配，22=第一个主分区
+  // USBDriveLetters：例如 "UW" 表示 USB 从 W: 开始分配（盘符表）
 ```
-| Function | Description |
+| 功能 | 描述 |
 |---|---|
-| 1 | Allocate drive letters |
-| 2 | Free drive letters |
-| 3 | Reallocate (rearrange + allocate) |
-| 22 | First primary partition allocation |
-| **varName special forms:** | |
-| `&drvLetter,diskNum,partNum` | Get drive letter of specific partition |
-| `uAllPart,diskNum,partNum` | Assign USB → new partition letter |
-| `Vol:volLabel,diskNum,partNum` | Find by volume label |
-| `Part:partName,diskNum,partNum` | Find by partition name |
-| `\Windows\|\WinXP\|\WinNT\|` | Search system dirs across drives |
-| **Options (0x**):** ||
-| 0x1 | Only rearrange already-drive-lettered partitions |
-| 0x2 | Verify partition validity |
-| 0x4 | Skip 0xEE/0xEF partitions |
-| 0x10 | Hidden partitions too |
-| 0x20 | CDROM too |
-| 0x40 | Limit drive letter table |
-| **Flags:** ||
-| `-check` | Skip if already loaded |
-| `-skiptp:tp1;tp2` | Skip partition types |
-| `-skippt:hd:pt` | Skip specific harddisk:partition |
-| `-from:D:` | Start drive letter from D: |
-| `-from:UW` | USB drive letter table "UW" |
-| `-cdrom` | Include CDROM |
+| 1 | 分配盘符 |
+| 2 | 释放盘符 |
+| 3 | 重新分配（重排 + 分配） |
+| 22 | 第一个主分区分配 |
+| **varName 特殊形式：** | |
+| `&drvLetter,diskNum,partNum` | 获取指定分区的盘符 |
+| `uAllPart,diskNum,partNum` | 分配 USB → 新分区盘符 |
+| `Vol:volLabel,diskNum,partNum` | 按卷标查找 |
+| `Part:partName,diskNum,partNum` | 按分区名查找 |
+| `\Windows\|\WinXP\|\WinNT\|` | 跨驱动器搜索系统目录 |
+| **选项（0x**）：** ||
+| 0x1 | 仅重排已有盘符的分区 |
+| 0x2 | 验证分区有效性 |
+| 0x4 | 跳过 0xEE/0xEF 分区 |
+| 0x10 | 也包含隐藏分区 |
+| 0x20 | 也包含 CDROM |
+| 0x40 | 限制盘符表 |
+| **标志：** ||
+| `-check` | 已加载则跳过 |
+| `-skiptp:tp1;tp2` | 跳过分区类型 |
+| `-skippt:hd:pt` | 跳过指定 disk:partition |
+| `-from:D:` | 从 D: 开始分配盘符 |
+| `-from:UW` | USB 盘符表 "UW" |
+| `-cdrom` | 包含 CDROM |
 ```
 
 ---
 
-## MOUNT (WIM / VHD / UDM)
+## 挂载 (WIM / VHD / UDM)
 
-### WIM mounting
+### WIM 挂载
 ```
-MOUN[-svr] [!] wimFile,mountDir,[imageID],[tempDir]    // mount (read-write)
-MOUN[-svr] -w [!] wimFile,mountDir,[imageID],[tempDir]  // mount writable
-MOUN[-svr] -m [!] wimFile,mountDir,[imageID],[tempDir]  // mount read-only (no -w)
-MOUN -u mountDir                                         // unmount
-MOUN -query &var                                        // query mounted images
-MOUN[-svr] -u [!] wimFile,mountDir,[imageID],[tempDir]   // unmount with commit
-MOUN[-svr] -rw [!] wimFile,mountDir,...                  // mount read-write (alias)
+MOUN[-svr] [!] wimFile,mountDir,[imageID],[tempDir]    // 挂载（读写）
+MOUN[-svr] -w [!] wimFile,mountDir,[imageID],[tempDir]  // 挂载为可写
+MOUN[-svr] -m [!] wimFile,mountDir,[imageID],[tempDir]  // 挂载为只读（无 -w）
+MOUN -u mountDir                                         // 卸载
+MOUN -query &var                                        // 查询已挂载镜像
+MOUN[-svr] -u [!] wimFile,mountDir,[imageID],[tempDir]   // 卸载并提交
+MOUN[-svr] -rw [!] wimFile,mountDir,...                  // 挂载为读写（别名）
 ```
-Option: `-dll WIMDLLpath:` to specify wimgapi.dll location.
+选项：`-dll WIMDLLpath:` 指定 wimgapi.dll 位置。
 
-### VHD/VHDX mounting
+### VHD/VHDX 挂载
 ```
-MOUN-vhd -c[x] file.vhd,size                            // create (x=expand to size first)
-MOUN-vhd -c[x] -d file.vhd,size                         // create dynamic (sparse)
-MOUN-vhd -c[x] -s:512 file.vhd,size                     // sector size override
-MOUN-vhd -r file.vhd,mountDir                           // mount read-only
-MOUN-vhd -d file.vhd,mountDir                           // mount dynamic VHD
-MOUN-vhd -u mountDir                                    // unmount
-MOUN-vhd -iso file.iso,mountDir                         // mount ISO
-MOUN-vhd -query file.vhd,&var                          // query VHD info
+MOUN-vhd -c[x] file.vhd,size                            // 创建（x=先扩展到指定大小）
+MOUN-vhd -c[x] -d file.vhd,size                         // 创建动态（稀疏）
+MOUN-vhd -c[x] -s:512 file.vhd,size                     // 扇区大小覆盖
+MOUN-vhd -r file.vhd,mountDir                           // 挂载为只读
+MOUN-vhd -d file.vhd,mountDir                           // 挂载动态 VHD
+MOUN-vhd -u mountDir                                    // 卸载
+MOUN-vhd -iso file.iso,mountDir                         // 挂载 ISO
+MOUN-vhd -query file.vhd,&var                          // 查询 VHD 信息
 ```
-PECMD-private PE var: when var goes out of scope, auto-unmount. Use `PEvar` as 3rd parameter.
+PECMD 私有 PE 变量：当变量超出作用域时自动卸载。使用 `PEvar` 作为第 3 个参数。
 
-### UDM (Ultra Deep Mount) — hidden partition mounting
+### UDM（超深度挂载）— 隐藏分区挂载
 ```
-MOUN-udm [flags] \\\\.PhysicalDriveN                     // mount all or specific
-MOUN-udm -findboot -ret:&retVar                         // find and mount boot device
-MOUN-udm -u mountDir                                    // unmount
+MOUN-udm [flags] \\\\.PhysicalDriveN                     // 挂载全部或指定
+MOUN-udm -findboot -ret:&retVar                         // 查找并挂载引导设备
+MOUN-udm -u mountDir                                    // 卸载
 ```
-| Flag | Description |
+| 标志 | 描述 |
 |---|---|
-| `-ud` | UD partition |
-| `-uh` | UD high |
-| `-muh` | Mount UD high |
-| `-u+` | U+ partition |
-| `-udfs` | UD filesystem |
-| `-udm-` | Disable UDM |
-| `-mall` | Mount ALL (not just hidden) |
-| `-mhide` | Mount hidden only |
-| `-mhide1` | Mount hidden only (variant 1) |
-| `-onlys` | Only mount specific system types |
-| `-findboot` | Auto-find boot device |
-| `-ret:` | Return device path to variable |
-| `-CheckFile[+]:path` | Verify by file existence |
-| `-CheckVol[R]` | Verify by volume label |
-| `-CheckUuid[R]` | Verify by UUID |
-| `-CheckPtType` | Verify by partition type |
-| `-check[-]` | Only mount valid filesystem partitions |
-| `-tag[+]:name` | Tag identification for matching |
-| `-opts:`/`-opt:` | Mount options (separate or combined) |
-| `-nbrd[-]` | Don't broadcast drive letter |
-| `-ainf:var` | Store partition table buffer to variable |
-| `-udmid:pt#physicalNum` | Soft mount by physical partition number (read-only default) |
-| `-udmdev:device` | Specify boot device and UDM |
+| `-ud` | UD 分区 |
+| `-uh` | UD 高端 |
+| `-muh` | 挂载 UD 高端 |
+| `-u+` | U+ 分区 |
+| `-udfs` | UD 文件系统 |
+| `-udm-` | 禁用 UDM |
+| `-mall` | 挂载全部（不仅是隐藏的） |
+| `-mhide` | 仅挂载隐藏分区 |
+| `-mhide1` | 仅挂载隐藏分区（变体 1） |
+| `-onlys` | 仅挂载特定系统类型 |
+| `-findboot` | 自动查找引导设备 |
+| `-ret:` | 返回设备路径到变量 |
+| `-CheckFile[+]:path` | 按文件存在验证 |
+| `-CheckVol[R]` | 按卷标验证 |
+| `-CheckUuid[R]` | 按 UUID 验证 |
+| `-CheckPtType` | 按分区类型验证 |
+| `-check[-]` | 仅挂载有效文件系统分区 |
+| `-tag[+]:name` | 标签标识用于匹配 |
+| `-opts:`/`-opt:` | 挂载选项（分隔或合并） |
+| `-nbrd[-]` | 不广播盘符 |
+| `-ainf:var` | 存储分区表缓冲区到变量 |
+| `-udmid:pt#physicalNum` | 按物理分区号软挂载（默认只读） |
+| `-udmdev:device` | 指定引导设备和 UDM |
 
 ---
 
-## SYSTEM
+## 系统
 
-### MAIN — WinPE entry point
+### MAIN — WinPE 入口点
 ```
 MAIN path\to\PECMD.INI
 ```
-Starts the desktop, hooks Ctrl+Alt+Del, runs the config file, and enters the message loop. This is the standard PE boot entry command.
+启动桌面，挂钩 Ctrl+Alt+Del，运行配置文件，并进入消息循环。这是标准的 PE 引导入口命令。
 
-### INIT — Initialize
+### INIT — 初始化
 ```
 INIT [options],[timeout]
 ```
-Options: `I`=keyboard, `U`=USB, `C`=disable Ctrl+Alt+Del, `K`=kill explorer, `P`=pagefile
-Common: `INIT IU,3000`
+选项：`I`=键盘，`U`=USB，`C`=禁用 Ctrl+Alt+Del，`K`=结束 explorer，`P`=页面文件
+常用：`INIT IU,3000`
 
-### SHEL — Set Windows shell
+### SHEL — 设置 Windows 外壳
 ```
 SHEL %SystemRoot%\explorer.exe
 SHEL PECMD.EXE LOAD MyShell.ini
     cmd_on_shell_change
 ```
-The indented line(s) execute when the shell transition happens.
+缩进的行在外壳切换时执行。
 
-### SHUT — Shutdown/restart
+### SHUT — 关机/重启
 ```
-SHUT                              // shutdown
-SHUT R                            // restart
-SHUT S                            // suspend/standby
-SHUT H                            // hibernate
-SHUT L                            // logoff
-SHUT K                            // lock workstation
-SHUT E                            // eject optical drive
-SHUT C                            // close optical drive
-SHUT O                            // eject optical + wait 10s
-SHUT O5                           // eject optical + wait 5s (O+数字=wait N seconds)
-SHUT -force R                     // force restart
-SHUT -- [scriptFile]              // run script on shutdown
-SHUTDOWN -s|-r|-f|-t 秒           // pass raw args to shutdown.exe
-  // -s=shutdown -r=reboot -f=force --f=cancel force -t=delay
+SHUT                              // 关机
+SHUT R                            // 重启
+SHUT S                            // 挂起/待机
+SHUT H                            // 休眠
+SHUT L                            // 注销
+SHUT K                            // 锁定工作站
+SHUT E                            // 弹出光驱
+SHUT C                            // 关闭光驱
+SHUT O                            // 弹出光驱 + 等待 10 秒
+SHUT O5                           // 弹出光驱 + 等待 5 秒（O+数字=等待 N 秒）
+SHUT -force R                     // 强制重启
+SHUT -- [scriptFile]              // 关机时运行脚本
+SHUTDOWN -s|-r|-f|-t 秒           // 传递原始参数给 shutdown.exe
+  // -s=关机 -r=重启 -f=强制 --f=取消强制 -t=延迟
 ```
 // OnShutdown.wcs hook 操作码: shutdown reboot logout suspend hiber poweroff unknown lock
 
-### DISP — Display settings
+### DISP — 显示设置
 ```
-DISP W1024H768B32F60                             // width, height, color bits, refresh rate
-DISP                                             // auto-detect best mode
-DISP =N W1024H768B32F60                         // target display N (0-based)
-DISP W1024H768B32F60 T15                         // apply with 15s timeout (auto-restore)
-DISP W1024H768B32F60 P                           // set as primary display
-DISP W1024H768B32F60 O0                          // orientation (0=default, 1=90, 2=180, 3=270)
-DISP -confirm W1024H768B32F60                    // confirmation prompt
-DISP -nwb W1024H768B32F60                        // no broadcast wait
-DISP -delay W1024H768B32F60                      // registry-only (don't apply), wait for broadcast
-DISP @X0:Y0:X1:Y1:...                            // multi-monitor positions (matrix)
-DISP S0x84                                        // multi-display: 0x81=single, 0x82=clone, 0x84=extend, 0x88=dual
-DISP ?[?*] [=N] &var                             // query current (*=all possible) modes
-DISP -reset                                       // reset to defaults
-DISP -bright[?]:value/&var                        // brightness control
-DISP -ori [?] &var                                // query orientation
-DISP -guis                                        // graphical interface
-DISP -sort[-r|-n]                                 // sort modes (r=reverse, n=by name)
-```
-
-### PAGE — Virtual memory
-```
-PAGE C:\pagefile.sys 256 512   // min 256MB, max 512MB
+DISP W1024H768B32F60                             // 宽，高，色深，刷新率
+DISP                                             // 自动检测最佳模式
+DISP =N W1024H768B32F60                         // 目标显示器 N（从 0 开始）
+DISP W1024H768B32F60 T15                         // 应用并设 15 秒超时（自动恢复）
+DISP W1024H768B32F60 P                           // 设为主显示器
+DISP W1024H768B32F60 O0                          // 方向（0=默认，1=90°, 2=180°, 3=270°）
+DISP -confirm W1024H768B32F60                    // 确认提示
+DISP -nwb W1024H768B32F60                        // 不等待广播
+DISP -delay W1024H768B32F60                      // 仅写注册表（不应用），等待广播
+DISP @X0:Y0:X1:Y1:...                            // 多显示器位置（矩阵）
+DISP S0x84                                        // 多显示器模式：0x81=单屏，0x82=克隆，0x84=扩展，0x88=双屏
+DISP ?[?*] [=N] &var                             // 查询当前（*=所有可能）模式
+DISP -reset                                       // 重置为默认值
+DISP -bright[?]:value/&var                        // 亮度控制
+DISP -ori [?] &var                                // 查询方向
+DISP -guis                                        // 图形界面
+DISP -sort[-r|-n]                                 // 排序模式（r=反向，n=按名称）
 ```
 
-### RAMD — RAM disk (ImDisk)
+### PAGE — 虚拟内存
 ```
-RAMD ImDisk,L100,FAT32,C:,MyRam      // create
-RAMD ImDisk* -D -m G:                 // remove
-```
-
-### SERV — Service management
-```
-SERV servicename                             // start service
-SERV !servicename                            // stop service (! prefix)
-SERV ?servicename,&var                       // query status
-SERV -create name,path,type,start            // create service
-SERV -delete [-stop-] name                   // delete (-stop-=auto-stop before delete)
-```
-Start types: `-boot`, `-system`, `-auto`, `-demand`, `-disabled`, `-delayed-auto`
-
-### HOTK — System-wide hotkey
-```
-HOTK Ctrl+Alt+#0x41,execPath                // register (global, system-wide)
-HOTK Ctrl+Shift+Alt+Win+#0x42,command       // multi-modifier
-HOTK #0x0D,--del                            // unregister by key code
-HOTK --del:keyname                          // unregister by name
-HOTK -wait [timeout],&var                   // NOTE: non-standard extension. Use standard WAIT -cont [-timeout],[&var] instead.
-```
-Modifiers: `Ctrl`, `Alt`, `Shift`, `Win`. Combine with `+`.
-Virtual key codes use `#` prefix (decimal or hex: `#0x41`).
-
-### HKEY — Window/program-scope hotkey
-```
-HKEY #0x41,command                          // window-active only (responds when main window has focus)
-HKEY $#0x41,command                         // $ = program-level global (any window of this PECMD instance)
-HKEY Ctrl+Shift+#0x42,command               // multi-modifier
-HKEY #0x0D,--del                            // unregister by key code
-HKEY --del:keyname                          // unregister by name
+PAGE C:\pagefile.sys 256 512   // 最小 256MB，最大 512MB
 ```
 
-### DATE — Date/time variables and sub-variables
+### RAMD — RAM 磁盘（ImDisk）
 ```
-DATE &var                                  // get current date (yyyy mm dd HH MM SS ms weekday format)
-DATE &var yyyy-mm-dd-HH-MM-SS-ms-wd        // set system date/time (partial ok)
-DATE -h &var                               // high-precision timer (microseconds)
-DATE -r &var                               // sync + read high-precision timer
-DATE -space0 &var                          // space-delimited, 0-padded
-DATE -space &var                           // space-delimited (default compact)
-DATE -bsys &var                            // output system time
-DATE -utc:UTCtime &var                     // convert FROM UTC time
-DATE -gmt:GMTtime &var                     // convert FROM GMT time
-DATE -local:LOCALtime &var                 // convert FROM local time
-DATE -sys:internTime &var                  // international/UTC time
-DATE -us &var                              // microseconds (4 decimal places)
+RAMD ImDisk,L100,FAT32,C:,MyRam      // 创建
+RAMD ImDisk* -D -m G:                 // 移除
 ```
-Sub-items (use `MSTR` or direct `%&var:item%` syntax):
-| Sub-item | Meaning |
+
+### SERV — 服务管理
+```
+SERV servicename                             // 启动服务
+SERV !servicename                            // 停止服务（! 前缀）
+SERV ?servicename,&var                       // 查询状态
+SERV -create name,path,type,start            // 创建服务
+SERV -delete [-stop-] name                   // 删除（-stop-=删除前自动停止）
+```
+启动类型：`-boot`，`-system`，`-auto`，`-demand`，`-disabled`，`-delayed-auto`
+
+### HOTK — 系统级热键
+```
+HOTK Ctrl+Alt+#0x41,execPath                // 注册（全局，系统级）
+HOTK Ctrl+Shift+Alt+Win+#0x42,command       // 多修饰键
+HOTK #0x0D,--del                            // 按键码取消注册
+HOTK --del:keyname                          // 按名称取消注册
+HOTK -wait [timeout],&var                   // 注意：非标准扩展。请改用标准 WAIT -cont [-timeout],[&var]。
+```
+修饰键：`Ctrl`，`Alt`，`Shift`，`Win`。用 `+` 组合。
+虚拟键码使用 `#` 前缀（十进制或十六进制：`#0x41`）。
+
+### HKEY — 窗口/程序级热键
+```
+HKEY #0x41,command                          // 仅窗口激活时响应（主窗口有焦点时响应）
+HKEY $#0x41,command                         // $ = 程序级全局（此 PECMD 实例的任何窗口）
+HKEY Ctrl+Shift+#0x42,command               // 多修饰键
+HKEY #0x0D,--del                            // 按键码取消注册
+HKEY --del:keyname                          // 按名称取消注册
+```
+
+### DATE — 日期/时间变量和子变量
+```
+DATE &var                                  // 获取当前日期（yyyy mm dd HH MM SS ms weekday 格式）
+DATE &var yyyy-mm-dd-HH-MM-SS-ms-wd        // 设置系统日期/时间（可部分设置）
+DATE -h &var                               // 高精度计时器（微秒）
+DATE -r &var                               // 同步 + 读取高精度计时器
+DATE -space0 &var                          // 空格分隔，0 填充
+DATE -space &var                           // 空格分隔（默认紧凑）
+DATE -bsys &var                            // 输出系统时间
+DATE -utc:UTCtime &var                     // 从 UTC 时间转换
+DATE -gmt:GMTtime &var                     // 从 GMT 时间转换
+DATE -local:LOCALtime &var                 // 从本地时间转换
+DATE -sys:internTime &var                  // 国际/UTC 时间
+DATE -us &var                              // 微秒（4 位小数）
+```
+子项（使用 `MSTR` 或直接 `%&var:item%` 语法）：
+| 子项 | 含义 |
 |---|---|
-| `y` / `year` | Year (4-digit) |
-| `mon` / `month` | Month (2-digit) |
-| `d` / `day` | Day (2-digit) |
-| `w` / `weekday` | Day of week (1=Mon..7=Sun) |
-| `h` / `hour` | Hour (24h, 2-digit) |
-| `min` / `minute` | Minute (2-digit) |
-| `s` / `second` | Second (2-digit) |
-| `ms` / `msec` | Milliseconds (3-digit) |
-| `ws[1]` | Week of year ([1]=Sunday as weekend boundary) |
-| `ds` / `daysofyear` | Day of year (1-366) |
-| `Freq` / `frequency` | Counter frequency |
-| `Counter` / `counter` | Hardware timer counter value |
-| `gmt` | Seconds since 1970-01-01 |
-| `uptime` / `uptime_ms` | Milliseconds since boot |
-| `utc` | 100ns units since 1601-01-01 |
-| `uptimens` | Nanoseconds since boot |
+| `y` / `year` | 年（4位） |
+| `mon` / `month` | 月（2位） |
+| `d` / `day` | 日（2位） |
+| `w` / `weekday` | 星期几（1=周一..7=周日） |
+| `h` / `hour` | 小时（24小时制，2位） |
+| `min` / `minute` | 分钟（2位） |
+| `s` / `second` | 秒（2位） |
+| `ms` / `msec` | 毫秒（3位） |
+| `ws[1]` | 年内第几周（[1]=周日为周末边界） |
+| `ds` / `daysofyear` | 年内第几天（1-366） |
+| `Freq` / `frequency` | 计数器频率 |
+| `Counter` / `counter` | 硬件计时器计数器值 |
+| `gmt` | 自 1970-01-01 至今的秒数 |
+| `uptime` / `uptime_ms` | 自开机以来的毫秒数 |
+| `utc` | 自 1601-01-01 至今的 100ns 单位数 |
+| `uptimens` | 自开机以来的纳秒数 |
 
-### TEMP — Temporary file/directory management
+### TEMP — 临时文件/目录管理
 ```
-TEMP [[@]Delete|[$]Setting] [初始目录][,变量名]           // query/set temp dir
-TEMP @[$]Setting 新临时目录,[变量名]                       // silent set
-TEMP [*del] [*tmpl:[前部]*[尾部]] *tmpdir [,]变量名        // generate unique temp directory
-TEMP [*del] [*tmpl:...]*tmpfile [,]变量名[,目录变量名]      // generate unique temp file
+TEMP [[@]Delete|[$]Setting] [初始目录][,变量名]           // 查询/设置临时目录
+TEMP @[$]Setting 新临时目录,[变量名]                       // 静默设置
+TEMP [*del] [*tmpl:[前部]*[尾部]] *tmpdir [,]变量名        // 生成唯一临时目录
+TEMP [*del] [*tmpl:...]*tmpfile [,]变量名[,目录变量名]      // 生成唯一临时文件
 ```
-`@` = silent mode. `*del` = auto-delete on exit. `*tmpl:` = custom name template (`*` = random portion).
+`@` = 静默模式。`*del` = 退出时自动删除。`*tmpl:` = 自定义名称模板（`*` = 随机部分）。
 
-### RUNS — Run registry key
+### RUNS — 运行注册表项
 ```
-RUNS prog,Name                       // add to HKLM\...\Run
-RUNS -d Name                         // delete entry
-```
-
-### PATH — Set search path
-```
-PATH C:\Tools;%PATH%                 // set PATH environment variable
-PATH %CurDir%\Tools                  // append to existing
+RUNS prog,Name                       // 添加到 HKLM\...\Run
+RUNS -d Name                         // 删除条目
 ```
 
-### RECY — Empty Recycle Bin
+### PATH — 设置搜索路径
 ```
-RECY *                               // empty all recycle bins
-RECY C:                              // empty C: drive recycle bin
-```
-
-### USER — Set owner info
-```
-USER 用户名,公司名                    // set My Computer property values
+PATH C:\Tools;%PATH%                 // 设置 PATH 环境变量
+PATH %CurDir%\Tools                  // 追加到现有值
 ```
 
-### HOME — Set home directory
+### RECY — 清空回收站
 ```
-HOME C:\Users\name                   // set home directory (sets HKCU registry)
+RECY *                               // 清空所有回收站
+RECY C:                              // 清空 C: 盘回收站
+```
+
+### USER — 设置所有者信息
+```
+USER 用户名,公司名                    // 设置"我的电脑"属性值
+```
+
+### HOME — 设置主目录
+```
+HOME C:\Users\name                   // 设置主目录（修改 HKCU 注册表）
 ```
 
 ---
 
-## AUDIO & DISPLAY
+## 音频与显示
 
-### SCRN — Screenshot / capture screen
+### SCRN — 截图 / 捕获屏幕
 ```
-SCRN &w,&h                             // get screen width and height
-SCRN -win &w,&h                        // maximized window size
-SCRN -desk &w,&h                       // desktop resolution (no DPI scaling)
-SCRN -cur &x,&y                        // get cursor position
-SCRN -cap scrn.bmp,&wid                // capture full screen to BMP, return window ID
-SCRN -cap scrn.bmp,&wid,WxH            // capture at specific resolution
-SCRN -cap scrn.bmp,&wid,WxH,x,y        // capture region at (x,y) of size WxH
-SCRN -cap -capwid:WID scrn.bmp,&wid    // capture specific window
-SCRN -cap -cur scrn.bmp,&wid           // capture with cursor included
-SCRN -cap scrn.jpg,&wid,0,0,0,80       // capture as JPG (quality 80)
-SCRN -cap :image/png:screenshot.png,0  // capture as PNG (format prefix)
-SCRN -cap :image/bmp:file.bmp,0        // capture as BMP (format prefix)
-SCRN -cap file.bmp,#WindowID           // capture specific window by handle
-SCRN -cap file.bmp,<x:y:R:B>           // capture rectangular region
+SCRN &w,&h                             // 获取屏幕宽度和高度
+SCRN -win &w,&h                        // 最大化窗口尺寸
+SCRN -desk &w,&h                       // 桌面分辨率（不考虑 DPI 缩放）
+SCRN -cur &x,&y                        // 获取光标位置
+SCRN -cap scrn.bmp,&wid                // 捕获全屏为 BMP，返回窗口 ID
+SCRN -cap scrn.bmp,&wid,WxH            // 按指定分辨率捕获
+SCRN -cap scrn.bmp,&wid,WxH,x,y        // 捕获 (x,y) 处大小为 WxH 的区域
+SCRN -cap -capwid:WID scrn.bmp,&wid    // 捕获指定窗口
+SCRN -cap -cur scrn.bmp,&wid           // 捕获时包含光标
+SCRN -cap scrn.jpg,&wid,0,0,0,80       // 捕获为 JPG（质量 80）
+SCRN -cap :image/png:screenshot.png,0  // 捕获为 PNG（格式前缀）
+SCRN -cap :image/bmp:file.bmp,0        // 捕获为 BMP（格式前缀）
+SCRN -cap file.bmp,#WindowID           // 按句柄捕获指定窗口
+SCRN -cap file.bmp,<x:y:R:B>           // 捕获矩形区域
 ```
-Capture formats: `.bmp`, `.jpg`, `.png` (by extension or `:image/format:` prefix).
-Capture targets: `0`=full screen, `#WindowID`=specific window, `<x:y:R:B>`=rectangular region.
-Extended size params: `SCRN -taskbar W,H,X,Y,TaskBarPos,DpiX,DpiY,ScaleX,ScaleY` for DPI-aware info.
+捕获格式：`.bmp`，`.jpg`，`.png`（按扩展名或 `:image/format:` 前缀）。
+捕获目标：`0`=全屏，`#WindowID`=指定窗口，`<x:y:R:B>`=矩形区域。
+扩展尺寸参数：`SCRN -taskbar W,H,X,Y,TaskBarPos,DpiX,DpiY,ScaleX,ScaleY` 用于 DPI 感知信息。
 
-### FONT — Load / register fonts
+### FONT — 加载/注册字体
 ```
-FONT fontPath                           // register a single font file
-FONT fontPath,fontName                  // register with specific name
-FONT -reg fontPath                      // permanent registration (survives reboot)
-FONT -unreg fontPath                    // unregister font
-FONT fontDir\*                          // register all fonts in directory
-FONT -list &var                         // list registered font names
-FONT ?fontName,&var                     // query font info
-```
-
-### WALL — Set desktop wallpaper
-```
-WALL imagePath                           // set wallpaper (BMP, JPG, PNG, GIF)
-WALL %SystemRoot%\Web\Wallpaper\img.jpg  // absolute path
-WALL -center imagePath                   // centered (not stretched)
-WALL -tile imagePath                     // tiled
-WALL -stretch imagePath                  // stretched (default)
-WALL -fit imagePath                      // fit to screen
-WALL -fill imagePath                     // fill to screen
-WALL -span imagePath                     // span across monitors
-WALL ""                                  // clear wallpaper (solid color)
+FONT fontPath                           // 注册单个字体文件
+FONT fontPath,fontName                  // 以指定名称注册
+FONT -reg fontPath                      // 永久注册（重启后仍有效）
+FONT -unreg fontPath                    // 取消注册字体
+FONT fontDir\*                          // 注册目录中的所有字体
+FONT -list &var                         // 列出已注册字体名称
+FONT ?fontName,&var                     // 查询字体信息
 ```
 
-### SITE — File attribute query/set
+### WALL — 设置桌面壁纸
 ```
-// Query
-SITE ?filePath                           // show attributes in message box
-SITE &var,filePath                       // get attributes to variable (e.g. "A--RHS-")
-SITE ?-attr,&var=&attr                   // query raw attribute flags
+WALL imagePath                           // 设置壁纸（BMP、JPG、PNG、GIF）
+WALL %SystemRoot%\Web\Wallpaper\img.jpg  // 绝对路径
+WALL -center imagePath                   // 居中（不拉伸）
+WALL -tile imagePath                     // 平铺
+WALL -stretch imagePath                  // 拉伸（默认）
+WALL -fit imagePath                      // 适应屏幕
+WALL -fill imagePath                     // 填充屏幕
+WALL -span imagePath                     // 跨显示器
+WALL ""                                  // 清除壁纸（纯色）
+```
 
-// Set
-SITE +R,filePath                         // set Read-only
-SITE +H,filePath                         // set Hidden
-SITE +S,filePath                         // set System
-SITE +A,filePath                         // set Archive
-SITE -R,filePath                         // remove Read-only
-SITE +R+H+S+A,filePath                   // combine multiple
-SITE +R-H,filePath                       // set Read-only AND remove Hidden
-SITE -R-H-S-A,filePath                   // clear all attributes
-SITE +R+H,dirPath\*                      // apply to all files in directory (add trailing backslash)
+### SITE — 文件属性查询/设置
+```
+// 查询
+SITE ?filePath                           // 在消息框中显示属性
+SITE &var,filePath                       // 获取属性到变量（如 "A--RHS-"）
+SITE ?-attr,&var=&attr                   // 查询原始属性标志
 
-// Encode variable (security)
-SITE ?-all,VAR=variable                  // encode variable (PECMD-style)
-SITE ?-sys,VAR=variable                  // encode with system flag
-SITE ?H:hWnd,variable1[,variable2]       // copy to clipboard
+// 设置
+SITE +R,filePath                         // 设置只读
+SITE +H,filePath                         // 设置隐藏
+SITE +S,filePath                         // 设置系统
+SITE +A,filePath                         // 设置存档
+SITE -R,filePath                         // 移除只读
+SITE +R+H+S+A,filePath                   // 组合多个
+SITE +R-H,filePath                       // 设置只读并移除隐藏
+SITE -R-H-S-A,filePath                   // 清除所有属性
+SITE +R+H,dirPath\*                      // 应用于目录中所有文件（路径末尾加反斜杠）
 
-// File version query
-SITE ?fileVerVar[,prodVerVar]=FVER,filePath  // query file version (e.g. "1.2.3.4")
+// 编码变量（安全）
+SITE ?-all,VAR=variable                  // 编码变量（PECMD 风格）
+SITE ?-sys,VAR=variable                  // 以系统标志编码
+SITE ?H:hWnd,variable1[,variable2]       // 复制到剪贴板
 
-// File time query
+// 文件版本查询
+SITE ?fileVerVar[,prodVerVar]=FVER,filePath  // 查询文件版本（如 "1.2.3.4"）
+
+// 文件时间查询
 SITE ?[-local -ws -link] [[*]creationVar,[*]writeVar,[*]accessVar]=FTIME,filePath
-  // * prefix → returns UTC time integer (directly comparable)
-  // no * → returns "yyyy mm dd HH MM SS us weekday" (fixed-width fields)
-  // -local → local time (default: UTC)
-  // -ws → append week-of-year; -ws1 → Sunday as weekend boundary
-  // -link → follow symbolic links
+  // * 前缀 → 返回 UTC 时间整数（可直接比较）
+  // 无 * → 返回 "yyyy mm dd HH MM SS us weekday"（固定宽度字段）
+  // -local → 本地时间（默认：UTC）
+  // -ws → 追加年内周数；-ws1 → 周日为周末边界
+  // -link → 跟随符号链接
 
-// File attribute query
+// 文件属性查询
 SITE ?[attrVar][,hidVar][,roVar][,sysVar][,fullVar]=FATTR,filePath
 
-// Update file timestamp
+// 更新文件时间戳
 SITE *touch[:[cr][*local:|*local0:|*sys:|*sys0:|*utc:]time],<file>[,retVar]
 ```
-Attribute flags in query result: `R`=Read-only, `H`=Hidden, `S`=System, `A`=Archive,
-`N`=Normal, `D`=Directory, `C`=Compressed, `E`=Encrypted, `T`=Temporary, `O`=Offline.
+查询结果中的属性标志：`R`=只读，`H`=隐藏，`S`=系统，`A`=存档，
+`N`=普通，`D`=目录，`C`=压缩，`E`=加密，`T`=临时，`O`=脱机。
 
 ---
 
-## DRIVERS & DEVICES
+## 驱动与设备
 
-### DEVI — Device driver installation
+### DEVI — 设备驱动安装
 ```
-// Install from CAB/INF/folder
-DEVI [$]<CAB文件>[,匹配级别[,解压目录]]         // install from CAB
-DEVI [*nocheck] <INF文件>[,DevClass]           // install from INF
-DEVI [*rescan] <含有INF的目录>[,DevClass]       // install from directory
-DEVI $<INF文件>,[安装节],[操作码]               // advanced install
-DEVI *extract <CAB>[,匹配级别],解压目录          // extract only
+// 从 CAB/INF/文件夹安装
+DEVI [$]<CAB文件>[,匹配级别[,解压目录]]         // 从 CAB 安装
+DEVI [*nocheck] <INF文件>[,DevClass]           // 从 INF 安装
+DEVI [*rescan] <含有INF的目录>[,DevClass]       // 从目录安装
+DEVI $<INF文件>,[安装节],[操作码]               // 高级安装
+DEVI *extract <CAB>[,匹配级别],解压目录          // 仅解压
 
-// List devices
+// 列出设备
 DEVI listdev:var [*devclass:Class] [*ALL] [*listdev=i|c|+]
-DEVI listdev:var *many *devid:PCI\VEN_14E4*     // list with filter
+DEVI listdev:var *many *devid:PCI\VEN_14E4*     // 按筛选条件列出
 
-// Control devices
-DEVI *enable:[h|c|+:]devID                      // enable device
-DEVI *disable:[h|c|+:]devID                     // disable device
-DEVI *remove:[h|c|+:]devID                      // remove device
-DEVI *restart:[h|c|+:]devID                     // restart device
-DEVI *status:retVar:[h|c|+:]devID               // query status
-DEVI *update:hardwareID:INF                      // update driver
-DEVI *install:hardwareID:INF                     // install driver
+// 控制设备
+DEVI *enable:[h|c|+:]devID                      // 启用设备
+DEVI *disable:[h|c|+:]devID                     // 禁用设备
+DEVI *remove:[h|c|+:]devID                      // 移除设备
+DEVI *restart:[h|c|+:]devID                     // 重启设备
+DEVI *status:retVar:[h|c|+:]devID               // 查询状态
+DEVI *update:hardwareID:INF                      // 更新驱动
+DEVI *install:hardwareID:INF                     // 安装驱动
 
-// Other
-DEVI *rescan[:Fun]                               // rescan devices
-DEVI buildcache:[-a:arch] dir                    // build driver cache
+// 其他
+DEVI *rescan[:Fun]                               // 重新扫描设备
+DEVI buildcache:[-a:arch] dir                    // 构建驱动缓存
 ```
-Advanced flags: `*dummy`=test mode, `*7pe[-]`=force DrvLoad, `*inner`=force no DrvLoad, `*drvload/*devcon`=priority selection, `*retid:var`=return installed device IDs, `*auto`=auto-convert INF, `*sys:`=copy to system dir, `*cab`=force CAB type, `*comp+`=match compatible IDs, `*ret:retVar`=return report, `*IdCah:PeVar`=reuse ID buffer, `*infcache:`=acceleration cache, `*optsys[:val]`=system tools priority, `*num:count`=count limit, `*disverify/*autodisverify`=signature check control, `*sub/*self`=search modes, `*showdev:`=show device info, `*norescan`=skip rescan.
-Listdev options: `*comp[+]`=compatible IDs, `*hwid`=hardware IDs, `*inst`=instance IDs, `*many`=multi-line, `*rescan`=rescan first.
+高级标志：`*dummy`=测试模式，`*7pe[-]`=强制 DrvLoad，`*inner`=强制不使用 DrvLoad，`*drvload/*devcon`=优先级选择，`*retid:var`=返回安装的设备 ID，`*auto`=自动转换 INF，`*sys:`=复制到系统目录，`*cab`=强制 CAB 类型，`*comp+`=匹配兼容 ID，`*ret:retVar`=返回报告，`*IdCah:PeVar`=重用 ID 缓冲区，`*infcache:`=加速缓存，`*optsys[:val]`=系统工具优先级，`*num:count`=计数限制，`*disverify/*autodisverify`=签名检查控制，`*sub/*self`=搜索模式，`*showdev:`=显示设备信息，`*norescan`=跳过重新扫描。
+Listdev 选项：`*comp[+]`=兼容 ID，`*hwid`=硬件 ID，`*inst`=实例 ID，`*many`=多行，`*rescan`=先重新扫描。
 
-### FBWF — FBWF cache control
+### FBWF — FBWF 缓存控制
 ```
 FBWF [Ppercent] [Lmin] [Hmax] [Fremain]
 ```
-All values in MB. Example: `FBWF P50 L200 H300` — 50% of memory, min 200MB, max 300MB.
+所有值单位为 MB。示例：`FBWF P50 L200 H300` — 内存的 50%，最小 200MB，最大 300MB。
 
 ---
 
-## REGISTRY
+## 注册表
 
-### REGI — Read/write registry
+### REGI — 读写注册表
 ```
-// Read (all type prefixes)
+// 读取（所有类型前缀）
 REGI $HKLM\SOFTWARE\Key\Val,&var          // REG_SZ
 REGI #HKLM\SOFTWARE\Key\Val,&var          // REG_DWORD
 REGI @HKLM\SOFTWARE\Key\Val,&var          // REG_BINARY
 REGI *HKLM\SOFTWARE\Key\Val,&var          // REG_MULTI_SZ
-REGI **HKLM\SOFTWARE\Key\Val,&var         // REG_MULTI_SZ (special)
-REGI *$HKLM\SOFTWARE\Key\Val,&var         // multi-line REG_MULTI_SZ
+REGI **HKLM\SOFTWARE\Key\Val,&var         // REG_MULTI_SZ（特殊）
+REGI *$HKLM\SOFTWARE\Key\Val,&var         // 多行 REG_MULTI_SZ
 REGI ~HKLM\SOFTWARE\Key\Val,&var          // REG_EXPAND_SZ
-REGI ~~HKLM\SOFTWARE\Key\Val,&var         // REG_EXPAND_SZ (variant)
+REGI ~~HKLM\SOFTWARE\Key\Val,&var         // REG_EXPAND_SZ（变体）
 REGI +HKLM\SOFTWARE\Key\Val,&var          // REG_QWORD
 REGI ^HKLM\SOFTWARE\Key\Val,&var          // REG_LINK
 REGI bHKLM\SOFTWARE\Key\Val,&var          // REG_QWORD_BIG_ENDIAN
 REGI uHKLM\SOFTWARE\Key\Val,&var          // REG_MUI_SZ
 REGI nHKLM\SOFTWARE\Key\Val,&var          // REG_NONE
-REGI .HKLM\SOFTWARE\Key\Val,&var          // offline registry (offline Windows/system)
-REGI HKCU\Software\Key\,&&keys            // enumerate subkeys (NL-delimited)
+REGI .HKLM\SOFTWARE\Key\Val,&var          // 离线注册表（离线 Windows/system）
+REGI HKCU\Software\Key\,&&keys            // 枚举子键（换行分隔）
 
-// Write
-REGI $HKLM\SOFTWARE\Key\Val=string         // write REG_SZ
-REGI #HKLM\SOFTWARE\Key\Val=#0x100        // write REG_DWORD (hex)
-REGI $HKLM\SOFTWARE\Key\Val=               // delete value
+// 写入
+REGI $HKLM\SOFTWARE\Key\Val=string         // 写入 REG_SZ
+REGI #HKLM\SOFTWARE\Key\Val=#0x100        // 写入 REG_DWORD（十六进制）
+REGI $HKLM\SOFTWARE\Key\Val=               // 删除值
 
-// Advanced operations
-REGI --ak HKCU\Software\Key\,&all             // enumerate ALL values for key
-REGI --av HKCU\Software\Key\,&all             // enumerate ALL subkeys  
-REGI .?\HKLM\SOFTWARE\Key\Val,&type           // query value type (dot+question)
-REGI --16 ...                                 // hex data input
-REGI --su path\val=value                      // run elevated (SYSTEM) — for 32bit on 64bit
-REGI --init path\val,&var                     // return empty string on read failure
-REGI --name path\val,&var                     // data variable name mode
-REGI --k path\key\                            // only create key (don't set value)
-REGI --byte path\val,&var                     // byte stream mode
-REGI --v[-] path\val,&var                     // don't save changes (read snapshot)
-REGI --qk path\val,&var                       // quick mode
-REGI --r10 path\val,&var                      // output decimal (for DWORD)
-REGI --t:NUM path\val,&var                    // specify arbitrary registry type by number
-REGI --0[:N] path\key\                        // clear key: 1=clear default, 2=delete subkeys, 4=delete values (combine: 5=1+4)
+// 高级操作
+REGI --ak HKCU\Software\Key\,&all             // 枚举键的所有值
+REGI --av HKCU\Software\Key\,&all             // 枚举所有子键
+REGI .?\HKLM\SOFTWARE\Key\Val,&type           // 查询值类型（点+问号）
+REGI --16 ...                                 // 十六进制数据输入
+REGI --su path\val=value                      // 以 SYSTEM 身份运行（提升权限）— 用于 32 位在 64 位系统上
+REGI --init path\val,&var                     // 读取失败时返回空字符串
+REGI --name path\val,&var                     // 数据变量名模式
+REGI --k path\key\                            // 仅创建键（不设置值）
+REGI --byte path\val,&var                     // 字节流模式
+REGI --v[-] path\val,&var                     // 不保存更改（读取快照）
+REGI --qk path\val,&var                       // 快速模式
+REGI --r10 path\val,&var                      // 输出十进制（用于 DWORD）
+REGI --t:NUM path\val,&var                    // 按数字指定任意注册表类型
+REGI --0[:N] path\key\                        // 清除键：1=清除默认值，2=删除子键，4=删除值（组合：5=1+4）
 
-// Query existence (returns ERROR if not found)
+// 查询存在性（找不到返回 ERROR）
 REGI ?HKLM\SOFTWARE\Key\,&&VT
 FIND $%&VT%=ERROR, MESS Key not found! MESS Key exists
-REGI ?HKLM\SOFTWARE\Key\Val,&&VT           // check value existence
-REGI ?HKLM\SOFTWARE\Key\,&&VT               // check key existence
-FIND $%&VT%=NI, MESS Data not set!          // NI = key exists but no data
+REGI ?HKLM\SOFTWARE\Key\Val,&&VT           // 检查值是否存在
+REGI ?HKLM\SOFTWARE\Key\,&&VT               // 检查键是否存在
+FIND $%&VT%=NI, MESS Data not set!          // NI = 键存在但无数据
 ```
 
-### HIVE — Load/unload offline registry hive (comprehensive)
+### HIVE — 加载/卸载离线注册表配置单元（全面）
 ```
-// Mount an offline hive to a mount point under HKLM (or HKU)
-HIVE E:\Windows\System32\config\SOFTWARE,HKLM\PE-SYS     // load offline SOFTWARE hive
-HIVE E:\Windows\System32\config\SYSTEM,HKLM\PE-SYS       // load offline SYSTEM hive
-HIVE E:\Users\Default\NTUSER.DAT,HKU\PE-DEF             // load offline user hive
-HIVE HKLM\PE-SYS,                                        // unload (empty path, same mount point)
+// 将离线配置单元挂载到 HKLM（或 HKU）下的挂载点
+HIVE E:\Windows\System32\config\SOFTWARE,HKLM\PE-SYS     // 加载离线 SOFTWARE 配置单元
+HIVE E:\Windows\System32\config\SYSTEM,HKLM\PE-SYS       // 加载离线 SYSTEM 配置单元
+HIVE E:\Users\Default\NTUSER.DAT,HKU\PE-DEF             // 加载离线用户配置单元
+HIVE HKLM\PE-SYS,                                        // 卸载（路径为空，相同挂载点）
 
-// Load with security descriptor (preserve ACLs)
-HIVE E:\...\SOFTWARE,HKLM\PE-SYS,ACL                    // load with security/ACL
+// 加载时保留安全描述符（保留 ACL）
+HIVE E:\...\SOFTWARE,HKLM\PE-SYS,ACL                    // 带安全/ACL 加载
 
-// Load as temporary hive (changes discarded on unload)
-HIVE -tmp E:\...\SOFTWARE,HKLM\PE-TMP                   // use temp hive (read-only intent)
+// 作为临时配置单元加载（卸载时丢弃更改）
+HIVE -tmp E:\...\SOFTWARE,HKLM\PE-TMP                   // 使用临时配置单元（只读意图）
 
-// Load with restore on unload (save changes back to hive file)
-HIVE -restore E:\...\SOFTWARE,HKLM\PE-SYS               // restore (write-back) on unload
-HIVE -restore HKLM\PE-SYS,                               // unload with restore (saves changes)
+// 加载并在卸载时还原（将更改保存回配置单元文件）
+HIVE -restore E:\...\SOFTWARE,HKLM\PE-SYS               // 卸载时还原（写回）
+HIVE -restore HKLM\PE-SYS,                               // 卸载并还原（保存更改）
 ```
-Mount point syntax: `HKLM\PE-SYS` = mount the hive at `HKEY_LOCAL_MACHINE\PE-SYS`.
-After mounting, access with `REGI .HKLM\PE-SYS\...` (dot prefix for offline registry).
-To unload, provide the same mount point with an empty path (or `-restore` prefix to save).
+挂载点语法：`HKLM\PE-SYS` = 将配置单元挂载到 `HKEY_LOCAL_MACHINE\PE-SYS`。
+挂载后，使用 `REGI .HKLM\PE-SYS\...` 访问（点前缀表示离线注册表）。
+要卸载，提供相同的挂载点并留空路径（或使用 `-restore` 前缀来保存更改）。
 
 ---
 
-## GUI CONTROLS
+## GUI 控件
 
-All GUI controls are documented in [pecmd-gui.md](pecmd-gui.md).
+所有 GUI 控件文档参见 [pecmd-gui.md](pecmd-gui.md)。
 
 ---
 
-## NETWORK
+## 网络
 
-### ADSL — Broadband/WiFi
+### ADSL — 宽带/WiFi
 ```
-// Dial-up (PPPoE)
-ADSL userEncoded,passEncoded,[retries],[name|*|retVar]     // dial-up
-ADSL start[+] userEncoded,passEncoded,[retries],[retVar]    // start (connect)
-ADSL stop,connectionName                                    // hang up
-ADSL list[on],connectionName                                // list connections
+// 拨号（PPPoE）
+ADSL userEncoded,passEncoded,[retries],[name|*|retVar]     // 拨号
+ADSL start[+] userEncoded,passEncoded,[retries],[retVar]    // 开始（连接）
+ADSL stop,connectionName                                    // 挂断
+ADSL list[on],connectionName                                // 列出连接
 
 // WiFi (ADSL-wlan)
-ADSL-wlan SSID|&profileVar,password,encType,[index]        // connect (enc default=WPA2PSK AES)
-ADSL-wlan -start SSID|&profileVar,password,encType,[index]  // explicit start
-ADSL-wlan index,,list,&&result                              // list WiFi profiles
-ADSL-wlan index,,query[all],&&result                        // query details (序号 guid State Desc)
-ADSL-wlan index,,scan,&&result                              // scan networks
-ADSL-wlan index,,-list,&&result                             // net-broadcast scan
-// Result format (list): SSID SignalQuality Flags BssType NumBssid bConnectable ...
-// Result format (query[all]): index guid State Description
-// Flags & 1 = currently connected
+ADSL-wlan SSID|&profileVar,password,encType,[index]        // 连接（加密默认=WPA2PSK AES）
+ADSL-wlan -start SSID|&profileVar,password,encType,[index]  // 显式开始
+ADSL-wlan index,,list,&&result                              // 列出 WiFi 配置文件
+ADSL-wlan index,,query[all],&&result                        // 查询详情（序号 guid State Desc）
+ADSL-wlan index,,scan,&&result                              // 扫描网络
+ADSL-wlan index,,-list,&&result                             // 网络广播扫描
+// 结果格式（list）：SSID SignalQuality Flags BssType NumBssid bConnectable ...
+// 结果格式（query[all]）：index guid State Description
+// Flags & 1 = 当前已连接
 ```
 
-### PCIP — IP configuration
+### PCIP — IP 配置
 ```
 PCIP 192.168.1.100,255.255.255.0,192.168.1.1,[DNS1],[DNS2]
 PCIP DHCP
 ```
 
-### Other network
+### 其他网络
 ```
-NTPC time.server.com                                // time sync
-SITE ftp://user:pass@server/path,local,get|put        // FTP (download/upload)
-UPNP add|del TCP|UDP,port,internalIP                  // port forwarding
+NTPC time.server.com                                // 时间同步
+SITE ftp://user:pass@server/path,local,get|put        // FTP（下载/上传）
+UPNP add|del TCP|UDP,port,internalIP                  // 端口转发
 ```
 
 ---
 
-## EXTERNAL EXECUTION
+## 外部执行
 
-### EXEC — Execute program (comprehensive)
+### EXEC — 执行程序（全面）
 ```
 EXEC [=][!][@][^][&][*] [flags] program [args]
 ```
-Basic: `=`=wait, `!`=hidden, `@`=no wait+hidden, `^`=don't wait, `*`=don't wait
+基本：`=`=等待完成，`!`=隐藏运行，`@`=不等待+隐藏，`^`=不等待，`*`=不等待
 
-Additional flags (most commonly used):
+附加标志（最常用）：
 ```
--err+                  // capture stderr into same output
--err                   // capture stderr separately
--cmd:::Callback        // real-time output line callback
--wd:path               // set working directory
--pid:var               // get process PID
--su[acde]              // run as SYSTEM
--doc:mode              // open/edit/print/properties document
--min|-max|-show|-hide  // window state
--user:name -passwd:pwd // run as user
--timeout:ms[:code]     // timeout
--waiti                 // wait for UI init
--raw                   // capture raw (no recoding)
+-err+                  // 捕获 stderr 到同一输出
+-err                   // 单独捕获 stderr
+-cmd:::Callback        // 实时输出行回调
+-wd:path               // 设置工作目录
+-pid:var               // 获取进程 PID
+-su[acde]              // 以 SYSTEM 身份运行
+-doc:mode              // 打开/编辑/打印/属性 文档
+-min|-max|-show|-hide  // 窗口状态
+-user:name -passwd:pwd // 以指定用户身份运行
+-timeout:ms[:code]     // 超时
+-waiti                 // 等待 UI 初始化
+-raw                   // 捕获原始数据（不重新编码）
 -nowin                 // CREATE_NO_WINDOW
--incmd                  // run command in a fresh PECMD instance (no message loop)
+-incmd                  // 在新的 PECMD 实例中运行命令（无消息循环）
 
-// Additional EXEC flags:
--clone:var            // clone PECMD to run script variable
--mem                  // ghost process (in-memory execution)
--io                   // take over child process I/O
--code:<enc>           // specify source encoding
--REALTIME|-HIGH|-ABOVENORMAL|-NORMAL|-BELOWNORMAL|-LOW|-IDLE  // process priority
--shel:"auto_cmd"      // execute in SHEL mode
--svrsys|-svrusr|-svr- // service-to-desktop execution
-/InstallService /name // install as Windows service
-/RemoveService name   // uninstall service
--poprmenu|-runrmenu   // popup/execute file right-click menu
+// 附加 EXEC 标志：
+-clone:var            // 克隆 PECMD 运行脚本变量
+-mem                  // 幽灵进程（内存中执行）
+-io                   // 接管子进程 I/O
+-code:<enc>           // 指定源编码
+-REALTIME|-HIGH|-ABOVENORMAL|-NORMAL|-BELOWNORMAL|-LOW|-IDLE  // 进程优先级
+-shel:"auto_cmd"      // 在 SHEL 模式下执行
+-svrsys|-svrusr|-svr- // 服务到桌面执行
+/InstallService /name // 安装为 Windows 服务
+/RemoveService name   // 卸载服务
+-poprmenu|-runrmenu   // 弹出/执行文件右键菜单
 ```
 
-### EXEC* — Capture output
+### EXEC* — 捕获输出
 ```
 EXEC* [*1|*N|*-] [-catch] [-cmd:::Callback] [-err+] [&]outputVar=program [args]
 ```
-`*1`=only first line, `*N`=merge lines, `*-`=trim trailing newline
+`*1`=仅第一行，`*N`=合并行，`*-`=去除尾部换行
 
-### SOCK — Windows sockets / IPC
+### SOCK — Windows 套接字 / IPC
 ```
-SOCK [*] Name[;ProFamily][;ProType][;ProID]        // create socket (*=auto-recycle)
-SOCK --file [*] Name;[we][-rwd];FileName           // file handle
-SOCK --shm [*] Name;[w];ShareName;Length[;...]     // shared memory (w=writable)
-SOCK --event [*] Name;ShareName[;Init;ManualReset] // event object
-SOCK --sem [*] Name;ShareName[;InitCount;MaxCount] // semaphore
-SOCK --mutex [*] Name;ShareName[;InitLocked]       // mutex
-SOCK --pipe [*] Name;ShareName[;Timeout;BufSz;Mode] // named pipe (0x1=immediate, 0x2=client, 0x4=server)
-SOCK --mailslot [*] Name;ShareName[;IsServer;Timeout] // mailslot
-SOCK --gethostbyname[*|#] IPName;HostName          // DNS lookup
-SOCK --unknown Name[,InitialValue]                 // COM IUnknown pointer (auto-release)
-SOCK --BSTR[vt] Name[,[*][InitialValue][,FromString]] // BSTR string
-```
-
-Socket operations (all via `ENVI @Name.operation=`):
-```
-ENVI @Name.connect=[ErrVar];IP;Port               // TCP connect
-ENVI @Name.bind=[ErrVar];IP;Port                  // bind (server)
-ENVI @Name.listen=[ErrVar][;Backlog]              // listen (default backlog=7)
-ENVI @Name.accept=[ErrVar];[ListenFD][;IPVar][;PortVar]  // accept connection
-ENVI @Name.write=[ErrVar];[LenVar];[DataVar];[BytesToSend[@Offset]][;Flags][;IP][;Port]  // send
-ENVI @Name.read=[ErrVar];[LenVar];[DataVar];[*][BytesToRecv[@Offset]][;Flags][;IPVar][;PortVar]  // recv (*=multi-read)
-ENVI @Name.close=[ErrVar]                         // close
-ENVI @Name.shutdown=[ErrVar][;Mode]               // 0=recv, 1=send, 2=both
-ENVI @Name.sock=[ErrVar][;ProFamily;ProType;ProID]  // recreate socket
-ENVI @Name.fd=fdVarName                           // get file descriptor
-ENVI @Name.mem=memVarName                         // get shared memory address
-ENVI @Name.setsockopt=[ErrVar];[Level];Item;DataVar[;DataLen]  // set socket option
-ENVI @Name.select=[[*]ErrVar];MsTimeout;[[Ret:]fd1:fd2:...]  // multiplexing (*=API error)
-ENVI @Name.getname=[ErrVar];[0/1];[IPVar][;PortVar]  // 0=local, 1=peer
-ENVI @Name.wait=[ErrVar][;Timeout][;[*]handle2:...]  // wait (event/sem/mutex)
-ENVI @Name.setevent=[ErrVar][;1][;OldValueVar]    // signal event (0=clear)
+SOCK [*] Name[;ProFamily][;ProType][;ProID]        // 创建套接字（*=自动回收）
+SOCK --file [*] Name;[we][-rwd];FileName           // 文件句柄
+SOCK --shm [*] Name;[w];ShareName;Length[;...]     // 共享内存（w=可写）
+SOCK --event [*] Name;ShareName[;Init;ManualReset] // 事件对象
+SOCK --sem [*] Name;ShareName[;InitCount;MaxCount] // 信号量
+SOCK --mutex [*] Name;ShareName[;InitLocked]       // 互斥锁
+SOCK --pipe [*] Name;ShareName[;Timeout;BufSz;Mode] // 命名管道（0x1=立即，0x2=客户端，0x4=服务端）
+SOCK --mailslot [*] Name;ShareName[;IsServer;Timeout] // 邮件槽
+SOCK --gethostbyname[*|#] IPName;HostName          // DNS 查询
+SOCK --unknown Name[,InitialValue]                 // COM IUnknown 指针（自动释放）
+SOCK --BSTR[vt] Name[,[*][InitialValue][,FromString]] // BSTR 字符串
 ```
 
-Pipe/mailslot operations: `.read` / `.write` / `.connect`
-
-### PINT — Pin to taskbar/start
+套接字操作（全部通过 `ENVI @Name.operation=`）：
 ```
-PINT %Desktop%\Name.lnk,TaskBand         // pin to taskbar
-PINT %Desktop%\Name.lnk,StartMenu        // pin to start menu
+ENVI @Name.connect=[ErrVar];IP;Port               // TCP 连接
+ENVI @Name.bind=[ErrVar];IP;Port                  // 绑定（服务端）
+ENVI @Name.listen=[ErrVar][;Backlog]              // 监听（默认 backlog=7）
+ENVI @Name.accept=[ErrVar];[ListenFD][;IPVar][;PortVar]  // 接受连接
+ENVI @Name.write=[ErrVar];[LenVar];[DataVar];[BytesToSend[@Offset]][;Flags][;IP][;Port]  // 发送
+ENVI @Name.read=[ErrVar];[LenVar];[DataVar];[*][BytesToRecv[@Offset]][;Flags][;IPVar][;PortVar]  // 接收（*=多次读取）
+ENVI @Name.close=[ErrVar]                         // 关闭
+ENVI @Name.shutdown=[ErrVar][;Mode]               // 0=接收，1=发送，2=两者
+ENVI @Name.sock=[ErrVar][;ProFamily;ProType;ProID]  // 重新创建套接字
+ENVI @Name.fd=fdVarName                           // 获取文件描述符
+ENVI @Name.mem=memVarName                         // 获取共享内存地址
+ENVI @Name.setsockopt=[ErrVar];[Level];Item;DataVar[;DataLen]  // 设置套接字选项
+ENVI @Name.select=[[*]ErrVar];MsTimeout;[[Ret:]fd1:fd2:...]  // 多路复用（*=API 错误）
+ENVI @Name.getname=[ErrVar];[0/1];[IPVar][;PortVar]  // 0=本地，1=对端
+ENVI @Name.wait=[ErrVar][;Timeout][;[*]handle2:...]  // 等待（事件/信号量/互斥锁）
+ENVI @Name.setevent=[ErrVar][;1][;OldValueVar]    // 信号事件（0=清除）
 ```
 
-### LINK — Create shortcut
+管道/邮件槽操作：`.read` / `.write` / `.connect`
+
+### PINT — 固定到任务栏/开始菜单
+```
+PINT %Desktop%\Name.lnk,TaskBand         // 固定到任务栏
+PINT %Desktop%\Name.lnk,StartMenu        // 固定到开始菜单
+```
+
+### LINK — 创建快捷方式
 ```
 LINK %Desktop%\Name.lnk,target,[args],[icon],[iconIdx],[workDir]
-LINK [?]Name.lnk                          // query shortcut info
+LINK [?]Name.lnk                          // 查询快捷方式信息
 ```
 
 ---
 
-## ADDITIONAL CONTROLS
+## 附加控件
 
-Additional GUI controls are documented in [pecmd-gui.md](pecmd-gui.md).
+附加 GUI 控件文档参见 [pecmd-gui.md](pecmd-gui.md)。
 
 ---
 
-## STRING MANIPULATION
+## 字符串操作
 
-### MSTR — Multi-string extraction
+### MSTR — 多字符串提取
 ```
-MSTR &a,&b=<1><3>%&data%              // extract fields 1 and 3
-MSTR &rest=<5*>%&data%                 // fields 5 through end (use <N*> or <N->)
-MSTR &restq=<~5>%&data%                 // field 5 with outer quotes stripped (~ = strip quotes)
-MSTR &s=pos,len,%&str%                 // substring at position
-MSTR &last=<-1>%&data%                 // last field (negative index)
-MSTR -delims:. &a,&b,&c=<1*>%&ip%     // split by custom delimiter
-MSTR* &a,&b=<1><2>%&data%               // TAB-delimited (prefix * on command)
-MSTR$ &a,&b=<1><2>%&data%               // space-delimited, consecutive spaces = single
+MSTR &a,&b=<1><3>%&data%              // 提取字段 1 和 3
+MSTR &rest=<5*>%&data%                 // 字段 5 到末尾（使用 <N*> 或 <N->）
+MSTR &restq=<~5>%&data%                 // 字段 5 并剥离外层引号（~ = 去除引号）
+MSTR &s=pos,len,%&str%                 // 指定位置的子串
+MSTR &last=<-1>%&data%                 // 最后一个字段（负索引）
+MSTR -delims:. &a,&b,&c=<1*>%&ip%     // 按自定义分隔符拆分
+MSTR* &a,&b=<1><2>%&data%               // TAB 分隔（命令前缀 *）
+MSTR$ &a,&b=<1><2>%&data%               // 空格分隔，连续空格视为单个
 ```
 
-### SED — Regex substitution
+### SED — 正则替换
 ```
 SED &r=count,pattern,replacement,%&source%
-SED &r=0,pat,rep,%&s%                  // replace ALL
-SED &r=1,pat,rep,%&s%                  // replace FIRST
-SED &ext=-1,.*\.,,%&filename%          // get extension (negative=from end)
-SED &r=0:0,pat,rep,%&s%                // regex mode
+SED &r=0,pat,rep,%&s%                  // 替换全部
+SED &r=1,pat,rep,%&s%                  // 替换第一个
+SED &ext=-1,.*\.,,%&filename%          // 获取扩展名（负数=从末尾算起）
+SED &r=0:0,pat,rep,%&s%                // 正则模式
 ```
 
-### Other string operations
+### 其他字符串操作
 ```
-LSTR &left=N,%&str%                     // first N chars
-RSTR &right=N,%&str%                    // last N chars
-SSTR &mid=M,N,%&str%                    // N chars from position M
-LPOS &pos=needle,[1],%&haystack%        // find first (case-insensitive; add ,1, for case-sensitive)
-RPOS &pos=needle,[1],%&haystack%        // find last
-STRL &len=%&str%                        // string length
-RAND &var                               // random 63-bit integer
+LSTR &left=N,%&str%                     // 前 N 个字符
+RSTR &right=N,%&str%                    // 后 N 个字符
+SSTR &mid=M,N,%&str%                    // 从位置 M 取 N 个字符
+LPOS &pos=needle,[1],%&haystack%        // 查找第一个（不区分大小写；加 ,1, 区分大小写）
+RPOS &pos=needle,[1],%&haystack%        // 查找最后一个
+STRL &len=%&str%                        // 字符串长度
+RAND &var                               // 随机 63 位整数
 ```
 
 ---
 
-## OTHER COMMANDS
+## 其他命令
 
 ### TIME / DTIM
 ```
-TIME &var                               // get current time
-DTIM &ts,&date,&time                    // combine to timestamp
-DTIM &dateStr,&ts                       // timestamp to string
+TIME &var                               // 获取当前时间
+DTIM &ts,&date,&time                    // 合并为时间戳
+DTIM &dateStr,&ts                       // 时间戳转字符串
 ```
-> Note: See SYSTEM section for the comprehensive DATE command.
+> 注意：完整的 DATE 命令请参见系统部分。
 
 ### BASE — Base64
 ```
-BASE string,&var                         // PECMD variant (for ADSL security)
-BASE* string,&var                        // standard base64
-BASE* -u string,&var                     // standard decode
+BASE string,&var                         // PECMD 变体（用于 ADSL 安全）
+BASE* string,&var                        // 标准 base64
+BASE* -u string,&var                     // 标准解码
 ```
 
-### CMPS — Compression
+### CMPS — 压缩
 ```
-CMPS -m source.wcs,dest.wcz             // compress (encrypted)
-CMPS -m -u source.wcz,dest.wcs           // decompress
-CMPS -f -m source.wcs,dest.wcz           // compress (no encryption, -m after -f)
-CMPS -bin source.exe,dest.wcz            // compress binary (NOT script)
-CMPS -src[:flags] source.wcs,dest.wcz    // source compression with clean flags:
-  // -src:1 = remove comment lines
-  // -src:2 = convert line endings
-  // -src:4 = compress empty lines
-  // -src:8 = remove inline comments
-  // Combine: -src:15 = all of above
-CMPS -utf8 source.wcs,dest.wcz           // encode as UTF-8
-```
-
-### WAIT — Pause / key wait
-```
-WAIT ms                                    // pause milliseconds
-WAIT -1                                    // wait forever
-WAIT -cont [-timeout],[&var]              // non-blocking key press wait
-WAIT *pid|*tid                             // wait for process/thread completion
-WAIT **                                     // wait for grandparent process
-WAIT =tid                                   // wait for specific thread ID
-WAIT -del file1 [-del file2]               // delete files after wait (with retry)
-WAIT -delms:N                               // delay between delete retries (ms)
-WAIT -scanall|scan:key,&var                // get keyboard scan state table
-WAIT -sys[0] [switch] -cmd                 // system proxy agent execution
-WAIT -sys[0]cmd                            // system direct agent execution
-WAIT -thread                                // wait for all child threads
-WAIT $handle                                // wait for handle
-WAIT -freemem                               // free memory
-WAIT -pad                                   // distinguish numpad keys
-WAIT -ncd                                   // don't change directory during wait
-WAIT &&PressKey.Hex                         // sub-var for hex key code
-WAIT time1 time2                            // time1>0&<1: *100000 = pending message count
+CMPS -m source.wcs,dest.wcz             // 压缩（加密）
+CMPS -m -u source.wcz,dest.wcs           // 解压
+CMPS -f -m source.wcs,dest.wcz           // 压缩（不加密，-m 在 -f 之后）
+CMPS -bin source.exe,dest.wcz            // 压缩二进制（非脚本）
+CMPS -src[:flags] source.wcs,dest.wcz    // 源码压缩及清理标志：
+  // -src:1 = 移除注释行
+  // -src:2 = 转换行尾符
+  // -src:4 = 压缩空行
+  // -src:8 = 移除行内注释
+  // 组合：-src:15 = 以上全部
+CMPS -utf8 source.wcs,dest.wcz           // 编码为 UTF-8
 ```
 
-### KILL — Terminate
+### WAIT — 暂停 / 按键等待
 ```
-KILL process.exe                           // by name
-KILL *12345                                // by PID
-KILL \                                     // current script's windows
-KILL \WinName                              // specific window title
-KILL process.exe|username                   // by name + owner
-KILL \[windowTitle]                        // by window title
-KILL @[windowName]                         // by window class name
-KILL @@windowID                            // by window ID
-KILL **tid                                 // by thread ID (async kill)
-KILL *&hpid                                // by process HANDLE
-KILL **&htid                               // by thread HANDLE (async)
-KILL -force process.exe                    // force terminate
-KILL -explorer process.exe                 // prevent explorer auto-restart
-KILL -gui                                  // process manager GUI
-KILL -tree process.exe                     // terminate process tree
-KILL -svr2                                 // for MESS-svr2
-KILL -exitcode:NUM process.exe             // set exit code
-KILL ** process.exe                        // force synchronous kill
-```
-
-### LOGS — Debug logging
-```
-LOGS * C:\log.txt                       // start logging
-LOGS                                    // stop
+WAIT ms                                    // 暂停毫秒数
+WAIT -1                                    // 永久等待
+WAIT -cont [-timeout],[&var]              // 非阻塞按键等待
+WAIT *pid|*tid                             // 等待进程/线程完成
+WAIT **                                     // 等待祖父进程
+WAIT =tid                                   // 等待指定线程 ID
+WAIT -del file1 [-del file2]               // 等待后删除文件（含重试）
+WAIT -delms:N                               // 删除重试间隔（毫秒）
+WAIT -scanall|scan:key,&var                // 获取键盘扫描状态表
+WAIT -sys[0] [switch] -cmd                 // 系统代理执行
+WAIT -sys[0]cmd                            // 系统直接代理执行
+WAIT -thread                                // 等待所有子线程
+WAIT $handle                                // 等待句柄
+WAIT -freemem                               // 释放内存
+WAIT -pad                                   // 区分小键盘按键
+WAIT -ncd                                   // 等待期间不切换目录
+WAIT &&PressKey.Hex                         // 十六进制键码子变量
+WAIT time1 time2                            // time1>0&<1：*100000 = 待处理消息数
 ```
 
-### COME / NOTE — Comment toggle
+### KILL — 终止
 ```
-COME 0 / NOTE OFF                       // disable comments
-COME 1 / NOTE ON                        // enable comments
+KILL process.exe                           // 按名称
+KILL *12345                                // 按 PID
+KILL \                                     // 当前脚本的窗口
+KILL \WinName                              // 指定窗口标题
+KILL process.exe|username                   // 按名称 + 所有者
+KILL \[windowTitle]                        // 按窗口标题
+KILL @[windowName]                         // 按窗口类名
+KILL @@windowID                            // 按窗口 ID
+KILL **tid                                 // 按线程 ID（异步终止）
+KILL *&hpid                                // 按进程句柄
+KILL **&htid                               // 按线程句柄（异步）
+KILL -force process.exe                    // 强制终止
+KILL -explorer process.exe                 // 阻止 explorer 自动重启
+KILL -gui                                  // 进程管理器 GUI
+KILL -tree process.exe                     // 终止进程树
+KILL -svr2                                 // 用于 MESS-svr2
+KILL -exitcode:NUM process.exe             // 设置退出代码
+KILL ** process.exe                        // 强制同步终止
+```
+
+### LOGS — 调试日志
+```
+LOGS * C:\log.txt                       // 开始记录日志
+LOGS                                    // 停止
+```
+
+### COME / NOTE — 注释开关
+```
+COME 0 / NOTE OFF                       // 禁用注释
+COME 1 / NOTE ON                        // 启用注释
 ```
 
 ### HELP
 ```
-HELP                                    // show full help
-HELP commandName                        // show command-specific help
+HELP                                    // 显示完整帮助
+HELP commandName                        // 显示指定命令帮助
 ```
 
-### TIME — Timer control
+### TIME — 定时器控制
 ```
-TIME TimerName,interval,command          // periodic timer
-TIME -t:1 TimerName,interval,command     // one-shot
-ENVI @TimerName=0                        // stop
-ENVI @TimerName=interval;count           // run N times
-ENVI @TimerName=-del                     // destroy
+TIME TimerName,interval,command          // 周期性定时器
+TIME -t:1 TimerName,interval,command     // 单次定时器
+ENVI @TimerName=0                        // 停止
+ENVI @TimerName=interval;count           // 运行 N 次
+ENVI @TimerName=-del                     // 销毁
 ```
 
-### ENVI ? — System queries
+### ENVI ? — 系统查询
 ```
-ENVI ?WinPE=ispe                          // check if running in WinPE
-ENVI ?FVER &ver,path\to\file.dll          // get file version
-ENVI ?ReturnValue=FVAR,varName;{GUID}     // query firmware variable (UEFI)
+ENVI ?WinPE=ispe                          // 检查是否在 WinPE 中运行
+ENVI ?FVER &ver,path\to\file.dll          // 获取文件版本
+ENVI ?ReturnValue=FVAR,varName;{GUID}     // 查询固件变量（UEFI）
 ```
 
 ---
 
-## Appendix: Virtual Key Codes
+## 附录：虚拟键码
 
-Common Windows virtual key codes used with `HKEY`, `HOTK`, `WAIT -cont`, and `SEND`:
+与 `HKEY`、`HOTK`、`WAIT -cont` 和 `SEND` 配合使用的常用 Windows 虚拟键码：
 
-| Key Name | Decimal | Hex | Description |
+| 键名 | 十进制 | 十六进制 | 描述 |
 |---|---|---|---|
 | VK_LBUTTON | 1 | 0x01 | Left mouse button |
 | VK_RBUTTON | 2 | 0x02 | Right mouse button |
@@ -1567,10 +1567,10 @@ Common Windows virtual key codes used with `HKEY`, `HOTK`, `WAIT -cont`, and `SE
 | VK_OEM_6 | 221 | 0xDD | ]} key |
 | VK_OEM_7 | 222 | 0xDE | '" key |
 
-Usage with PECMD commands:
+与 PECMD 命令配合使用示例：
 ```
 HKEY Alt+#0x41,TEAM MESS Pressed Alt+A!
 HOTK Ctrl+Win+#0x53,MYFUNC         // Ctrl+Win+S
-WAIT -cont -3000,&key               // wait 3s for key, store code in &key
-SEND #0x0D                          // send Enter key
+WAIT -cont -3000,&key               // 等待 3 秒按键，将码存入 &key
+SEND #0x0D                          // 发送 Enter 键
 ```

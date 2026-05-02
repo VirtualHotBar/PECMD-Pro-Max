@@ -1,8 +1,8 @@
-# 网络/SOCK/COM/WMI — 代码配方
+# 网络/SOCK/COM/WMI — 写法示例
 
-## 16. Network Operations
+## 16. 网络操作
 
-### Get network adapter IP
+### 获取网卡 IP
 
 ```wcs
 EXEC* &&ipcfg=*ipconfig                         // * prefix = internal PECMD command
@@ -18,7 +18,7 @@ FORX *NL &ipcfg,&&line,
 }
 ```
 
-### WiFi scan & connect
+### WiFi 扫描与连接
 
 ```wcs
 ADSL-wlan ,,list,&&wifiInfo                     // scan nearby networks
@@ -28,7 +28,7 @@ BASE "password",&&encPSK
 ADSL-wlan %&encSSID%,%&encPSK%                  // connect
 ```
 
-### Ping check
+### Ping 检测
 
 ```wcs
 EXEC* &result=!ping -n 1 192.168.1.1
@@ -37,7 +37,7 @@ FIND TTL=,%&result%,MESS Host reachable             // substring search (no $ = 
 
 ---
 
-## 29. NET & Network Card Operations
+## 29. NET 与网卡操作
 
 ```wcs
 // Full network adapter query
@@ -52,9 +52,9 @@ PCIP DHCP
 
 ---
 
-## 65. SOCK Networking (TCP/UDP Client-Server)
+## 65. SOCK 网络（TCP/UDP 客户端-服务器）
 
-### TCP server with accept loop
+### TCP 服务器（带 accept 循环）
 
 ```wcs
 SOCK sk                                    // server listen socket (TCP default)
@@ -81,7 +81,7 @@ _SUB Server
 _END
 ```
 
-### TCP client and UDP
+### TCP 客户端与 UDP
 
 ```wcs
 SOCK sc                                    // client socket
@@ -98,7 +98,7 @@ ENVI @su.write=&&err;&Len;&data;;;&destIP  // sendto
 ENVI @su.read=&&err;&Len;&recvBuf;;;&srcIP // recvfrom
 ```
 
-### Shared memory and named pipe
+### 共享内存与命名管道
 
 ```wcs
 SOCK --shm shm1;w;MySharedMem;1024         // writable shared memory
@@ -111,9 +111,9 @@ ENVI @pip1.read=;;&buf                     // read
 
 ---
 
-## 66. COM/WMI Object Automation
+## 66. COM/WMI 对象自动化
 
-### Create COM object via CoCreateInstance
+### 通过 CoCreateInstance 创建 COM 对象
 
 ```wcs
 LOCK .com**                                // initialize COM
@@ -130,7 +130,7 @@ CALL $--qd --16 OLE32.DLL,CoCreateInstance,*&CLSID,#0,#1,*&IID,*&pObj
 CALL $--16 --ret:&&hr #,*&pObj.%&iMethod%,arg1,arg2
 ```
 
-### WMI query pattern
+### WMI 查询模式
 
 ```wcs
 LOCK .com**
@@ -151,7 +151,7 @@ CALL $--16 --ret:&&hr --qd #,*&&pRow.%&iGet%,#%&&bstrProp?ptr%,#0,*&vProp,#0,#0
 SET &value=%&&vProp?ptr:8
 ```
 
-### ITaskbarList3 (taskbar progress)
+### ITaskbarList3（任务栏进度条）
 
 ```wcs
 SOCK --unknown &&pTaskbar
@@ -163,7 +163,7 @@ CALL $--ret:&&r #,*&&pTaskbar.%&iRelease%
 
 ---
 
-### 45. GetIfTable — Network Speed Monitoring
+### 45. GetIfTable — 网络速率监控
 
 ```wcs
 ENVI$ &&buf=*0x1000 0
@@ -179,7 +179,7 @@ ENVI-addr ;&&bufsize=&&buf
 
 ---
 
-### 48. WiFi Connect + Tray UI Pattern
+### 48. WiFi 连接 + 托盘 UI 模式
 
 Combined ADSL-wlan + TABL + minimize-to-tray typical pattern:
 

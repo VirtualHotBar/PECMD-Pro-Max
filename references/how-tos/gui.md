@@ -1,8 +1,8 @@
-# GUI 控件/窗口/绘制 — 代码配方
+# GUI 控件/窗口/绘制 — 写法示例
 
-## 7. GUI Patterns
+## 7. GUI 模式
 
-### Complete window template [CHINESE]
+### 完整窗口模板
 
 ```wcs
 #code=65001
@@ -32,7 +32,7 @@ _SUB OnClose
 _END
 ```
 
-### DPI-aware window with manual layout
+### DPI 感知窗口与手动布局
 
 ```wcs
 _SUB DPIWindow,W600H400,DPI Demo,,,,, -scalef -scale
@@ -60,7 +60,7 @@ _SUB OnResize
 _END
 ```
 
-### TABL data operations (comprehensive)
+### TABL 数据操作（综合）
 
 ```wcs
 // Title with formatting flags
@@ -98,7 +98,7 @@ ENVI @Table1.Val=%&a%;%&rowB%
 ENVI @Table1.Val=%&b%;%&rowA%
 ```
 
-### LIST dropdown operations
+### LIST 下拉操作
 
 ```wcs
 LIST -h List1,L10T10W200H200,,CALL OnSelect,,0x100
@@ -111,7 +111,7 @@ ENVI @List1.isel=2                       // select by 1-based index
 ENVI @List1.QUERY=;&allItems             // get all items (NL-delimited)
 ```
 
-### Popup context menu on right-click
+### 右键弹出上下文菜单
 
 ```wcs
 ENVI @Table1.MSG=_%&::WM_RBUTTONDOWN%: CALL @--popmenu MyMenu
@@ -125,7 +125,7 @@ _SUB MyMenu
 _END
 ```
 
-### SWIN sub-window (tab pages)
+### SWIN 子窗口（选项卡页）
 
 ```wcs
 SWIN :Page1,L10T40W380H200
@@ -138,14 +138,14 @@ _END
 // Switch: ENVI @Page1.Visible=0 | ENVI @Page2.Visible=1
 ```
 
-### Dynamic label creation (command in variable)
+### 动态标签创建（变量中的命令）
 
 ```wcs
 ENVI &&cmdString=LABE -vcenter -trans Lbl%&i%,L%&x%T%&y%W%&w%H%&h%,%&text%,CALL OnClick %&i%,0x000000,14
 %&cmdString%                                      // execute the dynamically-built command
 ```
 
-### Checkbox with linked control
+### 带关联控件的复选框
 
 ```wcs
 CHEK Check1,L20T50W200H20,Auto refresh,CALL OnCheck,1
@@ -156,7 +156,7 @@ _END
 ```
 
 
-### Dynamic control creation & deletion
+### 动态控件创建与删除
 
 ```wcs
 // Create controls programmatically from a command string in a variable
@@ -170,7 +170,7 @@ ENVI @Edit%B.*del=                                  // delete edit field B
 ```
 ---
 
-## 26. Window Style Flags & Window Hiding
+## 26. 窗口样式标志与窗口隐藏
 
 ```wcs
 // Common window creation flags
@@ -194,9 +194,9 @@ ENVI @@Visible=?%&WID%:&&state                    // query visibility state
 
 ---
 
-## 32. SWIN Nested Windows (Tab Pages)
+## 32. SWIN 嵌套窗口（选项卡页）
 
-Complete property-page pattern: define each sub-window as a `_SUB`, embed them with `SWIN` in the parent, use `TABS.SEL` to switch visible page on tab click.
+完整的属性页模式：将每个子窗口定义为 `_SUB`，在父窗口中使用 `SWIN` 嵌入，通过 `TABS.SEL` 在选项卡点击时切换可见页面。
 
 ```wcs
 #code=65001
@@ -272,17 +272,17 @@ _SUB OnOK
 _END
 ```
 
-Key points:
-- `SWIN` containers must be placed BEFORE their `_SUB` definitions.
-- Use `0x100` flag to hide a page initially.
-- `TABS.SEL=<n>` selects a tab; `TABS.SEL=?` queries the current selection.
-- Toggle visibility with `ENVI @PageName.Visible=0` / `=1`.
+关键点：
+- `SWIN` 容器必须放在其 `_SUB` 定义**之前**。
+- 使用 `0x100` 标志初始隐藏页面。
+- `TABS.SEL=<n>` 选择选项卡；`TABS.SEL=?` 查询当前选择。
+- 通过 `ENVI @PageName.Visible=0` / `=1` 切换可见性。
 
 ---
 
-## 33. Dynamic Row Creation & Batch Deletion
+## 33. 动态行创建与批量删除
 
-Build controls at runtime from variable-expanded command strings. Batch-delete groups in loops.
+运行时通过变量展开的命令字符串构建控件。在循环中批量删除控件组。
 
 ```wcs
 _SUB CreateRow
@@ -324,16 +324,16 @@ LOOP #%&n%<5,
 }
 ```
 
-Key points:
-- `ENVI @CtrlName.*del=` destroys a control and frees its resources.
-- Command strings in variables (`%&cmd%`) are the only way to use computed control names.
-- Batch deletion loops must be careful not to skip indices when controls are pre-indexed.
+关键点：
+- `ENVI @CtrlName.*del=` 销毁控件并释放其资源。
+- 变量中的命令字符串（`%&cmd%`）是使用动态计算控件名的唯一方法。
+- 批量删除循环必须注意在控件已预索引时不要跳过索引。
 
 ---
 
-## 36. TABL Scrollbar Control via LVM Messages
+## 36. TABL 通过 LVM 消息控制滚动条
 
-Use `SENDMSG` to send list-view messages for scroll control. Messages apply to the underlying SysListView32 control.
+使用 `SENDMSG` 发送列表视图消息以控制滚动。消息作用于底层的 SysListView32 控件。
 
 ```wcs
 #code=65001
@@ -396,13 +396,13 @@ _SUB EnsureRow
 _END
 ```
 
-Note: `SENDMSG` sends to the window that last received focus / the foreground window. In a GUI context, you may need to focus the table first or use `ENVI @Table1.SENDMSG` (PECMD 2012 extension). For cross-process or precise control, use `CALL $ user32.dll,SendMessageW`.
+注意：`SENDMSG` 发送到最后获得焦点/前台窗口。在 GUI 上下文中，可能需要先聚焦表格或使用 `ENVI @Table1.SENDMSG`（PECMD 2012 扩展）。跨进程或精确控制时使用 `CALL $ user32.dll,SendMessageW`。
 
 ---
 
-## 37. TABL In-Row Sorting (Bubble Sort)
+## 37. TABL 行内排序（冒泡排序）
 
-Read all rows into memory, bubble-sort by a target column, rewrite the table.
+将所有行读入内存，按目标列冒泡排序，重写表格。
 
 ```wcs
 _SUB SortTableByCol
@@ -467,16 +467,16 @@ _END
 // CALL SortTableByCol 3          // sort by 3rd column
 ```
 
-Key points:
-- Double-percent `%%&Row[%&i%]%%` dereference: first `%%` evaluates to `%`, then `%&Row[3]%` reads the variable.
-- `FIND $str1>str2` does lexicographic "greater" comparison (compare two strings, true if first > second). Use `|` prefix instead for numeric compare.
-- Remove non-digits with `SED` for numeric extraction before numeric compare.
+关键点：
+- 双百分号 `%%&Row[%&i%]%%` 解引用：第一个 `%%` 求值为 `%`，然后 `%&Row[3]%` 读取变量。
+- `FIND $str1>str2` 进行字典序"大于"比较（比较两个字符串，第一个 > 第二个时为真）。数值比较请改用 `|` 前缀。
+- 数值比较前用 `SED` 移除非数字字符以提取数值。
 
 ---
 
-## 38. Custom Title Bar Window (Frameless + Manual Caption)
+## 38. 自定义标题栏窗口（无边框 + 手动标题）
 
-Borderless window with fake title bar built from LABE controls. Handles minimize, close, hover color effects, and window dragging via `WM_NCHITTEST`.
+无边框窗口，使用 LABE 控件构建仿标题栏。处理最小化、关闭、悬停颜色效果以及通过 `WM_NCHITTEST` 实现的窗口拖动。
 
 ```wcs
 #code=65001
@@ -541,17 +541,17 @@ _SUB OnAbout
 _END
 ```
 
-Key points:
-- `-nocap` removes the system title bar; `-trap` prevents close-button auto-exit.
-- `WM_NCHITTEST` on LABE controls returning `HTCAPTION` makes them draggable.
-- 4-part color format `textColor#bgColor#hoverTextColor#hoverBgColor` enables hover effects.
-- Unicode symbols (`&#x2500;` = ─, `&#x2715;` = ✕) provide button glyphs via HTML entities.
+关键点：
+- `-nocap` 移除系统标题栏；`-trap` 防止关闭按钮自动退出。
+- 在 LABE 控件上通过 `WM_NCHITTEST` 返回 `HTCAPTION` 使其可拖动。
+- 4段颜色格式 `文本色#背景色#悬停文本色#悬停背景色` 启用悬停效果。
+- Unicode 符号（`&#x2500;` = ─、`&#x2715;` = ✕）通过 HTML 实体提供按钮字形。
 
 ---
 
-## 64. TREE Control (Hierarchical Node View)
+## 64. TREE 控件（层级节点视图）
 
-### Create tree with icons and node hierarchy
+### 创建带图标和节点层级的树形控件
 
 ```wcs
 // Node data format: \parent_index:icon_index:label text
@@ -575,7 +575,7 @@ ENVI @Tree1.Check=3.1;2             // set indeterminate (0=unchecked, 1=checked
 ENVI @Tree1.Check=?*;&&state        // query checkbox state
 ```
 
-### Handle TVN_ITEMCHANGEDW (checkbox change notification)
+### 处理 TVN_ITEMCHANGEDW（复选框变更通知）
 
 ```wcs
 CALC -base=16 #&&TVN_ITEMCHANGEDW=0x100000000-419
@@ -588,9 +588,9 @@ _END
 
 ---
 
-## 67. GDI Painting (WM_PAINT Drawing)
+## 67. GDI 绘制（WM_PAINT 绘图）
 
-### Register GDI functions as aliases
+### 将 GDI 函数注册为别名
 
 ```wcs
 ENVI^ Alias -opt Rectangle=CALL $--qd# --ret:* Gdi32,Rectangle,*dummy,
@@ -598,7 +598,7 @@ ENVI^ Alias -opt Ellipse=CALL $--qd# --ret:* Gdi32,Ellipse,*dummy,
 ENVI^ Alias -opt Polyline=CALL $--qd# --ret:* Gdi32.dll,Polyline,*dummy,
 ```
 
-### Window with paint callback and animation
+### 带绘制回调和动画的窗口
 
 ```wcs
 _SUB CanvasWin,W260H320,Canvas Demo,
@@ -621,7 +621,7 @@ _SUB OnPaint                               // %1 = HDC handle
 _END
 ```
 
-### Polyline with POINT array
+### 使用 POINT 数组绘制折线
 
 ```wcs
 SET$ &Pt= 0x0064 0x0000  0x0000 0x0000  0x00C8 0x0000  0x0064 0x00C8  *200 0
@@ -634,9 +634,9 @@ _END
 
 ---
 
-## 68. PBAR / SPIN Controls (Progress Bar & Up-Down)
+## 68. PBAR / SPIN 控件（进度条与微调器）
 
-### Progress bar with color and text
+### 带颜色和文字覆盖的进度条
 
 ```wcs
 PBAR PBAR1,L22T13W200H16,20               // initial value = 20%
@@ -650,7 +650,7 @@ ENVI @PBAR1=%&p%;%&K%s  %&p%%%            // value;text
 ENVI @PBAR1.percent=%&p%C:0xFF00:0xCFFF:0xFF:%&K%s  %&p%%%
 ```
 
-### SPIN control bound to EDIT
+### 绑定到 EDIT 的 SPIN 微调控件
 
 ```wcs
 EDIT EDIT1,L28T14W158H29,0,,
@@ -666,9 +666,9 @@ ENVI @SPIN1.VAL=%&POS%:-20:5               // current, min=-20, max=5
 
 ---
 
-## 69. WM_DROPFILES Drag-and-Drop
+## 69. WM_DROPFILES 拖放
 
-### Enable file drop on window or control
+### 在窗口或控件上启用文件拖放
 
 ```wcs
 SET &WM_DROPFILES=0x0233
@@ -681,7 +681,7 @@ ENVI @EDIT1.MSG=%&WM_DROPFILES%::&&wp,&&lp, CALL OnDrop %&wp% %&lp%
 ENVI @this.MSG=%&WM_DROPFILES%::&&wp,&&lp, CALL OnDrop %&wp% %&lp%
 ```
 
-### Extract dropped file paths
+### 提取拖放的文件路径
 
 ```wcs
 _SUB OnDrop
@@ -693,9 +693,9 @@ _END
 
 ---
 
-## 70. RICHEDIT Rich Text Formatting
+## 70. RICHEDIT 富文本格式化
 
-### Create rich text edit control
+### 创建富文本编辑控件
 
 ```wcs
 // -rich flag enables rich text mode on EDIT/MEMO
@@ -703,7 +703,7 @@ EDIT|- -rich RichEdit1,L10T10W400H300,Default text,,0x200
 MEMO-+ -rich &&RichBox,L10T10W400H300,,0x200
 ```
 
-### Color and format specific text ranges
+### 对特定文本范围着色和格式化
 
 ```wcs
 // Format: [:fontsize[:fontname:]BITUL;][color[#bgcolor]][;start_pos[;end_pos]]
@@ -714,7 +714,7 @@ ENVI @RichEdit1.COLOR=:9;0xFF0000;6;9                 // blue, pos 6-9
 ENVI @RichEdit1.COLOR=:10;0xFF00FF;2:;4:              // magenta, line 2 to line 4
 ```
 
-### Programmatic text replacement
+### 编程式文本替换
 
 ```wcs
 SET &EM_SETSEL=0x00B1
@@ -725,16 +725,16 @@ ENVI @RichEdit1.SENDMSG=%&EM_REPLACESEL%,0,$newText
 
 ---
 
-## 71. IMAG Advanced (GIF Animation & Dynamic Update)
+## 71. IMAG 高级（GIF 动画与动态更新）
 
-### Animated GIF display
+### GIF 动画显示
 
 ```wcs
 IMAG IMAG1,L10T10W200H150,animation.gif,EXEC calc.exe     // click runs calc
 ENVI @IMAG1.delay=2000                                     // set frame delay to 2s
 ```
 
-### Dynamic image update at runtime
+### 运行时动态更新图像
 
 ```wcs
 // Update: update=w:h[:x:y:border_color:border_width][;filename]
@@ -746,7 +746,7 @@ ENVI @IMAG1.update=32:32::;?overlay.png                    // ? = overlay on exi
 ENVI @IMAG1.update=64:64::<0:0:32;32>source.bmp            // crop region
 ```
 
-### IMAG as interactive image button
+### IMAG 作为交互式图像按钮
 
 ```wcs
 IMAG ImgBtn,L10T10W64H64,#1000,CALL OnImageClick          // resource icon as button
@@ -756,7 +756,7 @@ RADI -scale:(51*96/12)<123:51>:bg.png ImgRad,L100T200W123H53,,CALL OnRadio
 
 ---
 
-### 52. ScrollBar via GetScrollInfo API
+### 52. 通过 GetScrollInfo API 控制滚动条
 
 ```wcs
 SET &SIF_RANGE=0x0001
@@ -783,9 +783,9 @@ SET @@sendmsg=%&TBID%;%&lvm_scroll%;%&Pos%;0
 
 ---
 
-## 72. TABS Cross-Page Control Access
+## 72. TABS 跨页控件访问
 
-### Access sibling page controls from a child function
+### 从子函数访问同级页面控件
 
 ```wcs
 _SUB Page1,W289H249,P1,,,#
@@ -810,8 +810,8 @@ _END
 // ENVI @Name1:L01.VAL=%&ToList%   // no "-" needed when directly in parent
 ```
 
-Key: `-` navigates UP the execution stack (not window hierarchy). Each `-` = one level.
-Names navigate DOWN through the window-control tree.
+关键点：`-` 沿执行栈向上导航（非窗口层级）。每个 `-` = 一级。
+名称沿窗口-控件树向下导航。
 
 ---
 

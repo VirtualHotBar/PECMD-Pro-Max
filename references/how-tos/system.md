@@ -1,8 +1,8 @@
-# 进程/线程/系统信息/工具 — 代码配方
+# 进程/线程/系统信息/工具 — 写法示例
 
-## 3. Boot Environment & System Info
+## 3. 启动环境与系统信息
 
-### Detect BIOS vs UEFI
+### 检测 BIOS 与 UEFI
 
 ```wcs
 _SUB GetBootEnv
@@ -15,7 +15,7 @@ _SUB GetBootEnv
 _END
 ```
 
-### Detect Secure Boot state
+### 检测 Secure Boot 状态
 
 ```wcs
 SET$ &SSBI=*2 0
@@ -24,7 +24,7 @@ SET?char &SSBI=&&enabled:0
 IFEX #%&enabled%=0,MESS Secure Boot: Disabled! MESS Secure Boot: Enabled
 ```
 
-### Get Windows version (RtlGetVersion)
+### 获取 Windows 版本（RtlGetVersion）
 
 ```wcs
 SET$# &verBuf=*4 0 *4 0 *4 0 *4 0 *4 0 *256 0
@@ -37,14 +37,14 @@ SET-make &&sp=&verBuf@16;256
 MESS Windows %&major%.%&minor% build %&build%
 ```
 
-### Check if running in WinPE
+### 检测是否在 WinPE 中运行
 
 ```wcs
 ENVI ?WinPE=&&isPE
 IFEX #%&isPE%>0, MESS Running in WinPE! MESS Normal Windows
 ```
 
-### Get file version
+### 获取文件版本
 
 ```wcs
 ENVI ?FVER &&ver,%SystemRoot%\System32\shell32.dll
@@ -53,9 +53,9 @@ MESS Shell32 version: %&ver%
 
 ---
 
-## 6. Process & Program Execution
+## 6. 进程与程序执行
 
-### Run and capture output
+### 运行并捕获输出
 
 ```wcs
 EXEC* &output=!cmd.exe /c dir C:\ /b
@@ -64,7 +64,7 @@ FORX *NL &output,&&line, CALC &count=%&count%+1
 MESS %&count% lines:%&NL%%&output%
 ```
 
-### Run with real-time output callback [CHINESE]
+### 带实时输出回调的执行 [CHINESE]
 
 ```wcs
 EXEC* -cmd:::OnLine -err+ &output=!"%program%" %args%
@@ -78,7 +78,7 @@ _SUB OnLine
 _END
 ```
 
-### Run sub-PECMD and wait
+### 运行子 PECMD 并等待
 
 ```wcs
 EXEC =!"%MyNAME%" TEAM WAIT 1000|LOAD other.ini
@@ -86,7 +86,7 @@ ENVI ?WinPE=&&isPE
 EXEC* &&ver=*PECMD                              // * prefix = internal PECMD command
 ```
 
-### Kill a process
+### 终止进程
 
 ```wcs
 KILL process.exe            // by name
@@ -97,9 +97,9 @@ KILL \WindowName            // kill specific window
 
 ---
 
-## 8. Threading & Async
+## 8. 线程与异步
 
-### Background thread with UI update via POSTMSG
+### 通过 POSTMSG 更新 UI 的后台线程
 
 ```wcs
 ENVI @MainWindow.MSG=#1: CALL OnThreadDone         // register custom message handler
@@ -113,7 +113,7 @@ _SUB LongTask
 _END
 ```
 
-### Shared flags for thread coordination
+### 线程协调共享标志
 
 ```wcs
 SET &::bWork=1
@@ -130,7 +130,7 @@ _SUB Worker
 _END
 ```
 
-### Multiple workers + completion check
+### 多工作线程 + 完成检查
 
 ```wcs
 SET &::task1Done=0
@@ -145,7 +145,7 @@ _END
 
 ---
 
-## 9. Single Instance / Mutex Pattern
+## 9. 单实例 / 互斥体模式
 
 ```wcs
 _SUB CheckSingle *
@@ -178,7 +178,7 @@ _END
 
 ---
 
-## 10. Hotkey Registration
+## 10. 热键注册
 
 ```wcs
 HKEY Ctrl+Shift+#0x41, CALL OnHotkeyA            // Ctrl+Shift+A
@@ -189,9 +189,9 @@ HKEY Ctrl+Shift+#0x41,--del                       // unregister
 
 ---
 
-## 11. String Manipulation
+## 11. 字符串操作
 
-### MSTR — field and substring extraction
+### MSTR — 字段与子串提取
 
 ```wcs
 MSTR &&a,&&b=<1><3>%&data%                         // fields 1 and 3 (space-delimited)
@@ -202,7 +202,7 @@ MSTR &&suffix=6,0,%&str%                           // from position 6 to end
 MSTR -delims:. &&a,&&b,&&c,&&d=<1*>%&ip%          // split by colon (IP: 192.168.1.1)
 ```
 
-### SED — regex substitution
+### SED — 正则替换
 
 ```wcs
 SED &&r=0,pat,rep,%&source%                        // replace ALL occurrences
@@ -213,7 +213,7 @@ SED &&clean=0,[^0-9], ,%&str%                       // remove all non-digits
 SED &&r=0:0,%&NL%,%&NL%ENVI ,%&source%             // transform newlines to commands (regex mode)
 ```
 
-### LPOS / RPOS — substring search
+### LPOS / RPOS — 子串查找
 
 ```wcs
 LPOS &&pos=needle,,%&haystack%                     // find first (case-insensitive)
@@ -221,7 +221,7 @@ LPOS &&pos=needle,1,%&haystack%                    // case-sensitive search
 RPOS &&pos=needle,,%&haystack%                     // find last
 ```
 
-### RSTR — zero-padding
+### RSTR — 零填充
 
 ```wcs
 RSTR &&padded=3,000%num%                            // pad to 3 digits: 8 -> 008
@@ -229,9 +229,9 @@ RSTR &&padded=3,000%num%                            // pad to 3 digits: 8 -> 008
 
 ---
 
-## 12. Dynamic Variables & Arrays
+## 12. 动态变量与数组
 
-### Indirect dereference (pseudo-arrays)
+### 间接解引用（伪数组）
 
 ```wcs
 SET Arr.1.1=row1col1
@@ -239,7 +239,7 @@ SET Arr.1.2=row1col2
 SET~ &&val=Arr.%&row%.%&col%                        // indirect read
 ```
 
-### Dynamic variable names with delayed expansion
+### 延迟展开的动态变量名
 
 ```wcs
 SET &hd=0
@@ -248,7 +248,7 @@ SET &D=C:
 // ^SET defers variable expansion: %% inside ^SET -> single % at execution time
 ```
 
-### Dynamic code execution
+### 动态代码执行
 
 ```wcs
 SET$ &NA=0a
@@ -260,7 +260,7 @@ SET< A=%&NL%}
 
 ---
 
-## 13. Timer & Scheduler Patterns
+## 13. 定时器与调度模式
 
 ```wcs
 TIME Timer1,1000, CALL OnTick                        // periodic timer
@@ -278,9 +278,9 @@ SET callback=CALL OnTimerB                            // switch handler on next 
 
 ---
 
-## 14. Compound Conditions & Flow Control
+## 14. 复合条件与流程控制
 
-### IFEX compound conditions
+### IFEX 复合条件
 
 ```wcs
 IFEX [ %file% & %var%<> ], command                  // file exists AND var not empty
@@ -288,13 +288,13 @@ IFEX [ %n%<=6 & %m%<6000 ], command                // numeric AND
 IFEX [| %a%<>%b% | %c%<>%d% ], command             // OR
 ```
 
-### FIND compound conditions
+### FIND 复合条件
 
 ```wcs
 FIND [ $1=%&RET% & %WID%>0 ], command               // AND in FIND
 ```
 
-### EXIT variants
+### EXIT 变体
 
 ```wcs
 EXIT LOOP       // break loop
@@ -307,7 +307,7 @@ EXIT -          // continue (skip to next iteration)
 
 ---
 
-## 15. Encryption & Hashing
+## 15. 加密与哈希
 
 ```wcs
 BASE "string",&&encoded                     // PECMD custom base64 (for ADSL passwords)
@@ -322,7 +322,7 @@ CMPS -u source.wcz,dest.wcs                 // decompress
 
 ---
 
-## 17. Date/Time
+## 17. 日期/时间
 
 ```wcs
 DATE &&dateVar                                     // get current date
@@ -335,7 +335,7 @@ DTIM &&newDate,%&ts%                                // convert back to date stri
 
 ---
 
-## 18. Math & Calculation
+## 18. 数学与计算
 
 ```wcs
 CALC #&result=1000 * 2 + 300                        // integer math (#)
@@ -347,7 +347,7 @@ CALC &&pct=100 - 100 * %&used% / %&total% ##1       // percentage, force decimal
 
 ---
 
-## 19. Cross-Process Window Control
+## 19. 跨进程窗口控制
 
 ```wcs
 // From second instance, restore first instance:
@@ -360,26 +360,26 @@ ENVI @window.POS=?::&InitW:&InitH
 
 ---
 
-## 21. Resource Embedding & Extraction
+## 21. 资源嵌入与提取
 
-### Load embedded scripts from PECMD resources
+### 从 PECMD 资源加载嵌入脚本
 
 ```wcs
 LOAD #102 arg1 arg2                                  // execute script at resource ID 102
 LOAD #103 /l zh-CN                                   // with language parameter
 ```
 
-### Execute embedded binaries from PECMD resources
+### 从 PECMD 资源执行嵌入二进制文件
 
 ```wcs
 EXEC* -exe:#1003 &&out=*bcdboot64.exe %sysdir% /l %lang% /s %esp% /f uefi
 EXEC* -exe:#1005 =*MountESP64                        // wait for completion (=)
 ```
 
-Resource IDs are embedded in the PECMD executable at build time. This is how PECMD-based tools bundle dependencies.
+资源 ID 在构建时嵌入到 PECMD 可执行文件中。这是基于 PECMD 的工具打包依赖项的方式。
 
 
-### Icon and image resources
+### 图标和图像资源
 
 ```wcs
 IMAG Btn,L0T0W64H64,#1000                           // display image from resource #1000
@@ -387,7 +387,7 @@ TIPS* tooltip text,,,#1                              // use icon from resource #
 ```
 ---
 
-## 22. System Tray Icon (Full Handler)
+## 22. 系统托盘图标（完整处理器）
 
 ```wcs
 // Create tray icon
@@ -411,7 +411,7 @@ SET &::WM_RBUTTONDOWN=0x0204
 ```
 
 
-### Full tray click handler with visibility toggle
+### 完整托盘点击处理器（含可见性切换）
 
 ```wcs
 _SUB OnTray
@@ -426,9 +426,9 @@ _END
 ```
 ---
 
-## 23. System Power & Display Control
+## 23. 系统电源与显示控制
 
-### Shutdown / reboot / logoff
+### 关机 / 重启 / 注销
 
 ```wcs
 SHUT                        // shutdown (SHUTDOWN)
@@ -438,7 +438,7 @@ SHUT E                      // standby
 SHUT H                      // hibernate
 ```
 
-### Display resolution
+### 显示分辨率
 
 ```wcs
 DISP W1920 H1080 B32 F60    // set 1920x1080, 32-bit color, 60Hz
@@ -448,14 +448,14 @@ DISP                        // auto-detect best mode (no arguments)
 TEAM DISP| KILL explorer
 ```
 
-### Screen dimensions
+### 屏幕尺寸
 
 ```wcs
 SCRN &scrW,&scrH
 CALC &&rightEdge=%&scrW% - 300
 ```
 
-### Query taskbar height
+### 查询任务栏高度
 
 ```wcs
 FIND --class:Shell_TrayWnd --wid*@ &tbars
@@ -473,7 +473,7 @@ MESS Taskbar height: %&TB_H% px
 
 ---
 
-## 30. SEND / WAIT -cont — Keyboard
+## 30. SEND / WAIT -cont — 键盘
 
 ```wcs
 SEND {ENTER}                                        // send Enter key
@@ -483,11 +483,11 @@ WAIT -cont -1000,&&key                              // wait up to 1s for key, re
 
 ---
 
-## 31. Multi-Part Color Format
+## 31. 多段颜色格式
 
-PECMD supports a 4-part color string for hover-aware controls:
+PECMD 支持 4 段颜色字符串，用于悬停感知控件：
 ```
-textColor#backgroundColor#hoverTextColor#hoverBackgroundColor
+文本色#背景色#悬停文本色#悬停背景色
 ```
 
 ```wcs
@@ -499,9 +499,9 @@ ENVI @Btn.color=0x000000#0xFFF0E0#0xFF0000#0xFFE0C0
 
 ---
 
-## 34. Parameter Validation Guard
+## 34. 参数验证守卫
 
-Early-exit guard pattern at function entry. Checks argument count, non-empty values, and format validity.
+函数入口处的提前退出守卫模式。检查参数个数、非空值和格式有效性。
 
 ```wcs
 _SUB SafeFunc
@@ -541,13 +541,13 @@ _SUB MainGuard *
 _END
 ```
 
-`FIND $X=X%&var%` is the idiomatic PECMD "is empty" test: if `%&var%` is empty, the left side collapses to `X=X` which matches the right side `X=X` (both empty after `X=`), so the command executes.
+`FIND $X=X%&var%` 是惯用的 PECMD "为空"测试：如果 `%&var%` 为空，左侧折叠为 `X=X` 与右侧 `X=X` 匹配（`X=` 后两者皆空），因此命令执行。
 
 ---
 
-## 35. MSTR String Splitting — All Practical Variants
+## 35. MSTR 字符串拆分 — 所有实用变体
 
-Real parsing examples covering last-field extraction, N-th field, trimmed split, and custom delimiters.
+真实解析示例，涵盖末字段提取、第 N 字段、去空白拆分和自定义分隔符。
 
 ```wcs
 // === Last segment (negative index) ===
@@ -598,9 +598,9 @@ FORX *NL &cfg,&&line,
 
 ---
 
-## 39. Struct Array Traversal (API Return Data)
+## 39. 结构体数组遍历（API 返回数据）
 
-Walk a struct array returned from a Win32 API call. Allocate a buffer, enumerate indices, calculate field offsets, read typed values, check the termination condition.
+遍历 Win32 API 调用返回的结构体数组。分配缓冲区、枚举索引、计算字段偏移、读取带类型的值、检查终止条件。
 
 ```wcs
 _SUB EnumDiskDrives
@@ -701,20 +701,20 @@ _SUB ReadDiskGeometry
 _END
 ```
 
-Key points:
-- `SET-ptr` + `SET-make` reads a pointer value at an offset and copies the data it points to.
-- `SET-long` writes a 32-bit integer to a buffer at a specific offset (used for `cbSize`).
-- `SET?int` reads a 32-bit signed integer; `SET?longlong` reads 64-bit.
-- Struct byte offsets are manually calculated from the MSDN layout.
-- `LOOP #1=1` with `EXIT LOOP` is the standard pattern for an arena-style iteration when the count isn't known upfront.
+关键点：
+- `SET-ptr` + `SET-make` 在指定偏移处读取指针值并复制其指向的数据。
+- `SET-long` 在缓冲区指定偏移处写入 32 位整数（用于 `cbSize`）。
+- `SET?int` 读取 32 位有符号整数；`SET?longlong` 读取 64 位。
+- 结构体字节偏移根据 MSDN 布局手动计算。
+- `LOOP #1=1` 配合 `EXIT LOOP` 是计数未知时竞技场式迭代的标准模式。
 
 ---
 
-## Additional Patterns
+## 附加模式
 
-### Pattern 57: Win32 API Two-Call Buffer Pattern
+### 模式 57：Win32 API 两次调用缓冲区模式
 
-Many Win32 APIs require calling twice: once to get the required buffer size, then allocate, then call again. This is the canonical reusable template:
+许多 Win32 API 需要调用两次：一次获取所需缓冲区大小，然后分配，再调用一次。这是标准的可复用模板：
 
 ```wcs
 // Generic two-call buffer pattern
@@ -726,9 +726,9 @@ SET$# &buffer=*%&retSize% 0
 CALL $--qd --ret:&retSize DLL.dll,FunctionName,*&buffer,#%&retSize%,...
 ```
 
-Used by: GetWindowsDirectoryW, GetSystemDirectoryW, GetTempPathW, GetComputerNameW, GetUserNameW, GetIfTable, QueryDosDeviceW, GetAdaptersInfo, GetModuleFileNameW.
+适用函数：GetWindowsDirectoryW、GetSystemDirectoryW、GetTempPathW、GetComputerNameW、GetUserNameW、GetIfTable、QueryDosDeviceW、GetAdaptersInfo、GetModuleFileNameW。
 
-Example - Get Computer Name:
+示例 — 获取计算机名：
 ```wcs
 _SUB GetComputerName
     CALL $--qd --ret:&ret Kernel32.dll,GetComputerNameW,*#0,*#0
@@ -738,9 +738,9 @@ _SUB GetComputerName
 _END
 ```
 
-### Pattern 58: GUID Byte-Swap via SED Regex (CLSIDFromString Fallback)
+### 模式 58：通过 SED 正则进行 GUID 字节交换（CLSIDFromString 回退方案）
 
-When `ole32.dll!CLSIDFromString` is unavailable (common in minimal PE), construct GUID binary from string using regex byte-swap:
+当 `ole32.dll!CLSIDFromString` 不可用时（最小 PE 中常见），使用正则字节交换从字符串构造 GUID 二进制：
 
 ```wcs
 _SUB MakeGuid
@@ -757,9 +757,9 @@ _SUB MakeGuid
 _END
 ```
 
-### Pattern 59: WndProc Binding for Win32 Callbacks
+### 模式 59：Win32 回调的 WndProc 绑定
 
-Register a PECMD `_SUB` function as a Win32 callback (e.g., for EnumResourceNames, EnumWindows):
+将 PECMD `_SUB` 函数注册为 Win32 回调（例如用于 EnumResourceNames、EnumWindows）：
 
 ```wcs
 // Bind function to execution stack and get its address
@@ -777,9 +777,9 @@ _SUB CallbackFunc
 _END
 ```
 
-### Pattern 60: WM_COMMAND + EN_CHANGE Edit Monitoring
+### 模式 60：WM_COMMAND + EN_CHANGE 编辑框监控
 
-Monitor edit control text changes via WM_COMMAND notification:
+通过 WM_COMMAND 通知监控编辑框文本变更：
 
 ```wcs
 SET &WM_COMMAND=0x0111
@@ -800,9 +800,9 @@ _SUB OnEditChange
 _END
 ```
 
-### Pattern 61: WM_MOUSEHOVER/LEAVE Hover Tooltips
+### 模式 61：WM_MOUSEHOVER/LEAVE 悬停提示
 
-Show tooltips on mouse hover over controls:
+在鼠标悬停控件时显示提示：
 
 ```wcs
 SET &WM_MOUSEHOVER=0x02A1
@@ -811,9 +811,9 @@ ENVI @Label1.MSG=_%&WM_MOUSEHOVER%: TIPS Title,"Hover text\nLine 2",3000,1
 ENVI @Label1.MSG=_%&WM_MOUSELEAVE%: TIPS *
 ```
 
-### Pattern 62: WM_SIZE Responsive Layout with Saved Positions
+### 模式 62：WM_SIZE 响应式布局与保存位置
 
-Full DPI-aware window resize handling:
+完整的 DPI 感知窗口调整大小处理：
 
 ```wcs
 _SUB MainWindow,L200T100W600H400,My App,-trap,-size
@@ -847,9 +847,9 @@ _SUB OnResize
 _END
 ```
 
-### Pattern 63: LoadLibraryExW for Resource-Only Loading
+### 模式 63：LoadLibraryExW 仅加载资源
 
-Load a DLL/EXE purely for resource extraction without executing code:
+加载 DLL/EXE 纯用于资源提取，不执行代码：
 
 ```wcs
 SET &LOAD_LIBRARY_AS_DATAFILE=0x00000002
@@ -862,7 +862,7 @@ CALL $--qd --ret:&hMod Kernel32.dll,LoadLibraryExW,$%&filePath%,#0,#%&flags%
 
 ---
 
-### 46. FVAR Secure Boot (Direct EFI Variable)
+### 46. FVAR Secure Boot（直接 EFI 变量）
 
 ```wcs
 // Method 1: Direct EFI global variable read (simplest)
@@ -873,7 +873,7 @@ ENVI ?&ret=FVAR,SecureBoot;{8be4df61-93ca-11d2-aa0d-00e098032b8c}
 ```
 
 
-### 49. Display Mode Presets with Timeout
+### 49. 带超时的显示模式预设
 
 ```wcs
 ENVI &&curDisp=
@@ -893,7 +893,7 @@ _END
 
 ---
 
-### 50. QueryDosDeviceW — All MS-DOS Devices
+### 50. QueryDosDeviceW — 所有 MS-DOS 设备
 
 ```wcs
 ENVI$ &&buf=*0x100000 0
@@ -906,7 +906,7 @@ CODE ***unicode,**.buf,*uni,&&result
 ```
 
 
-### 51. RtlGetNtVersionNumbers (Pointer-Based)
+### 51. RtlGetNtVersionNumbers（基于指针）
 
 ```wcs
 ENVI$# &&Major=*4 0
@@ -920,9 +920,9 @@ CALC &BuildNumber=%&Build% & 0xFFFF   // mask high 16 bits
 ```
 
 
-## 73. Thread Variable Async Conflict & Fix
+## 73. 线程变量异步冲突与修复
 
-### Problem: shared variable race condition
+### 问题：共享变量竞态条件
 
 ```wcs
 // BUG: I is shared in persistent stack, child thread may see stale value
@@ -935,7 +935,7 @@ LOOP %I%<10,
 }
 ```
 
-### Fix 1: copy to local before spawning
+### 修复 1：创建线程前复制到局部变量
 
 ```wcs
 {
@@ -945,7 +945,7 @@ LOOP %I%<10,
 }
 ```
 
-### Fix 2: use THREAD$ for pre-interpretation
+### 修复 2：使用 THREAD$ 进行预解释
 
 ```wcs
 {
@@ -954,17 +954,17 @@ LOOP %I%<10,
 }
 ```
 
-### THREAD vs THREAD* variable sharing rules
+### THREAD 与 THREAD* 变量共享规则
 
-| Context | THREAD (no *) | THREAD* (with *) |
+| 上下文 | THREAD（无 *） | THREAD*（带 *） |
 |---------|---------------|-------------------|
-| Regular function `{}` block | Copy (isolated) | Copy (isolated) |
-| Window `_SUB` or `_SUB F,*` | Copy (isolated) | **Shared** (direct link) |
-| `{}` inside window `_SUB` | Copy (isolated) | Copy (isolated — `{}` demotes to temporary) |
+| 普通函数 `{}` 块 | 复制（隔离） | 复制（隔离） |
+| 窗口 `_SUB` 或 `_SUB F,*` | 复制（隔离） | **共享**（直接链接） |
+| 窗口 `_SUB` 内的 `{}` | 复制（隔离） | 复制（隔离——`{}` 降级为临时） |
 
 ---
 
-## 76. Random String Generation
+## 76. 随机字符串生成
 
 ```wcs
 SET &CSet=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
@@ -983,9 +983,9 @@ LOOP #%n%>0,
 
 ---
 
-## 77. System Font Charset Constants
+## 77. 系统字体字符集常量
 
-Useful when setting fonts via `ENVI @ctrl.Font=size:name:style:charset`.
+通过 `ENVI @ctrl.Font=size:name:style:charset` 设置字体时非常有用。
 
 | Constant | Value | Description |
 |----------|-------|-------------|
@@ -999,92 +999,92 @@ Useful when setting fonts via `ENVI @ctrl.Font=size:name:style:charset`.
 
 ---
 
-## Non-Codebook Quick Reference (PECMD补充说明.doc extracts)
+## 非代码手册快速参考（PECMD补充说明.doc 摘录）
 
-The `PECMD补充说明.doc` is the authoritative source for advanced patterns:
+`PECMD补充说明.doc` 是高级模式的权威来源：
 
-### THREAD* Stack Chain Rules
-- In a window_SUB (persistent stack): THREAD* shares PE variables directly
-- In a temporary function/block ({}) : THREAD* copies PE variables (isolated)
-- `THREAD$` : pre-interpret once before launch (uses literal values, avoids async clash)
-- `-link` : maintain parent-child window connection; wait for child thread end
+### THREAD* 栈链规则
+- 在窗口 _SUB（持久栈）中：THREAD* 直接共享 PE 变量
+- 在临时函数/块（`{}`）中：THREAD* 复制 PE 变量（隔离）
+- `THREAD$`：启动前预解释一次（使用字面值，避免异步冲突）
+- `-link`：维护父子窗口连接；等待子线程结束
 
-### PE Variable Destructor
+### PE 变量析构器
 ```wcs
-SET-def ~CloseHandleX~h=0    // define h AND register destructor CloseHandleX
-// When scope exits: CloseHandleX %&h% → PE var h released
-// Destructors run in reverse order of definition
+SET-def ~CloseHandleX~h=0    // 定义 h 并注册析构器 CloseHandleX
+// 作用域退出时：CloseHandleX %&h% → PE 变量 h 被释放
+// 析构器按定义逆序执行
 ```
 
-### Function Destructor (`_SUB Func,*,析构命令`)
+### 函数析构器（`_SUB Func,*,析构命令`）
 ```wcs
 _SUB F1,*,IFEX #[ %&h%>0 ], CALL $kernel32.dll,CloseHandle,#%&h%
-    // ... function body with early EXIT
-_END  // destructor command runs automatically on exit
+    // ... 函数体，可提前 EXIT
+_END  // 退出时自动执行析构命令
 ```
 
-### #& Control Naming (Shared PE Variable)
+### #& 控件命名（共享 PE 变量）
 ```wcs
-LIST #&L7,L410T55W46H23,1|2|3|4,,1,    // control name is #&L7, variable is %&L7%
-// Access from parent/other pages: ENVI @Page1:#&L7.VAL=...
+LIST #&L7,L410T55W46H23,1|2|3|4,,1,    // 控件名是 #&L7，变量是 %&L7%
+// 从父窗口/其他页面访问：ENVI @Page1:#&L7.VAL=...
 ```
 
-### ENVI^ Alias System
+### ENVI^ Alias 别名系统
 ```wcs
 ENVI^ Alias aliasName=[cmd prefix]
-ENVI^ Alias * aliasName=cmd             // * = enable prefix+space syntax
+ENVI^ Alias * aliasName=cmd             // * = 启用 prefix+空格 语法
 ```
 
-### ENVI @@POSTMSG/SENDMSG Full Syntax
+### ENVI @@POSTMSG/SENDMSG 完整语法
 ```wcs
 ENVI @@SENDMSG=[:retVar;]windowID;messageID[;wParam[;lParam]]
-// wParam,lParam: @PEvar (buffer), $string (SENDMSG only), number
-// message with # prefix = PECMD custom message 1-N
-// _ = second-half response mode (responds after system)
+// wParam,lParam：@PE变量（缓冲区）、$字符串（仅 SENDMSG）、数字
+// 带 # 前缀的消息 = PECMD 自定义消息 1-N
+// _ = 后半响应模式（系统处理后响应）
 ```
 
-### PUT/GET Binary Resource Export
+### PUT/GET 二进制资源导出
 ```wcs
-// #.N = raw (original) resource data
+// #.N = 原始（未压缩）资源数据
 PUTF -dd -bs=10M out.dat,0,"%MyName%""#.101|SCRIPT"
-// #N = decompressed resource
+// #N = 已解压资源
 PUTF -dd -bs=10M out.dat,0,"%MyName%""#2|INDATA"
-// Resource type IDs: CURSOR=1 BITMAP=2 ICON=3 MENU=4 DIALOG=5, STRING=6,
+// 资源类型 ID：CURSOR=1 BITMAP=2 ICON=3 MENU=4 DIALOG=5、STRING=6、
 //   FONTDIR=7 ACCELERATOR=9 RCDATA=10 GROUP_ICON=14 VERSION=16 MANIFEST=24
 ```
 
-### FIND/IFEX Shortened Block Syntax (>=79N-59D)
+### FIND/IFEX 简写块语法（>=79N-59D）
 ```wcs
-FIND $1=1,FIND body! ELSE body          // single-line TRUE + ;ELSE
+FIND $1=1,FIND body! ELSE body          // 单行 TRUE + ;ELSE
 FIND $1=1,
 {   MESS TRUE
-}! MESS FALSE                           // multi-line TRUE, single-line ELSE on }!
-FIND $1=1, { MESS TRUE                  // TRUE block first line inline
+}! MESS FALSE                           // 多行 TRUE，单行 ELSE 在 }! 后
+FIND $1=1, { MESS TRUE                  // TRUE 块首行内联
 }! { MESS FALSE }
 ```
 
-### SED Regex Syntax (from PECMD2012正则表达式.doc)
+### SED 正则语法（来自 PECMD2012正则表达式.doc）
 ```
-.   = any char       [abc] = char class  [^abc] = negated class
-?   = 0-1 times      + = 1+ times        * = 0+ times
-??  = non-greedy ?   +? = non-greedy +   *? = non-greedy *
-()  = group          {} = named group (reference via \1-\9)
-^   = start anchor  $ = end anchor      | = alternation
-\\a = [a-zA-Z0-9]   \\d = [0-9]          \\h = [0-9a-fA-F]
-\\w = [a-zA-Z]+     \\z = [0-9]+          \\n = newline
-Replacement: \\0=entire match \\1-\\9=group refs \\u=uppercase \\l=lowercase
+.   = 任意字符       [abc] = 字符类    [^abc] = 否定类
+?   = 0-1 次         + = 1+ 次         * = 0+ 次
+??  = 非贪婪 ?       +? = 非贪婪 +     *? = 非贪婪 *
+()  = 分组           {} = 命名组（通过 \1-\9 引用）
+^   = 行首锚点       $ = 行尾锚点      | = 或
+\\a = [a-zA-Z0-9]   \\d = [0-9]        \\h = [0-9a-fA-F]
+\\w = [a-zA-Z]+     \\z = [0-9]+        \\n = 换行
+替换：\\0=完整匹配 \\1-\\9=分组引用 \\u=大写 \\l=小写
 ```
 
-### PECMD Variable → CMD Variable (3 methods)
+### PECMD 变量 → CMD 变量（3 种方法）
 ```
-// Method 1 (best): WRIT to stdout
-WRIT -,$+0,a 111        // CMD FOR /F captures output
+// 方法1（最佳）：WRIT 到 stdout
+WRIT -,$+0,a 111        // CMD FOR /F 捕获输出
 
-// Method 2: Temp file
-WRIT %tmpf%,$+0,set a=%val%   // then CALL .\tmpf.CMD
+// 方法2：临时文件
+WRIT %tmpf%,$+0,set a=%val%   // 然后 CALL .\tmpf.CMD
 
-// Method 3: Registry
-REGI HKCU\PECMD_U\var=%val%   // CMD reads via reg query
+// 方法3：注册表
+REGI HKCU\PECMD_U\var=%val%   // CMD 通过 reg query 读取
 ```
 
 ---

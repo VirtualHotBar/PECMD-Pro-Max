@@ -1,143 +1,143 @@
-# PECMD in WinPE Startup
+# PECMD 在 WinPE 启动中的应用
 
-## The Boot Flow
+## 启动流程
 
-In a typical WinPE environment, PECMD is the first user-mode program launched after the kernel and drivers initialize. It replaces the normal Windows shell with a script-controlled environment.
+在典型的 WinPE 环境中，PECMD 是内核和驱动程序初始化后第一个启动的用户模式程序。它用脚本控制的环境替代正常的 Windows Shell。
 
 ```
 Windows Boot Manager (bootmgr / bootmgfw.efi)
-    -> winload.exe / winload.efi (kernel loader)
-        -> ntoskrnl.exe (kernel)
-            -> smss.exe (session manager)
+    -> winload.exe / winload.efi (内核加载器)
+        -> ntoskrnl.exe (内核)
+            -> smss.exe (会话管理器)
                 -> winlogon.exe
-                    -> winpeshl.exe (WinPE shell launcher)
+                    -> winpeshl.exe (WinPE Shell 启动器)
                         -> PECMD.EXE MAIN X:\Windows\System32\PECMD.INI
 ```
 
-`winpeshl.exe` is the standard WinPE shell launcher. It checks `HKLM\SYSTEM\CurrentControlSet\Control\MiniNT` for custom shell paths. If `SetupComplete.cmd` exists, it runs that first, then launches the configured shell.
+`winpeshl.exe` 是标准 WinPE Shell 启动器。它检查 `HKLM\SYSTEM\CurrentControlSet\Control\MiniNT` 获取自定义 Shell 路径。如果 `SetupComplete.cmd` 存在，会先执行它，然后启动配置的 Shell。
 
-### WinXShell Integration
+### WinXShell 集成
 
-Many modern WinPE builds use **WinXShell** as an alternative or companion to PECMD. WinXShell provides a full Explorer-like desktop (taskbar, file manager, system tray) while PECMD handles boot-time scripting and low-level automation. A typical integration:
+许多现代 WinPE 构建使用 **WinXShell** 作为 PECMD 的替代或伴侣。WinXShell 提供完整的类 Explorer 桌面（任务栏、文件管理器、系统托盘），而 PECMD 处理启动脚本和底层自动化。典型集成方式：
 
 ```wcs
-// In PECMD.INI: launch WinXShell as the desktop shell
+// 在 PECMD.INI 中：启动 WinXShell 作为桌面 Shell
 EXEC* X:\Windows\System32\WinXShell.exe -winpe -wallpaper -desktop
 ```
 
-WinXShell reads its configuration from `WinXShell.xml` and can coexist with PECMD — PECMD manages boot scripts and driver loading, while WinXShell provides the user-facing desktop environment.
+WinXShell 从 `WinXShell.xml` 读取配置，可与 PECMD 共存——PECMD 管理启动脚本和驱动加载，WinXShell 提供面向用户的桌面环境。
 
-## PECMD.INI — The Standard Entry Point
+## PECMD.INI — 标准入口点
 
-`MAIN` is the standard PE entry command. It loads a configuration file AND starts the Windows message loop (necessary for GUI to work).
+`MAIN` 是标准 PE 入口命令。它加载配置文件**并**启动 Windows 消息循环（GUI 运行必需）。
 
 ```wcs
-// PECMD.INI — typical WinPE startup configuration
+// PECMD.INI — 典型 WinPE 启动配置
 #code=65001
 
-// 1. Show logo / splash
+// 1. 显示 Logo / 启动画面
 LOGO %CurDir%\splash.jpg
-TEXT System is initializing, please wait...#0xFFFFFF L20T20 $20
+TEXT 系统正在初始化，请稍候...#0xFFFFFF L20T20 $20
 
-// 2. Initialize user interface
+// 2. 初始化用户界面
 INIT IU,3000
 
-// 3. Load shell
+// 3. 加载 Shell
 SHEL %SystemRoot%\explorer.exe
 
-// 4. Initialize drivers
+// 4. 初始化驱动程序
 DEVI %CurDir%\Drivers\*.inf
 
-// 5. Create desktop shortcuts
-LINK %Desktop%\Command Prompt,%SystemRoot%\system32\cmd.exe
-LINK %Desktop%\Notepad,%SystemRoot%\system32\notepad.exe
+// 5. 创建桌面快捷方式
+LINK %Desktop%\命令提示符,%SystemRoot%\system32\cmd.exe
+LINK %Desktop%\记事本,%SystemRoot%\system32\notepad.exe
 
-// 6. Set environment
+// 6. 设置环境变量
 ENVI $TEMP=%SystemDrive%\TEMP
 ENVI $TMP=%SystemDrive%\TEMP
 
-// 7. Register hotkeys
-HKEY Ctrl+Alt+#0x44, EXEC cmd.exe       // Ctrl+Alt+D -> command prompt
+// 7. 注册热键
+HKEY Ctrl+Alt+#0x44, EXEC cmd.exe       // Ctrl+Alt+D -> 命令提示符
 
-// 8. Load external tools
+// 8. 加载外部工具
 LOAD %CurDir%\Tools\Network.ini
 LOAD %CurDir%\Tools\DiskTools.ini
 
-// 9. Execute startup programs
+// 9. 执行启动程序
 EXEC %SystemRoot%\system32\cmd.exe /c start /b PECMD.EXE TEAM WAIT 5000|LOAD %CurDir%\PostInit.ini
 
-// 10. Clean up logo
+// 10. 清除 Logo
 LOGO
 
-// 11. Wait indefinitely (keep PE alive)
+// 11. 无限等待（保持 PE 运行）
 WAIT -1
 ```
 
-## Key Startup Commands
+## 关键启动命令
 
-### INIT — Initialize PECMD runtime
-
-```wcs
-INIT [options],[timeout_ms]
-```
-
-`INIT IU,3000` — most common form. I=keyboard layout, U=USB initialization, 3000ms timeout.
-
-`INIT CIK` — C=write CDROM drive letters to env var, I=install tray icon menu, K=install low-level keyboard hook immediately
-
-### SHEL — Set Windows Shell
+### INIT — 初始化 PECMD 运行时
 
 ```wcs
-SHEL %SystemRoot%\explorer.exe         // use Explorer as shell
-SHEL PECMD.EXE LOAD %CurDir%\MyShell.ini  // use PECMD script as shell
+INIT [选项],[超时毫秒]
 ```
 
-The command(s) indented on the following line are executed when the shell changes:
+`INIT IU,3000` — 最常用形式。I=键盘布局，U=USB 初始化，3000ms 超时。
+
+`INIT CIK` — C=将 CDROM 盘符写入环境变量，I=安装托盘图标菜单，K=立即安装低级键盘钩子
+
+### SHEL — 设置 Windows Shell
+
+```wcs
+SHEL %SystemRoot%\explorer.exe              // 使用 Explorer 作为 Shell
+SHEL PECMD.EXE LOAD %CurDir%\MyShell.ini    // 使用 PECMD 脚本作为 Shell
+```
+
+下一行缩进的命令在 Shell 变更时执行：
 ```wcs
 SHEL %SystemRoot%\explorer.exe
     TEAM KILL Explorer.exe| KILL Explorer.exe
 ```
 
-### LOGO — Show/hide splash screen
+### LOGO — 显示/隐藏启动画面
 
 ```wcs
-LOGO %CurDir%\logo.jpg           // show splash image
-LOGO                             // hide splash
+LOGO %CurDir%\logo.jpg           // 显示启动画面
+LOGO                             // 隐藏启动画面
 ```
 
-### TEXT — Display status text
+### TEXT — 显示状态文本
 
 ```wcs
-TEXT Initializing system...#0x00FF00 L100T200 R600B400 $18:Microsoft YaHei
+TEXT 正在初始化系统...#0x00FF00 L100T200 R600B400 $18:Microsoft YaHei
 ```
 
-Format: `TEXT text[#color][LleftTtop][RrightBbottom][$fontSize[:fontName]]`
+格式：`TEXT 文本[#颜色][L左T上][R右B下][$字号[:字体名]]`
 
-### DEVI — Install drivers
+### DEVI — 安装驱动程序
 
 ```wcs
-DEVI %CurDir%\Drivers\NetCard.cab     // install from CAB
-DEVI %CurDir%\Drivers\*.inf            // install from INF files
-DEVI $%CurDir%\Drivers                 // install all drivers in directory
+DEVI %CurDir%\Drivers\NetCard.cab      // 从 CAB 安装
+DEVI %CurDir%\Drivers\*.inf             // 从 INF 文件安装
+DEVI $%CurDir%\Drivers                  // 安装目录中所有驱动
 ```
 
-### LINK — Create shortcuts
+### LINK — 创建快捷方式
 
 ```wcs
-LINK %Desktop%\MyTool,%CurDir%\mytool.exe
-LINK %StartMenu%\Tools\PartEditor,%CurDir%\part.exe,,%CurDir%\part.ico
+LINK %Desktop%\我的工具,%CurDir%\mytool.exe
+LINK %StartMenu%\Tools\分区编辑器,%CurDir%\part.exe,,%CurDir%\part.ico
 ```
 
-## Common WinPE Patterns
+## 常用 WinPE 模式
 
-### Pattern: Wait for removable drives then load tools
+### 模式：等待可移动驱动器后加载工具
 
 ```wcs
 _SUB WaitForUSB
     LOOP #1=1,
     {
-        FDRV &drvs=*:
-        FORX * %&drvs%,&&drv,
+        FDRV &盘符=*:
+        FORX * %&盘符%,&&drv,
         {
             FORM &type=%&drv%
             FIND $DRIVE_USBDISK=%&type%,
@@ -150,20 +150,20 @@ _SUB WaitForUSB
 _END
 ```
 
-### Pattern: Auto-assign drive letters
+### 模式：自动分配盘符
 
 ```wcs
-SHOW -1:-1                           // show all partitions
-DISK ,,,1,U:                         // assign USB drives starting from U:
+SHOW -1:-1                           // 显示所有分区
+DISK ,,,1,U:                         // 从 U: 开始分配 USB 驱动器
 ```
 
-### Pattern: Setup virtual memory (pagefile)
+### 模式：设置虚拟内存（页面文件）
 
 ```wcs
-PAGE C:\pagefile.sys 256 512         // min 256MB, max 512MB on C:
+PAGE C:\pagefile.sys 256 512         // C: 上最小 256MB，最大 512MB
 ```
 
-### Pattern: Setup temporary directory
+### 模式：设置临时目录
 
 ```wcs
 PATH %SystemDrive%\TEMP
@@ -171,16 +171,16 @@ ENVI $TEMP=%SystemDrive%\TEMP
 ENVI $TMP=%SystemDrive%\TEMP
 ```
 
-### Pattern: Mount WIM images for external programs
+### 模式：挂载 WIM 镜像加载外部程序
 
 ```wcs
-MOUN %CurDir%\Tools.wim,%SystemDrive%\Tools,,1    // mount WIM with TEMP
+MOUN %CurDir%\Tools.wim,%SystemDrive%\Tools,,1    // 挂载 WIM（带 TEMP）
 IFEX %SystemDrive%\Tools\Setup.cmd, EXEC =!"%SystemDrive%\Tools\Setup.cmd"
 ```
 
-## Minimal PECMD.INI
+## 最小 PECMD.INI
 
-The absolute minimal PE startup script:
+绝对最简 PE 启动脚本：
 
 ```wcs
 #code=65001
@@ -189,82 +189,82 @@ SHEL %SystemRoot%\explorer.exe
 WAIT -1
 ```
 
-## Important Notes
+## 重要注意事项
 
-1. `WAIT -1` at the end of PECMD.INI keeps the script running indefinitely (otherwise PE closes immediately after startup)
-2. `SHEL` must appear AFTER `INIT` — the shell needs the initialization to complete first
-3. In PE, the registry hive may not be fully loaded. Use `REGI .` (dot prefix) for offline registry access
-4. `%SystemDrive%` in PE is typically `X:` (the RAM disk), not `C:`
-5. PE environments often lack many DLLs. Test your scripts in a real PE or use `IFEX` guards
-6. The `%CurDir%` variable points to the directory containing PECMD.INI, making it ideal for relative paths
-7. Use `LOGS * C:\pecmd.log` at the top of PECMD.INI for debugging startup issues
+1. PECMD.INI 末尾的 `WAIT -1` 保持脚本无限运行（否则 PE 启动后立即关闭）
+2. `SHEL` 必须在 `INIT` **之后**——Shell 需要先完成初始化
+3. PE 中注册表配置单元可能未完全加载。离线注册表访问用 `REGI .`（点前缀）
+4. PE 中 `%SystemDrive%` 通常是 `X:`（RAM 磁盘），而非 `C:`
+5. PE 环境通常缺少许多 DLL。在真实 PE 中测试脚本，或使用 `IFEX` 防护
+6. `%CurDir%` 变量指向 PECMD.INI 所在目录，非常适合相对路径
+7. 在 PECMD.INI 顶部使用 `LOGS * C:\pecmd.log` 调试启动问题
 
-## PE Environment Limitations
+## PE 环境限制
 
-PE environments have inherent constraints. Understanding these is critical for writing robust PECMD scripts.
+PE 环境存在固有约束。理解这些是编写健壮 PECMD 脚本的关键。
 
-### 1. Missing Runtimes
-**Constraint**: VC++ redistributables and .NET Framework are not installed.
-**Mitigation**: Use static-linked PECMD tools (no external DLL dependencies). Avoid calling programs that require MSVC runtime DLLs unless you bundle them.
+### 1. 缺少运行时库
+**约束**：未安装 VC++ 可再发行组件和 .NET Framework。
+**缓解**：使用静态链接的 PECMD 工具（无需外部 DLL 依赖）。避免调用需要 MSVC 运行时 DLL 的程序，除非打包捆绑。
 
-### 2. Read-Only Media
-**Constraint**: The `X:\` sources root is a RAM disk that cannot be written to (filesystem overlay). The boot media itself (CD/DVD, USB) may be read-only.
-**Mitigation**: Use `%TEMP%`, `%SystemDrive%\TEMP`, or a writable partition for scratch files. Never attempt to write to `X:\Windows\System32\` or the boot media root.
+### 2. 只读介质
+**约束**：`X:\` 源根目录是 RAM 磁盘，不可写入（文件系统叠加层）。启动介质本身（CD/DVD、USB）可能是只读的。
+**缓解**：将 `%TEMP%`、`%SystemDrive%\TEMP` 或可写分区用于临时文件。切勿尝试写入 `X:\Windows\System32\` 或启动介质根目录。
 
-### 3. No Network by Default
-**Constraint**: Network adapters are not initialized and DHCP is not configured.
-**Mitigation**: Explicitly initialize networking with `PCIP` command before any network operations. For wireless/WiFi, use `ADSL-wlan`; for PPPoE broadband dial-up, use `ADSL`.
+### 3. 默认无网络
+**约束**：未初始化网络适配器，未配置 DHCP。
+**缓解**：在任何网络操作之前用 `PCIP` 命令显式初始化网络。无线/WiFi 用 `ADSL-wlan`；PPPoE 宽带拨号用 `ADSL`。
 
-### 4. Temporary Registry
-**Constraint**: The registry is loaded into RAM and changes are lost on reboot. The SYSTEM and SOFTWARE hives are loaded from the WIM and are read-only overlays.
-**Mitigation**: Save persistent settings to `HKCU` (which maps to a writable hive) or use offline HIVE manipulation (`REGI .`) for persistent changes. Use `%Desktop%` or `%TEMP%` directory for state files.
+### 4. 临时注册表
+**约束**：注册表加载到 RAM 中，重启后更改丢失。SYSTEM 和 SOFTWARE 配置单元从 WIM 加载，是只读叠加层。
+**缓解**：将持久设置保存到 `HKCU`（映射到可写配置单元）或使用离线 HIVE 操作（`REGI .`）进行持久更改。使用 `%Desktop%` 或 `%TEMP%` 目录存储状态文件。
 
-### 5. Single-User SYSTEM Account
-**Constraint**: PE runs as the SYSTEM account with no user profiles, no `%USERPROFILE%` directory in the traditional sense, and no user-specific HKCU hive by default.
-**Mitigation**: Use `%TEMP%` for scratch data. Create a writable user profile directory manually: `PATH X:\Users\Default` and `ENVI $USERPROFILE=X:\Users\Default` before `INIT`.
+### 5. 单用户 SYSTEM 账户
+**约束**：PE 以 SYSTEM 账户运行，无用户配置文件，无传统意义上的 `%USERPROFILE%` 目录，默认无用户特定的 HKCU 配置单元。
+**缓解**：用 `%TEMP%` 存储临时数据。在 `INIT` 之前手动创建可写的用户配置文件目录：`PATH X:\Users\Default` 和 `ENVI $USERPROFILE=X:\Users\Default`。
 
-### 6. Missing Drivers
-**Constraint**: Storage controllers, network adapters, and chipset drivers may not be included in the base PE image.
-**Mitigation**: Use `DEVI` to inject required drivers at startup. For storage controllers that hold the boot media, drivers must be integrated into the WIM itself (via DISM) before boot.
+### 6. 缺少驱动程序
+**约束**：基础 PE 镜像可能不包含存储控制器、网络适配器和芯片组驱动。
+**缓解**：使用 `DEVI` 在启动时注入所需驱动。对于持有启动介质的存储控制器，必须在启动前将驱动集成到 WIM 中（通过 DISM）。
 
-### 7. Uncertain Drive Letters
-**Constraint**: Drive letter assignment is not deterministic. The USB boot drive may be `C:`, `D:`, or any other letter rather than the expected `U:`.
-**Mitigation**: Use `FORX @\` with a unique tag file to locate the correct drive. For example: `FORX @\MyPETools.tag,&&usbDrv,1` — then use `%&usbDrv%` as the base path. The `@\` prefix searches all drives from C: to Z:.
+### 7. 盘符不确定
+**约束**：盘符分配不是确定性的。USB 启动盘可能是 `C:`、`D:` 或任何其他字母，而非预期的 `U:`。
+**缓解**：使用 `FORX @\` 配合唯一标记文件定位正确盘符。例如：`FORX @\MyPETools.tag,&&usbDrv,1`——然后用 `%&usbDrv%` 作为基础路径。`@\` 前缀从 C: 到 Z: 搜索所有盘符。
 
-### 8. Writable USERPROFILE Required
-**Constraint**: Many Windows APIs and shell components require a valid writable `%USERPROFILE%` path. Without it, Explorer may fail to launch or behave erratically.
-**Mitigation**: Set `ENVI $USERPROFILE=X:\Users\Default` and ensure the directory exists (`PATH X:\Users\Default`) before calling `INIT` or `SHEL`. This is a common source of "Explorer doesn't start" bugs.
+### 8. 需要可写 USERPROFILE
+**约束**：许多 Windows API 和 Shell 组件需要有效的可写 `%USERPROFILE%` 路径。没有它，Explorer 可能无法启动或行为异常。
+**缓解**：在调用 `INIT` 或 `SHEL` 之前设置 `ENVI $USERPROFILE=X:\Users\Default` 并确保目录存在（`PATH X:\Users\Default`）。这是"Explorer 不启动"bug 的常见根源。
 
-## PE Version Differences
+## PE 版本差异
 
-### WinPE 3.x (Windows 7 Kernel)
-- Based on Windows 7 / Server 2008 R2 kernel (NT 6.1)
-- **Features**: MBR/GPT partitioning, basic DISM support, VHD boot
-- **Limitations**: No DPI scaling, limited USB 3.0 support, WIM mounting uses `wimgapi.dll` (user-mode, slower, requires temporary space)
-- **PECMD notes**: `INIT U` for USB is essential; many modern storage drivers must be injected via `DEVI`
+### WinPE 3.x（Windows 7 内核）
+- 基于 Windows 7 / Server 2008 R2 内核（NT 6.1）
+- **特性**：支持 MBR/GPT 分区、基础 DISM、VHD 启动
+- **限制**：无 DPI 缩放、USB 3.0 支持有限、WIM 挂载用 `wimgapi.dll`（用户模式，较慢，需临时空间）
+- **PECMD 备注**：`INIT U` 对 USB 至关重要；许多现代存储驱动需通过 `DEVI` 注入
 
-### WinPE 5.x (Windows 8.1 Kernel)
-- Based on Windows 8.1 / Server 2012 R2 kernel (NT 6.3)
-- **Features**: Improved DISM (faster, more commands), native USB 3.0, better SSD support
-- **WIM mounting**: Still uses `wimgapi.dll` by default; `wimmount.sys` (kernel-mode, faster) available as optional
-- **PECMD notes**: DPI scaling support begins (`-scale` flag works); `PART -super -up` works for GPT partition type changes
+### WinPE 5.x（Windows 8.1 内核）
+- 基于 Windows 8.1 / Server 2012 R2 内核（NT 6.3）
+- **特性**：改进的 DISM（更快、更多命令）、原生 USB 3.0、更好的 SSD 支持
+- **WIM 挂载**：默认仍用 `wimgapi.dll`；可选 `wimmount.sys`（内核模式，更快）
+- **PECMD 备注**：开始支持 DPI 缩放（`-scale` 标志）；`PART -super -up` 可用于 GPT 分区类型更改
 
-### WinPE 10.x (Windows 10/11 Kernel)
-- Based on Windows 10/11 kernel (NT 10.0)
-- **Features**: Full modern driver support, network auto-configuration (Wi-Fi profiles), NVMe native support, exFAT boot support
-- **WIM mounting**: `wimmount.sys` (kernel-mode) is default — faster and uses less RAM than `wimgapi.dll`
-- **DPI scaling**: Full support via `-scale[:DPI]` flag; `-scalef` for XP-style fallback
-- **UEFI Secure Boot**: Fully supported; PECMD scripts can run in Secure Boot-enabled environments
-- **PECMD notes**: `INIT` auto-detects most hardware; Wi-Fi can be set up with `ADSL WLAN` or native `netsh wlan`
+### WinPE 10.x（Windows 10/11 内核）
+- 基于 Windows 10/11 内核（NT 10.0）
+- **特性**：完整现代驱动支持、网络自动配置（Wi-Fi 配置文件）、NVMe 原生支持、exFAT 启动支持
+- **WIM 挂载**：默认 `wimmount.sys`（内核模式）——比 `wimgapi.dll` 更快且使用更少 RAM
+- **DPI 缩放**：通过 `-scale[:DPI]` 标志完全支持；`-scalef` 用于 XP 风格回退
+- **UEFI Secure Boot**：完全支持；PECMD 脚本可在启用 Secure Boot 的环境中运行
+- **PECMD 备注**：`INIT` 自动检测大多数硬件；Wi-Fi 可通过 `ADSL WLAN` 或原生 `netsh wlan` 设置
 
-### Key Differences Summary
+### 关键差异总结
 
-| Feature | WinPE 3.x | WinPE 5.x | WinPE 10.x |
-|---------|-----------|-----------|------------|
-| WIM Mounting | wimgapi.dll | wimgapi + optional wimmount.sys | wimmount.sys (default) |
-| DPI Scaling | None | Basic (`-scale`) | Full (`-scale[:DPI]`, `-scalef`) |
-| USB 3.0 | Requires driver injection | Native | Native |
-| NVMe | Not supported | Limited | Native |
-| UEFI Secure Boot | Unreliable | Working | Fully supported |
-| Network | Manual only | Manual + basic auto | Full auto-config |
-| exFAT Boot | No | No | Yes |
+| 特性 | WinPE 3.x | WinPE 5.x | WinPE 10.x |
+|------|-----------|-----------|------------|
+| WIM 挂载 | wimgapi.dll | wimgapi + 可选 wimmount.sys | wimmount.sys（默认） |
+| DPI 缩放 | 无 | 基础（`-scale`） | 完整（`-scale[:DPI]`、`-scalef`） |
+| USB 3.0 | 需驱动注入 | 原生 | 原生 |
+| NVMe | 不支持 | 有限 | 原生 |
+| UEFI Secure Boot | 不可靠 | 可用 | 完全支持 |
+| 网络 | 仅手动 | 手动 + 基础自动 | 完整自动配置 |
+| exFAT 启动 | 否 | 否 | 是 |

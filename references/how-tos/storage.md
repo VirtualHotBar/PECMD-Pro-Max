@@ -1,8 +1,8 @@
-# 磁盘/分区/文件/注册表/设备 — 代码配方
+# 磁盘/分区/文件/注册表/设备 — 写法示例
 
-## 1. Disk Enumeration & Information
+## 1. 磁盘枚举与信息
 
-### List all physical disks with details
+### 列出所有物理磁盘及详细信息
 
 ```wcs
 PART list disk,&&全部磁盘
@@ -14,7 +14,7 @@ FORX * %&全部磁盘%,&&磁盘,
 }
 ```
 
-### List all partitions on a disk (GPT + MBR compatible)
+### 列出磁盘所有分区（兼容 GPT + MBR）
 
 ```wcs
 SET &dsk=0    // 0 = first disk
@@ -34,7 +34,7 @@ FORX * %&全部分区%,&&pt,
 }
 ```
 
-### Map drive letters to disk numbers
+### 盘符与磁盘号对应关系
 
 ```wcs
 FDRV &Drvs=*:
@@ -47,7 +47,7 @@ FORX * %&Drvs%,&&D,
 // &Drv[0], &Drv[1], etc. now hold concatenated drive letters per disk
 ```
 
-### Get volume label and filesystem (with auto-mount fallback)
+### 获取卷标和文件系统（带自动挂载回退）
 
 ```wcs
 _SUB GetVol
@@ -71,9 +71,9 @@ _END
 
 ---
 
-## 2. Device Enumeration via Win32 API
+## 2. 通过 Win32 API 枚举设备
 
-### Enumerate physical disks via SetupAPI
+### 通过 SetupAPI 枚举物理磁盘
 
 ```wcs
 // Canonical method: CLSIDFromString produces binary GUID
@@ -101,7 +101,7 @@ IFEX $%&hSetup%<>-1,
 }
 ```
 
-### Get disk performance counters (IOCTL_DISK_PERFORMANCE)
+### 获取磁盘性能计数器（IOCTL_DISK_PERFORMANCE）
 
 ```wcs
 SET &disk=\\.\PhysicalDrive0
@@ -122,16 +122,16 @@ IFEX $%&h%<>-1,
 
 ---
 
-## 4. File & Config Operations
+## 4. 文件与配置操作
 
-### Read entire file (text / binary)
+### 读取整个文件（文本 / 二进制）
 
 ```wcs
 READ C:\config.ini,**,&content      // ** = DOS CRLF -> native, *r = raw, * = LF only
 GETF# C:\data.bin,0#*,&raw          // binary read
 ```
 
-### Parse INI-style config into variables [CHINESE]
+### 解析 INI 风格配置文件到变量
 
 ```wcs
 READ %CurDir%\config.ini,*,&cfg
@@ -146,7 +146,7 @@ FORX *NL &cfg,&&line,
 }
 ```
 
-### Write to file
+### 写入文件
 
 ```wcs
 WRIT C:\output.txt,$0,First line          // $ = ANSI, 0 = overwrite
@@ -155,7 +155,7 @@ PUTF -dd -len=0 C:\file.bin,0,zero        // create/truncate
 PUTF C:\file.bin,%offset%,#%&data%        // write at offset
 ```
 
-### Get file timestamp and size
+### 获取文件时间戳和大小
 
 ```wcs
 SIZE &&sz=C:\file.txt
@@ -164,9 +164,9 @@ MESS Size: %&sz% bytes
 
 ---
 
-## 5. Registry Operations
+## 5. 注册表操作
 
-### Read/write (all types)
+### 读/写（所有类型）
 
 ```wcs
 // Read
@@ -191,7 +191,7 @@ REGI HKCU\Software\MyApp,&vals               // values in key
 
 ---
 
-## 20. PART Operations (full toolkit patterns)
+## 20. PART 操作（完整工具包模式）
 
 ```wcs
 // Change partition type
@@ -217,7 +217,7 @@ PART -up -hup -swap:%&v1% %&dsk%#%&v2%
 
 ---
 
-## 24. Directory Search Across All Drives (FORX @)
+## 24. 跨盘符目录搜索（FORX @）
 
 ```wcs
 FORX @\Windows,&&winDir,1,                          // search ALL drives for \Windows
@@ -234,9 +234,9 @@ FORX @\Windows,&&winDir,1,                          // search ALL drives for \Wi
 
 ---
 
-## 25. Offline Registry (Full CRUD)
+## 25. 离线注册表（完整增删改查）
 
-Critical for PE system deployment. Uses the full offreg.dll API for create/read/write/enumerate on offline Windows hives.
+PE 系统部署的关键技术。使用完整的 offreg.dll API 对离线 Windows 注册表配置单元进行创建/读取/写入/枚举操作。
 
 ```wcs
 // --- Open offline hive ---
@@ -310,7 +310,7 @@ CALL $--qd offreg.dll,ORCloseHive,#%&hHive%
 
 ---
 
-## 27. BROW — File/Directory Browse Dialog
+## 27. BROW — 文件/目录浏览对话框
 
 ```wcs
 BROW &saveFile,&%Desktop%\output.iso,Save ISO file,iso           // save dialog
@@ -321,7 +321,7 @@ BROW &folder,*C:\,Select a folder                                // folder brows
 
 ---
 
-## 28. SUBJ — Mount/Unmount Drive Letters
+## 28. SUBJ — 挂载/卸载盘符
 
 ```wcs
 SUBJ -X:                                            // remove drive letter X:
@@ -330,7 +330,7 @@ SUBJ G:,\Device\HarddiskVolume3                     // mount volume as G:
 
 ---
 
-### 40. EFI Boot Entry Management (FVAR UEFI NVRAM)
+### 40. EFI 启动项管理（FVAR UEFI NVRAM）
 
 ```wcs
 // Read EFI firmware variable
@@ -357,9 +357,9 @@ CALL $--qd --ret:&bret ntdll.dll,RtlAdjustPrivilege,#22,#1,#0,&&pEnabled
 
 ---
 
-### 41. SSD Detection (Seek Penalty Query)
+### 41. SSD 检测（寻道惩罚查询）
 
-IOCTL formula: `CALC &ioctl = shl(0x2D,16) | shl(0,14) | shl(0x09,2) | 0` → 0x2D1400
+IOCTL 计算公式：`CALC &ioctl = shl(0x2D,16) | shl(0,14) | shl(0x09,2) | 0` → 0x2D1400
 
 ```wcs
 SET &STORAGE_PROPERTY_QUERY_Unknown=0
@@ -380,9 +380,9 @@ SET?int &&output=&&IncursSeekPenalty:8
 ---
 
 
-### 42. TRIM Support Detection
+### 42. TRIM 支持检测
 
-Same IOCTL 0x2D1400, PropertyId=8 (StorageDeviceTrimProperty).
+相同的 IOCTL 0x2D1400，PropertyId=8（StorageDeviceTrimProperty）。
 
 ```wcs
 SET &StorageDeviceTrimProperty=8
@@ -396,7 +396,7 @@ SET?int &&output=&&TrimEnabled:8
 
 ---
 
-### 43. STORAGE_GET_DEVICE_NUMBER (Path → Disk/Partition Mapping)
+### 43. STORAGE_GET_DEVICE_NUMBER（路径 → 磁盘/分区映射）
 
 ```wcs
 CALC &IOCTL_STORAGE_GET_DEVICE_NUMBER = shl(0x2D,16) | shl(0,14) | shl(0x05,2) | 0
@@ -410,12 +410,12 @@ SET?long &&output=&&DeviceNumber:4
 SET?long &&output=&&PartitionNumber:8
 ```
 
-Opening by device path: `\\.\C:` → returns partition info. Opening by `\\.\PhysicalDrive0` → returns disk info with PartitionNumber=0.
+通过设备路径打开：`\\.\C:` → 返回分区信息。通过 `\\.\PhysicalDrive0` 打开 → 返回磁盘信息（PartitionNumber=0）。
 
 ---
 
 
-### 44. Drive Layout Information EX (Full Disk Layout)
+### 44. Drive Layout Information EX（完整磁盘布局）
 
 ```wcs
 CALC &IOCTL_DISK_GET_DRIVE_LAYOUT_EX = shl(0x07,16) | shl(0,14) | shl(0x14,2) | 0  // 0x70050
@@ -428,14 +428,14 @@ CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_DISK_GET_D
 // Then partition entries at offset 112, each 120 bytes (PARTITION_INFORMATION_EX)
 ```
 
-Complete MBR type table (26 entries): 0x00=Empty→0xEF=EFI System, includes 0x07=NTFS, 0x0B/0x0C=FAT32, 0x0E/0x0F=EFI FAT, 0x27=Windows RE
+完整 MBR 类型表（26 项）：0x00=空→0xEF=EFI 系统分区，包含 0x07=NTFS、0x0B/0x0C=FAT32、0x0E/0x0F=EFI FAT、0x27=Windows RE
 
-Complete GPT type GUID table (23 entries): includes EBD0A0A2 (MS Basic Data), C12A7328 (EFI System), E3C9E316 (MSR), DE94BBA4 (Recovery)
+完整 GPT 类型 GUID 表（23 项）：包含 EBD0A0A2（MS 基本数据）、C12A7328（EFI 系统）、E3C9E316（MSR）、DE94BBA4（恢复）
 
 ---
 
 
-### 47. SITE fattr — File Attribute Bitmask Decoding
+### 47. SITE fattr — 文件属性位掩码解码
 
 ```wcs
 SITE ?,,,,var=fattr,"C:\Windows\notepad.exe"
@@ -455,17 +455,17 @@ CALC &isCompressed=%&var% & 0x800
 ---
 
 
-### 56. Generic IOCTL Code Construction
+### 56. 通用 IOCTL 代码构造
 
-The universal formula for computing any IOCTL control code:
+任意 IOCTL 控制码的通用计算公式：
 ```
 IOCTL = shl(DeviceType, 16) | shl(Access, 14) | shl(Function, 2) | Method
 ```
-Where:
-- DeviceType: FILE_DEVICE_ prefix value (e.g., 0x2D for storage)
-- Access: FILE_READ_ACCESS=0, FILE_WRITE_ACCESS=1, FILE_ANY_ACCESS=0
-- Function: operation-specific number
-- Method: METHOD_BUFFERED=0, METHOD_IN_DIRECT=1, METHOD_OUT_DIRECT=2, METHOD_NEITHER=3
+其中：
+- DeviceType：FILE_DEVICE_ 前缀值（例如存储设备为 0x2D）
+- Access：FILE_READ_ACCESS=0、FILE_WRITE_ACCESS=1、FILE_ANY_ACCESS=0
+- Function：操作专用编号
+- Method：METHOD_BUFFERED=0、METHOD_IN_DIRECT=1、METHOD_OUT_DIRECT=2、METHOD_NEITHER=3
 
 | IOCTL Constant | DeviceType | Access | Function | Method | Result |
 |---|---|---|---|---|---|
@@ -479,7 +479,7 @@ Where:
 
 ---
 
-## 74. Registry Key/Value/Data Existence Check
+## 74. 注册表 键/值/数据 存在性检查
 
 ```wcs
 // Check if KEY exists:
@@ -501,7 +501,7 @@ FIND $%&VT%<>ERROR,
 
 ---
 
-## 75. File vs Directory Detection
+## 75. 文件与目录检测
 
 ```wcs
 FDIR --fullfile &&F=%&NAME1%

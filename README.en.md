@@ -4,7 +4,7 @@
 
 [简体中文](./README.md) | English
 
-[![Version](https://img.shields.io/badge/version-1.2-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.2.2-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
@@ -23,18 +23,18 @@ pecmd-pro-max/
     ├── commands-full.md             ← Complete 110+ command reference (1576 lines)
     ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (1996 lines)
     ├── pe-startup.md                ← WinPE boot flow, environment limitations, PE version differences
-    └── recipes/
-        ├── storage.md               ← Disk/partition/file/registry/device recipes
-        ├── system.md                ← Process/thread/system/utility/callback recipes
-        ├── gui.md                   ← GUI controls/window/drawing recipes
-        └── net.md                   ← Network/SOCK/COM/WMI recipes
+    └── how-tos/
+        ├── storage.md               ← Disk/partition/file/registry/device how-tos
+        ├── system.md                ← Process/thread/system/utility/callback how-tos
+        ├── gui.md                   ← GUI controls/window/drawing how-tos
+        └── net.md                   ← Network/SOCK/COM/WMI how-tos
 ```
 
 ## Key features
 
 - **Three-tier variable system explained** — environment vs PE-local vs PE-global, indirect dereference, deferral, return-by-reference, hex/raw-buffer allocation, binary compare/convert
 - **110+ command reference** — every PECMD command with full syntax, return values, gotchas (incl. BROW, TREE, LAMBDA, SBAR, IPAD, BLOCK, DTIM, SLID, SPIN)
-- **Domain-organized code recipes** — disk/partition, process/thread, GUI controls/drawing, network/COM, in separate files for on-demand loading
+- **Domain-organized code how-tos** — disk/partition, process/thread, GUI controls/drawing, network/COM, in separate files for on-demand loading
 - **Complete GUI reference** — all 22 controls & sub-windows (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `TREE`...), ENVI @ properties full reference, message system, window management
 - **WinPE boot flow** — from `winpeshl.exe` → `PECMD MAIN PECMD.INI` through to `EXPLORER.EXE`, with `WinXShell` integration
 - **50 built-in variables table** — path/shell vars, process/thread vars, window/GUI vars, script/runtime vars, command-result vars
