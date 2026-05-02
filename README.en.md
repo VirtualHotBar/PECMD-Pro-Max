@@ -2,6 +2,8 @@
 
 > AI coding assistant skill for PECMD2012 scripting — write correct WinPE tools, GUIs, and boot scripts on the first try.
 
+[简体中文](./README.md) | English
+
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
