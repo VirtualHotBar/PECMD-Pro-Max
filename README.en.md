@@ -16,11 +16,12 @@ PECMD Pro Max is a **Claude Code skill** that teaches AI coding assistants to wr
 
 ```
 pecmd-pro-max/
-├── README.md                        ← You're reading it
+├── README.md                        ← 简体中文
+├── README.en.md                     ← You're reading it
 ├── SKILL.md                         ← Main skill file — mental model, variable system, patterns, traps
 └── references/
     ├── commands-full.md             ← Complete 110+ command reference (incl. BROW/TREE/LAMBDA/SBAR) + VK keys
-    ├── codebook.md                  ← 67 real-world code patterns (disk, API callbacks, GUI, buffers, etc.)
+    ├── codebook.md                  ← 68 real-world code patterns (disk, API callbacks, GUI, buffers, etc.)
     ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (22 control types)
     └── pe-startup.md                ← WinPE boot flow, environment limitations, version differences
 ```
@@ -29,8 +30,8 @@ pecmd-pro-max/
 
 - **Three-tier variable system explained** — environment vs PE-local vs PE-global, indirect dereference, deferral, return-by-reference, hex/raw-buffer allocation, binary compare/convert
 - **110+ command reference** — every PECMD command with syntax, return values, gotchas, and VK key codes (incl. BROW, TREE, LAMBDA, SBAR, IPAD, BLOCK)
-- **67 battle-tested code patterns** — disk enumeration, device IOCTL, Win32 API callbacks, GUID construction, buffer templates, ICO extraction, GDI drawing, mouse simulation
-- **Complete GUI reference** — every control type (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `IPAD`, `TREE`, `SBAR`...), message system, icons, styles
+- **68 battle-tested code patterns** — disk enumeration, device IOCTL, Win32 API callbacks, GUID construction, buffer templates, ICO extraction, GDI drawing, mouse simulation
+- **Complete GUI reference** — every control type (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `IPAD`...), message system, icons, styles
 - **WinPE boot flow** — from `winpeshl.exe` → `PECMD MAIN PECMD.INI` through to `EXPLORER.EXE`, with `WinXShell` integration, driver loading, and version-specific behavior
 - **25 common traps** — comment marker rules, CALC spacing, FIND vs IFEX behavior, thread safety, Visable/Visible distinction, mouse simulation, and more
 - **ForceLocal + EnviMode defaults** — ensures every generated script uses the safest variable scoping by default

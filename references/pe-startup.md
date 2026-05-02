@@ -9,9 +9,23 @@ Windows Boot Manager (bootmgr / bootmgfw.efi)
     -> winload.exe / winload.efi (kernel loader)
         -> ntoskrnl.exe (kernel)
             -> smss.exe (session manager)
-                -> Winlogon / WinPE-shell
-                    -> PECMD.EXE MAIN X:\Windows\System32\PECMD.INI
+                -> winlogon.exe
+                    -> winpeshl.exe (WinPE shell launcher)
+                        -> PECMD.EXE MAIN X:\Windows\System32\PECMD.INI
 ```
+
+`winpeshl.exe` is the standard WinPE shell launcher. It checks `HKLM\SYSTEM\CurrentControlSet\Control\MiniNT` for custom shell paths. If `SetupComplete.cmd` exists, it runs that first, then launches the configured shell.
+
+### WinXShell Integration
+
+Many modern WinPE builds use **WinXShell** as an alternative or companion to PECMD. WinXShell provides a full Explorer-like desktop (taskbar, file manager, system tray) while PECMD handles boot-time scripting and low-level automation. A typical integration:
+
+```wcs
+// In PECMD.INI: launch WinXShell as the desktop shell
+EXEC* X:\Windows\System32\WinXShell.exe -winpe -wallpaper -desktop
+```
+
+WinXShell reads its configuration from `WinXShell.xml` and can coexist with PECMD — PECMD manages boot scripts and driver loading, while WinXShell provides the user-facing desktop environment.
 
 ## PECMD.INI — The Standard Entry Point
 

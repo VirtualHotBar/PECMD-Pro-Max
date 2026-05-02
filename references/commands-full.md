@@ -34,6 +34,7 @@ Window flags:
 `-minb` (enable minimize), `-disminb` (disable minimize button),
 `-discloseb` (disable close button), `-nfocus` (no keyboard focus),
 `-ntab` (no tab stop), `-disaltmv` (disable ALT-drag),
+`-nb` (no border), `-nofix` (non-fixed position),
 `-forcenomin` (prevent minimize), `-scalef` (XP-style DPI scaling),
 `-scale[:DPI]` (Win8+ DPI scaling), `-nxp` (no XP visual style),
 `-csize` (size=client area), `-na` (don't activate on creation)
@@ -365,8 +366,21 @@ READ -,lineNo,&line,&var  // read specific line
 
 ### WRIT — Write to file
 ```
-WRIT path,$0,text      // $ = ANSI, 0 = line 0 (overwrite)
-WRIT path,$+0,text     // append
+WRIT[-UNICODE|-UNICODEB|-UTF8|-GBK|-BIG5|-ANSI|-<codepage>] [*fix] [*-nl] [*v] [*fv] [*c] [*nobom]
+    path,[$][+|-]lineID,text
+```
+Encoding flags (before filename): `-UNICODE`=UTF-16LE with BOM, `-UNICODEB`=UTF-16BE, `-UTF8`=UTF-8 with BOM, `-GBK`, `-BIG5`, `-ANSI`, `-<code_number>`=specific codepage. When existing file has BOM, BOM takes precedence.
+
+Star-prefix modifiers: `*fix`=lone CR as newline, `*-nl`=no trailing newline, `*v`=write to variable, `*fv`=FileData is a variable name, `*c`=clear file first, `*nobom`=write without BOM.
+
+Position: `$`=expand env vars, `+`=insert new line, `-`=delete line, plain number=replace line. `0` = last line.
+Special filenames: `-`=stdout, `--`=stderr, `CONOUT$`=debug terminal.
+
+```
+WRIT C:\BOOT.INI,+0,text              // append new line
+WRIT path,$0,a=%var%                  // replace last line, expand vars
+WRIT -,$+0,result                     // write to stdout
+WRIT path,$-3,                        // delete line 3
 ```
 
 ### GETF — Binary file read
@@ -842,7 +856,8 @@ HOME C:\Users\name                   // set home directory
 ### SCRN — Screenshot / capture screen
 ```
 SCRN &w,&h                             // get screen width and height
-SCRN -desk &w,&h                       // desktop resolution (all monitors combined, virtual screen)
+SCRN -win &w,&h                        // maximized window size
+SCRN -desk &w,&h                       // desktop resolution (no DPI scaling)
 SCRN -cur &x,&y                        // get cursor position
 SCRN -cap scrn.bmp,&wid                // capture full screen to BMP, return window ID
 SCRN -cap scrn.bmp,&wid,WxH            // capture at specific resolution
@@ -850,8 +865,14 @@ SCRN -cap scrn.bmp,&wid,WxH,x,y        // capture region at (x,y) of size WxH
 SCRN -cap -capwid:WID scrn.bmp,&wid    // capture specific window
 SCRN -cap -cur scrn.bmp,&wid           // capture with cursor included
 SCRN -cap scrn.jpg,&wid,0,0,0,80       // capture as JPG (quality 80)
+SCRN -cap :image/png:screenshot.png,0  // capture as PNG (format prefix)
+SCRN -cap :image/bmp:file.bmp,0        // capture as BMP (format prefix)
+SCRN -cap file.bmp,#WindowID           // capture specific window by handle
+SCRN -cap file.bmp,<x:y:R:B>           // capture rectangular region
 ```
-Capture formats: `.bmp`, `.jpg`, `.png` determined by file extension.
+Capture formats: `.bmp`, `.jpg`, `.png` (by extension or `:image/format:` prefix).
+Capture targets: `0`=full screen, `#WindowID`=specific window, `<x:y:R:B>`=rectangular region.
+Extended size params: `SCRN -taskbar W,H,X,Y,TaskBarPos,DpiX,DpiY,ScaleX,ScaleY` for DPI-aware info.
 
 ### FONT — Load / register fonts
 ```
@@ -1279,17 +1300,40 @@ EXEC* [*1|*N|*-] [-catch] [-cmd:::Callback] [-err+] [&]outputVar=program [args]
 
 ### SOCK — Windows sockets / IPC
 ```
-SOCK &sock                             // create socket
-SOCK &sock connect host port            // connect TCP
-SOCK &sock send data                    // send
-SOCK &sock recv &var                    // receive
-SOCK --pipe &pipeName                   // named pipe
-SOCK --mailslot &slotName               // mailslot
-SOCK --shm &varName                     // shared memory
-SOCK --event &eventName                 // event object
-SOCK --sem &semName                     // semaphore
-SOCK --mutex &mutexName                 // mutex
+SOCK [*] Name[;ProFamily][;ProType][;ProID]        // create socket (*=auto-recycle)
+SOCK --file [*] Name;[we][-rwd];FileName           // file handle
+SOCK --shm [*] Name;[w];ShareName;Length[;...]     // shared memory (w=writable)
+SOCK --event [*] Name;ShareName[;Init;ManualReset] // event object
+SOCK --sem [*] Name;ShareName[;InitCount;MaxCount] // semaphore
+SOCK --mutex [*] Name;ShareName[;InitLocked]       // mutex
+SOCK --pipe [*] Name;ShareName[;Timeout;BufSz;Mode] // named pipe (0x1=immediate, 0x2=client, 0x4=server)
+SOCK --mailslot [*] Name;ShareName[;IsServer;Timeout] // mailslot
+SOCK --gethostbyname[*|#] IPName;HostName          // DNS lookup
+SOCK --unknown Name[,InitialValue]                 // COM IUnknown pointer (auto-release)
+SOCK --BSTR[vt] Name[,[*][InitialValue][,FromString]] // BSTR string
 ```
+
+Socket operations (all via `ENVI @Name.operation=`):
+```
+ENVI @Name.connect=[ErrVar];IP;Port               // TCP connect
+ENVI @Name.bind=[ErrVar];IP;Port                  // bind (server)
+ENVI @Name.listen=[ErrVar][;Backlog]              // listen (default backlog=7)
+ENVI @Name.accept=[ErrVar];[ListenFD][;IPVar][;PortVar]  // accept connection
+ENVI @Name.write=[ErrVar];[LenVar];[DataVar];[BytesToSend[@Offset]][;Flags][;IP][;Port]  // send
+ENVI @Name.read=[ErrVar];[LenVar];[DataVar];[*][BytesToRecv[@Offset]][;Flags][;IPVar][;PortVar]  // recv (*=multi-read)
+ENVI @Name.close=[ErrVar]                         // close
+ENVI @Name.shutdown=[ErrVar][;Mode]               // 0=recv, 1=send, 2=both
+ENVI @Name.sock=[ErrVar][;ProFamily;ProType;ProID]  // recreate socket
+ENVI @Name.fd=fdVarName                           // get file descriptor
+ENVI @Name.mem=memVarName                         // get shared memory address
+ENVI @Name.setsockopt=[ErrVar];[Level];Item;DataVar[;DataLen]  // set socket option
+ENVI @Name.select=[[*]ErrVar];MsTimeout;[[Ret:]fd1:fd2:...]  // multiplexing (*=API error)
+ENVI @Name.getname=[ErrVar];[0/1];[IPVar][;PortVar]  // 0=local, 1=peer
+ENVI @Name.wait=[ErrVar][;Timeout][;[*]handle2:...]  // wait (event/sem/mutex)
+ENVI @Name.setevent=[ErrVar][;1][;OldValueVar]    // signal event (0=clear)
+```
+
+Pipe/mailslot operations: `.read` / `.write` / `.connect`
 
 ### PINT — Pin to taskbar/start
 ```
@@ -1313,7 +1357,7 @@ BROW [-fix] <变量名称[;flgnm]>,[[*|&]初始路径],[提示文字],[扩展名
 ```
 `*` = directory browser, `&` = save-file dialog, none = open-file dialog.
 `-fix`: attempt to break system directory masking.
-Flags: `0x10`=has edit box, `0x200`=no New Folder button, `0x4000`=mixed file+dir, `0x200`=multi-select, `0x80000`=browser style, `0x1000`=file must exist, `0x2`=overwrite warning, `0x1`=readonly checkbox, `0x40000`=short filenames.
+Flags: `0x10`=has edit box, `0x20`=multi-select, `0x200`=no New Folder button, `0x4000`=mixed file+dir, `0x80000`=browser style, `0x1000`=file must exist, `0x2`=overwrite warning, `0x1`=readonly checkbox, `0x40000`=short filenames.
 Filter format: `说明1|*.后缀1|说明2|*.后缀2|`.
 Does NOT change current working directory.
 

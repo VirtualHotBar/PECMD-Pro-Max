@@ -447,6 +447,19 @@ _SUB OnCheck
 _END
 ```
 
+
+### Dynamic control creation & deletion
+
+```wcs
+// Create controls programmatically from a command string in a variable
+ENVI &&cmd=LABE -vcenter -trans Lbl%&i%,L%x%T%y%W%w%H%h%,%&text%,,0x000000,14
+%&cmd%                                              // execute the command to create the control
+
+// Delete controls dynamically
+ENVI @Lbl%A.*del=                                   // delete label A
+ENVI @Edit%B.*del=                                  // delete edit field B
+// This is essential for dynamic GUIs that rebuild control sets
+```
 ---
 
 ## 8. Threading & Async
@@ -775,7 +788,7 @@ PART -up -hup -swap:%&v1% %&dsk%#%&v2%
 
 ---
 
-## 21. Resource Embedding (Internal Scripts & EXEs)
+## 21. Resource Embedding & Extraction
 
 ### Load embedded scripts from PECMD resources
 
@@ -793,9 +806,16 @@ EXEC* -exe:#1005 =*MountESP64                        // wait for completion (=)
 
 Resource IDs are embedded in the PECMD executable at build time. This is how PECMD-based tools bundle dependencies.
 
+
+### Icon and image resources
+
+```wcs
+IMAG Btn,L0T0W64H64,#1000                           // display image from resource #1000
+TIPS* tooltip text,,,#1                              // use icon from resource #1
+```
 ---
 
-## 22. System Tray Icon (TIPS*)
+## 22. System Tray Icon (Full Handler)
 
 ```wcs
 // Create tray icon
@@ -818,6 +838,20 @@ SET &::WM_LBUTTONDOWN=0x0201
 SET &::WM_RBUTTONDOWN=0x0204
 ```
 
+
+### Full tray click handler with visibility toggle
+
+```wcs
+_SUB OnTray
+    IFEX $%&::WM_LBUTTONDOWN%=%2, TEAM CALL OnSwitch| EXIT _SUB
+    IFEX $%&::WM_RBUTTONDOWN%=%2, CALL @--popmenu TrayMenu
+_END
+
+_SUB OnSwitch                                // toggle window visibility
+    ENVI @@Visible=?%&WID%:&&view
+    FIND |%&view%=0, ENVI @@Visible=%&WID%:1! ENVI @@Visible=%&WID%:0
+_END
+```
 ---
 
 ## 23. System Power & Display Control
@@ -884,46 +918,75 @@ FORX @\Windows,&&winDir,1,                          // search ALL drives for \Wi
 
 ---
 
-## 25. Offline Registry Manipulation (offreg.dll)
+## 25. Offline Registry (Full CRUD)
 
 Critical for PE system deployment. Uses the full offreg.dll API for create/read/write/enumerate on offline Windows hives.
 
 ```wcs
-// Open offline hive
+// --- Open offline hive ---
 SET &hHive=
 CALL $--qd --ret:&&ret offreg.dll,OROpenHive,$%&HiveFile%,*&hHive
 IFEX $%&ret%<>0, TEAM MESS Failed to open hive@错误#OK| EXIT
 
-// Open or create key
+// Alternative: ORLoadHive (loads with NT version context)
+CALL $--qd --ret:&bret offreg.dll,ORLoadHive,$%&hivepath%,*&hHive
+
+// --- Open or create key ---
 SET &hKey=
 CALL $--qd --ret:&&ret offreg.dll,OROpenKey,#%&hHive%,$%&SubKey%,*&hKey
-IFEX #%&ret%=0,                                       // key already exists
-{
-    // Read value
-    SET$# &Data=*8192 0
-    SET$# &pdwType=&PtrSz% 0
-    SET$# &pcbData=&PtrSz% 0
-    SET-long &pcbData=8192:0
-    CALL $--qd --ret:&&ret offreg.dll,ORGetValue,#%&hKey%,#0,$%&Value%,*&pdwType,#0,*&pcbData
-    SET?int &Data=&&ValueLength:0
-    SET-make &&Value=&Data@4;%&ValueLength%
-}! IFEX #%&ret%=234,                                    // key doesn't exist
+IFEX #%&ret%<>0,
 {
     CALL $--qd --ret:&&ret offreg.dll,ORCreateKey,#%&hHive%,$%&SubKey%,#0,$,#0,*&hKey,#0
 }
 
-// Set value
+// --- Read REG_SZ (type 1, two-call buffer) ---
+SET$# &pdwType=&PtrSz% 0
+SET$# &pcbData=&PtrSz% 0
+SET-long &pcbData=8192:0
+CALL $--qd --ret:&&ret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#1,#0,*&pcbData
+SET?int &pcbData=&&cbData:0
+SET$# &Data=*%&cbData% 0
+CALL $--qd --ret:&&ret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#1,*&Data,*&pcbData
+
+// --- Read REG_DWORD (type 4) ---
+SET$# &dwData=*4 0
+SET$# &lpcbData=*4 4
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#4,*&dwData,*&lpcbData
+SET?int &dwData=&&dwVal:0
+
+// --- Read REG_QWORD (type 11) ---
+SET$# &qwData=*8 0
+SET$# &lpcbData=*8 8
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#11,*&qwData,*&lpcbData
+SET?longlong &qwData=&&qwVal:0
+
+// --- Write value ---
 CALL $--qd --ret:&&ret offreg.dll,ORSetValue,#%&hKey%,$%&Value%,#1,*&Data,#%&DataSize%
 
-    // Enumerate subkeys
-    SET$# &keyCount=*4 0
-    SET$# &maxSubKeyLen=*4 0
-    SET$# &valCount=*4 0
-    CALL $--qd --ret:&&ret offreg.dll,ORQueryInfoKey,#%&hKey%,#0,#0,*&keyCount,*&maxSubKeyLen,#0,*&valCount,#0,#0,#0,#0
-    SET?int keyCount=&&nKeys:0
+// --- Enumerate subkeys ---
+SET$# &keyCount=*4 0
+SET$# &maxSubKeyLen=*4 0
+SET$# &valCount=*4 0
+CALL $--qd --ret:&&ret offreg.dll,ORQueryInfoKey,#%&hKey%,#0,#0,*&keyCount,*&maxSubKeyLen,#0,*&valCount,#0,#0,#0,#0
+SET?int &keyCount=&&nKeys:0
+SET?int &maxSubKeyLen=&&maxLen:0
+CALC &nameBufSz=%&maxLen%*2+2
+SET$# &lpName=*%&nameBufSz% 0
+SET$# &lpcchName=*4 0
+SET &i=0
+LOOP #%&i%<%&nKeys%,
+{
+    SET-long &lpcchName=%&nameBufSz%:0
+    CALL $--qd --ret:&&ret offreg.dll,OREnumKey,#%&hKey%,#%&i%,*&lpName,*&lpcchName,#0,#0,#0
+    SET-make &&subName=&lpName;0
+    CALC &i=%&i%+1
+}
 
-// Save and close — use actual NT version numbers for best compatibility
-// Use $0 for generic (current OS version implied)
+// --- Enumerate values ---
+CALL $--qd --ret:&&ret offreg.dll,ORQueryInfoKey,#%&hKey%,#0,#0,#0,#0,#0,*&valCount,#0,#0,#0,#0
+SET?int &valCount=&&nVals:0
+
+// --- Save and close ---
 CALL $--qd --ret:&&ret offreg.dll,ORSaveHive,#%&hHive%,$%&HiveFile%,$0,$0
 CALL $--qd offreg.dll,ORCloseKey,#%&hKey%
 CALL $--qd offreg.dll,ORCloseHive,#%&hHive%
@@ -953,22 +1016,9 @@ ENVI @@Visible=%&WID%:*4                          // SW_MINIMIZE
 ENVI @@Visible=?%&WID%:&&state                    // query visibility state
 ```
 
-## 27. Resource Extraction & Embedded Tools
+---
 
-```wcs
-// EXEC* -exe:#resourceID extracts and runs a binary embedded in PECMD resources
-EXEC* -exe:#1000 &&out=*mv.exe Z: /S               // run mv.exe from resource #1000
-EXEC* -exe:#1001 &&out=*mv64.exe Z: /S              // run mv64.exe from resource #1001
-
-// Resource scripts (LOAD #ID)
-LOAD #102                                            // run script at resource 102
-
-// Icon resources
-IMAG Btn,L0T0W64H64,#1000                           // display image from resource #1000
-TIPS* tooltip text,,,#1                              // use icon from resource #1
-```
-
-## 28. BROW — File/Directory Browse Dialog
+## 27. BROW — File/Directory Browse Dialog
 
 ```wcs
 BROW &saveFile,&%Desktop%\output.iso,Save ISO file,iso           // save dialog
@@ -977,14 +1027,18 @@ BROW &folder,*C:\,Select a folder                                // folder brows
 // Additional flags: 0x200=multi-select, 0x10=edit box
 ```
 
-## 29. SUBJ — Mount/Unmount Drive Letters
+---
+
+## 28. SUBJ — Mount/Unmount Drive Letters
 
 ```wcs
 SUBJ -X:                                            // remove drive letter X:
 SUBJ G:,\Device\HarddiskVolume3                     // mount volume as G:
 ```
 
-## 30. NET & Network Card Operations
+---
+
+## 29. NET & Network Card Operations
 
 ```wcs
 // Full network adapter query
@@ -997,7 +1051,9 @@ PCIP 192.168.1.100,255.255.255.0,192.168.1.1,192.168.1.1
 PCIP DHCP
 ```
 
-## 31. SEND / WAIT -cont — Keyboard
+---
+
+## 30. SEND / WAIT -cont — Keyboard
 
 ```wcs
 SEND {ENTER}                                        // send Enter key
@@ -1005,7 +1061,9 @@ SEND 0x11_,0x12_,0x2E,0x12^,0x11^                  // Ctrl+Alt+Del (press order)
 WAIT -cont -1000,&&key                              // wait up to 1s for key, returns VK code
 ```
 
-## 32. Multi-Part Color Format
+---
+
+## 31. Multi-Part Color Format
 
 PECMD supports a 4-part color string for hover-aware controls:
 ```
@@ -1019,37 +1077,9 @@ ENVI @Btn.color=0x000000#0xFFF0E0#0xFF0000#0xFFE0C0
 // Updates colors at runtime
 ```
 
-## 33. Dynamic Control Creation (Command String in Variable)
+---
 
-```wcs
-// Create controls programmatically from a command string in a variable
-ENVI &&cmd=LABE -vcenter -trans Lbl%&i%,L%x%T%y%W%w%H%h%,%&text%,,0x000000,14
-%&cmd%                                              // execute the command to create the control
-
-// Delete controls dynamically
-ENVI @Lbl%A.*del=                                   // delete label A
-ENVI @Edit%B.*del=                                  // delete edit field B
-// This is essential for dynamic GUIs that rebuild control sets
-```
-
-## 34. WM_TRAYNOTIFY Pattern (Full Tray Icon Handler)
-
-```wcs
-SET &::WM_TRAYNOTIFY=1109
-ENVI @this.MSG=_%&::WM_TRAYNOTIFY%::&&wp,&&lp, CALL OnTray %&wp% %&lp%
-
-_SUB OnTray
-    IFEX $%&::WM_LBUTTONDOWN%=%2, TEAM CALL OnSwitch| EXIT _SUB
-    IFEX $%&::WM_RBUTTONDOWN%=%2, CALL @--popmenu TrayMenu
-_END
-
-_SUB OnSwitch                                // toggle window visibility
-    ENVI @@Visible=?%&WID%:&&view
-    FIND |%&view%=0, ENVI @@Visible=%&WID%:1! ENVI @@Visible=%&WID%:0
-_END
-```
-
-## 35. SWIN Nested Windows (Tab Pages)
+## 32. SWIN Nested Windows (Tab Pages)
 
 Complete property-page pattern: define each sub-window as a `_SUB`, embed them with `SWIN` in the parent, use `TABS.SEL` to switch visible page on tab click.
 
@@ -1135,7 +1165,7 @@ Key points:
 
 ---
 
-## 36. Dynamic Row Creation & Batch Deletion
+## 33. Dynamic Row Creation & Batch Deletion
 
 Build controls at runtime from variable-expanded command strings. Batch-delete groups in loops.
 
@@ -1186,7 +1216,7 @@ Key points:
 
 ---
 
-## 37. Parameter Validation Guard
+## 34. Parameter Validation Guard
 
 Early-exit guard pattern at function entry. Checks argument count, non-empty values, and format validity.
 
@@ -1232,7 +1262,7 @@ _END
 
 ---
 
-## 38. MSTR String Splitting — All Practical Variants
+## 35. MSTR String Splitting — All Practical Variants
 
 Real parsing examples covering last-field extraction, N-th field, trimmed split, and custom delimiters.
 
@@ -1285,7 +1315,7 @@ FORX *NL &cfg,&&line,
 
 ---
 
-## 39. TABL Scrollbar Control via LVM Messages
+## 36. TABL Scrollbar Control via LVM Messages
 
 Use `SENDMSG` to send list-view messages for scroll control. Messages apply to the underlying SysListView32 control.
 
@@ -1354,7 +1384,7 @@ Note: `SENDMSG` sends to the window that last received focus / the foreground wi
 
 ---
 
-## 40. TABL In-Row Sorting (Bubble Sort)
+## 37. TABL In-Row Sorting (Bubble Sort)
 
 Read all rows into memory, bubble-sort by a target column, rewrite the table.
 
@@ -1428,7 +1458,7 @@ Key points:
 
 ---
 
-## 41. Custom Title Bar Window (Frameless + Manual Caption)
+## 38. Custom Title Bar Window (Frameless + Manual Caption)
 
 Borderless window with fake title bar built from LABE controls. Handles minimize, close, hover color effects, and window dragging via `WM_NCHITTEST`.
 
@@ -1503,7 +1533,7 @@ Key points:
 
 ---
 
-## 42. Struct Array Traversal (API Return Data)
+## 39. Struct Array Traversal (API Return Data)
 
 Walk a struct array returned from a Win32 API call. Allocate a buffer, enumerate indices, calculate field offsets, read typed values, check the termination condition.
 
@@ -1617,7 +1647,7 @@ Key points:
 
 ## Additional Patterns
 
-### Pattern 61: Win32 API Two-Call Buffer Pattern
+### Pattern 57: Win32 API Two-Call Buffer Pattern
 
 Many Win32 APIs require calling twice: once to get the required buffer size, then allocate, then call again. This is the canonical reusable template:
 
@@ -1643,7 +1673,7 @@ _SUB GetComputerName
 _END
 ```
 
-### Pattern 62: GUID Byte-Swap via SED Regex (CLSIDFromString Fallback)
+### Pattern 58: GUID Byte-Swap via SED Regex (CLSIDFromString Fallback)
 
 When `ole32.dll!CLSIDFromString` is unavailable (common in minimal PE), construct GUID binary from string using regex byte-swap:
 
@@ -1662,7 +1692,7 @@ _SUB MakeGuid
 _END
 ```
 
-### Pattern 63: WndProc Binding for Win32 Callbacks
+### Pattern 59: WndProc Binding for Win32 Callbacks
 
 Register a PECMD `_SUB` function as a Win32 callback (e.g., for EnumResourceNames, EnumWindows):
 
@@ -1682,7 +1712,7 @@ _SUB CallbackFunc
 _END
 ```
 
-### Pattern 64: WM_COMMAND + EN_CHANGE Edit Monitoring
+### Pattern 60: WM_COMMAND + EN_CHANGE Edit Monitoring
 
 Monitor edit control text changes via WM_COMMAND notification:
 
@@ -1705,7 +1735,7 @@ _SUB OnEditChange
 _END
 ```
 
-### Pattern 65: WM_MOUSEHOVER/LEAVE Hover Tooltips
+### Pattern 61: WM_MOUSEHOVER/LEAVE Hover Tooltips
 
 Show tooltips on mouse hover over controls:
 
@@ -1716,7 +1746,7 @@ ENVI @Label1.MSG=_%&WM_MOUSEHOVER%: TIPS Title,"Hover text\nLine 2",3000,1
 ENVI @Label1.MSG=_%&WM_MOUSELEAVE%: TIPS *
 ```
 
-### Pattern 66: WM_SIZE Responsive Layout with Saved Positions
+### Pattern 62: WM_SIZE Responsive Layout with Saved Positions
 
 Full DPI-aware window resize handling:
 
@@ -1752,7 +1782,7 @@ _SUB OnResize
 _END
 ```
 
-### Pattern 67: LoadLibraryExW for Resource-Only Loading
+### Pattern 63: LoadLibraryExW for Resource-Only Loading
 
 Load a DLL/EXE purely for resource extraction without executing code:
 
@@ -1767,81 +1797,352 @@ CALL $--qd --ret:&hMod Kernel32.dll,LoadLibraryExW,$%&filePath%,#0,#%&flags%
 
 ---
 
-## Pattern Index
+## 64. TREE Control (Hierarchical Node View)
 
-| # | Pattern | Description |
-|---|---------|-------------|
-| 1 | Disk Enumeration & Information | List disks, partitions, map drive letters |
-| 2 | Device Enumeration via Win32 API | SetupAPI enumeration, IOCTL calls |
-| 3 | Boot Environment & System Info | BIOS/UEFI, Secure Boot, WinPE detection |
-| 4 | File & Config Operations | READ, WRITE, GETF#, INI parsing |
-| 5 | Registry Operations | REGI read/write/enum, all types |
-| 6 | Process & Program Execution | EXEC*, callbacks, sub-PECMD |
-| 7 | GUI Patterns | Window templates, TABL, LIST, SWIN |
-| 8 | Threading & Async | THREAD*, POSTMSG, shared flags |
-| 9 | Single Instance / Mutex | LOCK mutex, window restore |
-| 10 | Hotkey Registration | HKEY, system-wide shortcuts |
-| 11 | String Manipulation | MSTR, SED, LPOS, RPOS, RSTR |
-| 12 | Dynamic Variables & Arrays | Indirect deref, delayed expansion |
-| 13 | Timer & Scheduler | TIME, one-shot, variable callbacks |
-| 14 | Compound Conditions & Flow Control | IFEX/FIND compound, EXIT variants |
-| 15 | Encryption & Hashing | BASE, HASH, CMPS |
-| 16 | Network Operations | IP config, WiFi scan/connect, ping |
-| 17 | Date/Time | DATE, TIME, DTIM |
-| 18 | Math & Calculation | CALC integer/float/hex |
-| 19 | Cross-Process Window Control | ENVI @@Visible, ENVI @@POS |
-| 20 | PART Operations | Partition management toolkit |
-| 21 | Resource Embedding | LOAD #ID, EXEC* -exe:#ID |
-| 22 | System Tray Icon | TIPS*, WM_TRAYNOTIFY handler |
-| 23 | System Power & Display Control | SHUT, DISP, SCRN |
-| 24 | Directory Search Across All Drives | FORX @ |
-| 25 | Offline Registry Manipulation | offreg.dll API |
-| 26 | Window Style Flags & Hiding | -nocap, -trap, ENVI @@Visible |
-| 27 | Resource Extraction & Embedded Tools | EXEC* -exe, LOAD #ID, icons |
-| 28 | BROW — File/Directory Browse Dialog | Save/open/folder dialogs |
-| 29 | SUBJ — Mount/Unmount Drive Letters | Drive letter assignment |
-| 30 | NET & Network Card Operations | PCIP query/set |
-| 31 | SEND / WAIT -cont — Keyboard Input | Send keys, wait for keypress |
-| 32 | Multi-Part Color Format | 4-part color for hover effects |
-| 33 | Dynamic Control Creation (Command String) | Variable-expanded command strings |
-| 34 | WM_TRAYNOTIFY Pattern | Full tray icon handler |
-| 35 | SWIN Nested Windows (Tab Pages) | TABS + SWIN property pages |
-| 36 | Dynamic Row Creation & Batch Deletion | Runtime control creation & loop deletion |
-| 37 | Parameter Validation Guard | Early-exit argument guards |
-| 38 | MSTR String Splitting — All Variants | Complete MSTR parsing cookbook |
-| 39 | TABL Scrollbar Control via LVM | LVM_SCROLL, LVM_ENSUREVISIBLE messages |
-| 40 | TABL In-Row Sorting | Bubble sort on table data |
-| 41 | Custom Title Bar Window | Frameless window with manual caption |
-| 42 | Struct Array Traversal | API struct array enumeration |
-| 43 | EFI Boot Entry Management | FVAR read/write UEFI NVRAM; Create/Remove/SetNext boot entry |
-| 44 | SSD Detection (Seek Penalty) | IOCTL_STORAGE_QUERY_PROPERTY |
-| 45 | TRIM Support Detection | IOCTL_STORAGE_QUERY_PROPERTY |
-| 46 | Disk Device Number from Path | IOCTL_STORAGE_GET_DEVICE_NUMBER mapping |
-| 47 | Drive Layout Information EX | IOCTL_DISK_GET_DRIVE_LAYOUT_EX with MBR/GPT tables |
-| 48 | Network Speed Monitoring | GetIfTable API real-time speed |
-| 49 | PE Icon Extraction | EnumResourceNames + ICO binary construction |
-| 50 | USB Drive Enumeration | SetupAPI + SCSI inquiry + device ID chain |
-| 51 | Advanced DPI v2 + Layered Windows | Per-monitor V2 DPI, transparency, mirror |
-| 52 | GPT Multi-Partition USB | Full create/format/verify with retry |
-| 53 | Offline Registry Full CRUD | ORLoadHive + Get/Set + Enum + Save |
-| 54 | FVAR Secure Boot (EFI Variable) | Direct EFI global variable read |
-| 55 | ScrollBar via GetScrollInfo | SCROLLINFO struct, column-pixel conversion |
-| 56 | QueryDosDeviceW All DOS Devices | Null-delimited parse + CODE decode |
-| 57 | File Attribute Bitmask Decoding | SITE fattr query + CALC flag & constant |
-| 58 | WiFi Connect + Tray UI | ADSL-wlan + TABL + minimize-to-tray |
-| 59 | Display Presets with Timeout | DISP + KILL explorer + countdown revert |
-| 60 | Generic IOCTL Code Formula | shl(base,16) \| shl(access,14) \| shl(func,2) \| method |
-| 61 | Win32 API Two-Call Buffer Pattern | Get-size → allocate → call-again template |
-| 62 | GUID Byte-Swap via SED Regex | CLSIDFromString fallback for minimal PE |
-| 63 | WndProc Binding for Callbacks | SET^ to register _SUB as Win32 callback |
-| 64 | WM_COMMAND + EN_CHANGE Edit Monitoring | Edit control change notification |
-| 65 | WM_MOUSEHOVER/LEAVE Tooltips | Hover tooltips on controls |
-| 66 | WM_SIZE Responsive Layout | DPI-aware resize with saved positions |
-| 67 | LoadLibraryExW Resource-Only Loading | Load DLL for resources without execution |
+### Create tree with icons and node hierarchy
+
+```wcs
+// Node data format: \parent_index:icon_index:label text
+// Child delimiters: 0x0B = start children, 0x0C = end children, 0x09 = separator
+TREE Tree1,L10T10W300H300,%&DATA%,0x10000127
+
+SET &MUI_NODE_DATA=\0:0:Root1\x0B\0:0:Child1.1\x09\0:0:Child1.2\x0C\1:1:Root2\x0B\1:1:Child2.1\x0C
+
+// Expand / Collapse nodes
+ENVI @Tree1.Expand=1                 // expand node 1
+ENVI @Tree1.Expand=2.1;0x0001       // collapse (TVE_COLLAPSE)
+ENVI @Tree1.Expand=4;0x4002         // expand partial (TVE_EXPANDPARTIALX)
+
+// Select a node
+ENVI @Tree1.Sel=2.2                 // select node 2.2
+ENVI @Tree1.Sel=?*2;&&node1         // query selected node path
+ENVI @Tree1.Sel=?@&&hnode           // query selected node handle
+
+// Checkbox state
+ENVI @Tree1.Check=3.1;2             // set indeterminate (0=unchecked, 1=checked, 2=indeterminate)
+ENVI @Tree1.Check=?*;&&state        // query checkbox state
+```
+
+### Handle TVN_ITEMCHANGEDW (checkbox change notification)
+
+```wcs
+CALC -base=16 #&&TVN_ITEMCHANGEDW=0x100000000-419
+ENVI @this.MSG=NOTIFY#%&Tree1_ID%#%&&TVN_ITEMCHANGEDW%::&&wp,&&lp, CALL OnItemChanged %&&wp% %&&lp%
+
+_SUB OnItemChanged
+    // parse NMTREEVIEW struct for changed item
+_END
+```
 
 ---
 
-### 44. SSD Detection (Seek Penalty Query)
+## 65. SOCK Networking (TCP/UDP Client-Server)
+
+### TCP server with accept loop
+
+```wcs
+SOCK sk                                    // server listen socket (TCP default)
+ENVI @sk.sock=&&err                        // create socket
+ENVI#$ &&v=1
+ENVI @sk.setsockopt=;;%&SO_REUSEADDR%,&&v  // SO_REUSEADDR
+ENVI @sk.bind=&&err;%&MYIP%;%&MYPORT%      // bind to IP:port
+ENVI @sk.listen=&&err;1                     // listen (backlog=1)
+
+THREAD* CALL Server
+
+_SUB Server
+    SOCK sr                                // accept socket
+    ENVI @sk.fd=&&fd                       // get listen fd
+    ENVI @sr.accept=&&err;%&&fd%           // accept connection
+    ENVI @sr.getname=;1;&&remoteIP         // get remote IP
+
+    // Read loop
+    ENVI @sr.read=&&err;&Len;&BRMSG        // read data
+    IFEX $%&Len%>0, ENVI @this.SENDMSG=#1  // notify main thread
+
+    // Send response
+    ENVI @sr.write=&&err;&Len;&Response    // write data
+_END
+```
+
+### TCP client and UDP
+
+```wcs
+SOCK sc                                    // client socket
+ENVI @sc.sock=&&err
+ENVI @sc.connect=&&err;%&TOIP%;%&TOPORT%   // connect
+ENVI @sc.write=&&err;&Len;&MSG             // send data
+ENVI @sc.read=&&err;&Len;&recvBuf          // receive
+ENVI @sc.shutdown=                         // graceful shutdown
+ENVI @sc.close=                            // close
+
+// UDP
+SOCK su;;%&SOCK_DGRAM%;%&IPPROTO_UDP%     // UDP socket
+ENVI @su.write=&&err;&Len;&data;;;&destIP  // sendto
+ENVI @su.read=&&err;&Len;&recvBuf;;;&srcIP // recvfrom
+```
+
+### Shared memory and named pipe
+
+```wcs
+SOCK --shm shm1;w;MySharedMem;1024         // writable shared memory
+ENVI @shm1.mem=&&addr                      // get memory address
+
+SOCK --pipe pip1;MyPipe;5000;4096;0x1      // named pipe, immediate connect
+ENVI @pip1.write=;;&data                   // write
+ENVI @pip1.read=;;&buf                     // read
+```
+
+---
+
+## 66. COM/WMI Object Automation
+
+### Create COM object via CoCreateInstance
+
+```wcs
+LOCK .com**                                // initialize COM
+SOCK --unknown &&pObj                      // IUnknown pointer (auto-release)
+
+SET$# &CLSID=*16 0
+SET$# &IID=*16 0
+CODE *,%&CLSID_HEX%,*HEX,&CLSID
+CODE *,%&IID_HEX%,*HEX,&IID
+
+CALL $--qd --16 OLE32.DLL,CoCreateInstance,*&CLSID,#0,#1,*&IID,*&pObj
+
+// Call vtable method (index 3)
+CALL $--16 --ret:&&hr #,*&pObj.%&iMethod%,arg1,arg2
+```
+
+### WMI query pattern
+
+```wcs
+LOCK .com**
+SOCK --unknown &&pLoc                       // IWbemLocator
+SOCK --unknown &&pSvc                       // IWbemServices
+
+CALL $--qd --16 OLE32.DLL,CoCreateInstance,*&CLSID_WbemLocator,#0,#1,*&IID_IWbemLocator,*&&pLoc
+
+CALL $--16 --qd #,*&&pLoc.%&iConnectServer%,$ROOT\CIMV2,#0,#0,#0,#0,#0,#0,*&&pSvc
+
+CALL $--16 --ret:&&hr --qd #,*&&pSvc.%&iExecQuery%,$WQL,*&wqlCmd,#0x30,#0,*&&pEnum
+
+SOCK --BSTR &&bstrProp,,PropertyName
+SOCK --unknown &&pRow
+CALL $--16 --qd #,*&&pEnum.%&iNext%,#0xFFFFFFFF,#1,*&&pRow,*&count
+SET$# &vProp=*24 0
+CALL $--16 --ret:&&hr --qd #,*&&pRow.%&iGet%,#%&&bstrProp?ptr%,#0,*&vProp,#0,#0
+SET &value=%&&vProp?ptr:8
+```
+
+### ITaskbarList3 (taskbar progress)
+
+```wcs
+SOCK --unknown &&pTaskbar
+CALL $--qd --16 --ret:&&hr OLE32.DLL,CoCreateInstance,*&CLSID_TaskbarList,#0,#1,*&IID_ITaskbarList3,*&&pTaskbar
+CALL $--ret:&&r #,*&&pTaskbar.%&iHrInit%
+CALL $--ret:&&r --qd# #,*&&pTaskbar.%&iSetValue%,%&hwnd%,0,%&total%
+CALL $--ret:&&r #,*&&pTaskbar.%&iRelease%
+```
+
+---
+
+## 67. GDI Painting (WM_PAINT Drawing)
+
+### Register GDI functions as aliases
+
+```wcs
+ENVI^ Alias -opt Rectangle=CALL $--qd# --ret:* Gdi32,Rectangle,*dummy,
+ENVI^ Alias -opt Ellipse=CALL $--qd# --ret:* Gdi32,Ellipse,*dummy,
+ENVI^ Alias -opt Polyline=CALL $--qd# --ret:* Gdi32.dll,Polyline,*dummy,
+```
+
+### Window with paint callback and animation
+
+```wcs
+_SUB CanvasWin,W260H320,Canvas Demo,
+    ENVI @this.Paint=OnPaint               // set WM_PAINT handler
+    SET &aw=2
+    SET &w=10
+    TIME &Timer1,50, ENVI @this.InvalidateRect=;;;230;
+_END
+
+_SUB OnPaint                               // %1 = HDC handle
+    CALC #L=%x0% - %w% - %L0%
+    CALC #T=%y0% - %h%
+    CALC #R=%x0% + %w% - %L0%
+    CALC #B=%y0% + %h%
+    Rectangle %1,%T%,%L%,%B%,%R%
+    Ellipse %1,%L%,%T%,%R%,%B%
+    CALC #w=%&w% + %&aw%
+    IFEX $%&w%>100, TEAM SET aw=-2|CALC #w=%&w% + %&aw%!
+    IFEX $%&w%<0, TEAM SET aw=2|CALC #w=%&w% + %&aw%
+_END
+```
+
+### Polyline with POINT array
+
+```wcs
+SET$ &Pt= 0x0064 0x0000  0x0000 0x0000  0x00C8 0x0000  0x0064 0x00C8  *200 0
+ENVI-addr &&PtAddr=&Pt
+
+_SUB OnPaint
+    Polyline %1,%&PtAddr%,4
+_END
+```
+
+---
+
+## 68. PBAR / SPIN Controls (Progress Bar & Up-Down)
+
+### Progress bar with color and text
+
+```wcs
+PBAR PBAR1,L22T13W200H16,20               // initial value = 20%
+ENVI @PBAR1.color=0xFF                     // foreground (red)
+ENVI @PBAR1.bkcolor=0xFF00                 // background (green)
+
+// Update progress with text overlay
+ENVI @PBAR1=%&p%;%&K%s  %&p%%%            // value;text
+
+// Advanced: percent display with colored text
+ENVI @PBAR1.percent=%&p%C:0xFF00:0xCFFF:0xFF:%&K%s  %&p%%%
+```
+
+### SPIN control bound to EDIT
+
+```wcs
+EDIT EDIT1,L28T14W158H29,0,,
+SPIN SPIN1,L192T13W22H30,EDIT1,&&npos:&&button:&&old,
+    ENVI @LABE3= SPIN1 [%&&npos%] [%&&button%] [%&&old%], 0xA0
+
+// Query value and range
+ENVI @SPIN1.VAL=?&&POS:&&FROM:&&TO
+
+// Set value and range
+ENVI @SPIN1.VAL=%&POS%:-20:5               // current, min=-20, max=5
+```
+
+---
+
+## 69. WM_DROPFILES Drag-and-Drop
+
+### Enable file drop on window or control
+
+```wcs
+SET &WM_DROPFILES=0x0233
+
+// Register drop handler on EDIT control (style 0x4 = accept files)
+EDIT|- EDIT1,L10T10W400H200,,0x004
+ENVI @EDIT1.MSG=%&WM_DROPFILES%::&&wp,&&lp, CALL OnDrop %&wp% %&lp%
+
+// Register drop handler on window
+ENVI @this.MSG=%&WM_DROPFILES%::&&wp,&&lp, CALL OnDrop %&wp% %&lp%
+```
+
+### Extract dropped file paths
+
+```wcs
+_SUB OnDrop
+    ENVI ?&&firstFile,&&allFiles=DROPFILE,%1    // %1 = wParam
+    MESS Dropped: %&&allFiles%
+    ENVI @EDIT1=%&&allFiles%
+_END
+```
+
+---
+
+## 70. RICHEDIT Rich Text Formatting
+
+### Create rich text edit control
+
+```wcs
+// -rich flag enables rich text mode on EDIT/MEMO
+EDIT|- -rich RichEdit1,L10T10W400H300,Default text,,0x200
+MEMO-+ -rich &&RichBox,L10T10W400H300,,0x200
+```
+
+### Color and format specific text ranges
+
+```wcs
+// Format: [:fontsize[:fontname:]BITUL;][color[#bgcolor]][;start_pos[;end_pos]]
+// B=Bold, I=Italic, U=Underline, T=Strikeout, L=Link
+ENVI @RichEdit1.COLOR=:20:Consolas:BI;0xFF;0;3      // Bold+Italic, red, pos 0-3
+ENVI @RichEdit1.COLOR=:12;0xFF00;3;6                  // green, pos 3-6
+ENVI @RichEdit1.COLOR=:9;0xFF0000;6;9                 // blue, pos 6-9
+ENVI @RichEdit1.COLOR=:10;0xFF00FF;2:;4:              // magenta, line 2 to line 4
+```
+
+### Programmatic text replacement
+
+```wcs
+SET &EM_SETSEL=0x00B1
+SET &EM_REPLACESEL=0x00C2
+ENVI @RichEdit1.SENDMSG=%&EM_SETSEL%,startPos,endPos
+ENVI @RichEdit1.SENDMSG=%&EM_REPLACESEL%,0,$newText
+```
+
+---
+
+## 71. IMAG Advanced (GIF Animation & Dynamic Update)
+
+### Animated GIF display
+
+```wcs
+IMAG IMAG1,L10T10W200H150,animation.gif,EXEC calc.exe     // click runs calc
+ENVI @IMAG1.delay=2000                                     // set frame delay to 2s
+```
+
+### Dynamic image update at runtime
+
+```wcs
+// Update: update=w:h[:x:y:border_color:border_width][;filename]
+ENVI @IMAG1.update=32:32;shell32.dll#52                    // replace with icon #52
+ENVI @IMAG1.update=64:64::;*newimage.png                   // * = new image
+ENVI @IMAG1.update=32:32::;?overlay.png                    // ? = overlay on existing
+
+// Source rectangle: <X:Y:W;H>filename
+ENVI @IMAG1.update=64:64::<0:0:32;32>source.bmp            // crop region
+```
+
+### IMAG as interactive image button
+
+```wcs
+IMAG ImgBtn,L10T10W64H64,#1000,CALL OnImageClick          // resource icon as button
+CHEK -scale:(51*96/12)<123:51>:bg.png ImgChk,L100T100W123H53,,CALL OnCheck
+RADI -scale:(51*96/12)<123:51>:bg.png ImgRad,L100T200W123H53,,CALL OnRadio
+```
+
+---
+
+### 40. EFI Boot Entry Management (FVAR UEFI NVRAM)
+
+```wcs
+// Read EFI firmware variable
+ENVI ?&var=FVAR,Boot0000;{8be4df61-93ca-11d2-aa0d-00e098032b8c}
+
+// Write EFI firmware variable
+ENVI ?-v =FVAR+,BootXXXX,&&buf   // create/modify boot entry
+
+// Get buffer byte length
+ENVI-addr ;&len=&&buf
+
+// Create view into buffer at offset (FVAR data starts at offset)
+ENVI-mkdummy &&view=&&buf@8
+
+// 16-bit WORD access for BootOrder entries
+SET?short &buf=&val:offset
+
+// Need SeSystemEnvironmentPrivilege to write
+CALL $--qd --ret:&bret ntdll.dll,RtlAdjustPrivilege,#22,#1,#0,&&pEnabled
+
+// Boot entry ID naming: Boot%IDXX% where IDXX = BootID + 0x100000
+// Clean empty IDs, compact BootOrder array
+```
+
+---
+
+### 41. SSD Detection (Seek Penalty Query)
 
 IOCTL formula: `CALC &ioctl = shl(0x2D,16) | shl(0,14) | shl(0x09,2) | 0` → 0x2D1400
 
@@ -1863,7 +2164,8 @@ SET?int &&output=&&IncursSeekPenalty:8
 
 ---
 
-### 45. TRIM Support Detection
+
+### 42. TRIM Support Detection
 
 Same IOCTL 0x2D1400, PropertyId=8 (StorageDeviceTrimProperty).
 
@@ -1877,31 +2179,9 @@ CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,
 SET?int &&output=&&TrimEnabled:8
 ```
 
-### 60. Generic IOCTL Code Construction
-
-The universal formula for computing any IOCTL control code:
-```
-IOCTL = shl(DeviceType, 16) | shl(Access, 14) | shl(Function, 2) | Method
-```
-Where:
-- DeviceType: FILE_DEVICE_ prefix value (e.g., 0x2D for storage)
-- Access: FILE_READ_ACCESS=0, FILE_WRITE_ACCESS=1, FILE_ANY_ACCESS=0
-- Function: operation-specific number
-- Method: METHOD_BUFFERED=0, METHOD_IN_DIRECT=1, METHOD_OUT_DIRECT=2, METHOD_NEITHER=3
-
-| IOCTL Constant | DeviceType | Access | Function | Method | Result |
-|---|---|---|---|---|---|
-| IOCTL_STORAGE_QUERY_PROPERTY | 0x2D | 0 | 0x09 | 0 | 0x2D1400 |
-| IOCTL_DISK_GET_DRIVE_GEOMETRY_EX | 0x07 | 0 | 0x28 | 0 | 0x700A0 |
-| IOCTL_DISK_GET_DRIVE_LAYOUT_EX | 0x07 | 0 | 0x14 | 0 | 0x70050 |
-| IOCTL_DISK_GET_PARTITION_INFO_EX | 0x07 | 0 | 0x12 | 0 | 0x70048 |
-| IOCTL_STORAGE_GET_DEVICE_NUMBER | 0x2D | 0 | 0x05 | 0 | 0x2D1080 |
-| IOCTL_DISK_PERFORMANCE | 0x07 | 0 | 0x08 | 0 | 0x70020 |
-| IOCTL_DISK_UPDATE_PROPERTIES | 0x07 | 0 | 0x40 | 0 | 0x70100 |
-
 ---
 
-### 46. STORAGE_GET_DEVICE_NUMBER (Path → Disk/Partition Mapping)
+### 43. STORAGE_GET_DEVICE_NUMBER (Path → Disk/Partition Mapping)
 
 ```wcs
 CALC &IOCTL_STORAGE_GET_DEVICE_NUMBER = shl(0x2D,16) | shl(0,14) | shl(0x05,2) | 0
@@ -1919,7 +2199,8 @@ Opening by device path: `\\.\C:` → returns partition info. Opening by `\\.\Phy
 
 ---
 
-### 47. Drive Layout Information EX (Full Disk Layout)
+
+### 44. Drive Layout Information EX (Full Disk Layout)
 
 ```wcs
 CALC &IOCTL_DISK_GET_DRIVE_LAYOUT_EX = shl(0x07,16) | shl(0,14) | shl(0x14,2) | 0  // 0x70050
@@ -1938,7 +2219,8 @@ Complete GPT type GUID table (23 entries): includes EBD0A0A2 (MS Basic Data), C1
 
 ---
 
-### 48. GetIfTable — Network Speed Monitoring
+
+### 45. GetIfTable — Network Speed Monitoring
 
 ```wcs
 ENVI$ &&buf=*0x1000 0
@@ -1954,54 +2236,7 @@ ENVI-addr ;&&bufsize=&&buf
 
 ---
 
-### 49. Offline Registry Full CRUD + Enumeration (Complete Package)
-
-```wcs
-// Load hive
-ENVI$ &&hResult=*4 0
-CALL $--qd --ret:&bret offreg.dll,ORLoadHive,$%&hivepath%,*&&hResult
-SET?int &&hResult=&&hKey:0
-
-// Read REG_SZ
-ENVI-copy &&lpData=&&null
-ENVI$# &&lpcbData=*4 0
-CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
-SET?int &&lpcbData=&&cbData:0
-ENVI$ &&lpData=*%&cbData% 0
-CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
-
-// Read REG_DWORD (type 4)
-ENVI$# &&dwData=*4 0
-ENVI$# &&lpcbData=*4 4
-CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#4,*&&dwData,*&&lpcbData
-
-// Read REG_QWORD (type 11)
-ENVI$# &&qwData=*8 0
-ENVI$# &&lpcbData=*8 8
-CALL $--qd --ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#11,*&&qwData,*&&lpcbData
-
-// Write: same pattern but ORSetValue
-
-// Enumerate subkeys
-CALL $--qd --ret:&bret offreg.dll,ORQueryInfoKey,%&hKey%,$#0,*&&cSubKeys,*&&cValues,*&&maxSubKeyLen,*&&lpcbMaxValNameLen,*&&lpcbMaxValLen,*&&lpcbSecurityDescriptor,*&&lpftLastWriteTime
-CALC #&&KeySize=%&maxSubKeyLen%*2
-ENVI$# &&cSubKeys=*4 0
-ENVI$ &&lpName=*%&KeySize% 0
-ENVI$# &&lpcchName=*4 %&KeySize%
-CALL $--qd --ret:&bret offreg.dll,OREnumKey,%&hKey%,%&i%,*&&lpName,*&&lpcchName,#0,#0,#0
-
-// Save hive (use correct NT version number)
-CALL $--qd --ret:&bret offreg.dll,ORSaveHive,%&hKey%,$%&savepath%,#%&MajorVersion%,#%&MinorVersion%
-
-// Unload
-CALL $--qd --ret:&bret offreg.dll,ORCloseKey,%&hKey%
-```
-
-Backup-before-write safety: copy hive file → operate → if success delete backup, else restore from backup.
-
----
-
-### 50. FVAR Secure Boot (Direct EFI Variable)
+### 46. FVAR Secure Boot (Direct EFI Variable)
 
 ```wcs
 // Method 1: Direct EFI global variable read (simplest)
@@ -2011,7 +2246,8 @@ ENVI ?&ret=FVAR,SecureBoot;{8be4df61-93ca-11d2-aa0d-00e098032b8c}
 // Method 2: NtQuerySystemInformation #145 (already in codebook section 37)
 ```
 
-### 51. SITE fattr — File Attribute Bitmask Decoding
+
+### 47. SITE fattr — File Attribute Bitmask Decoding
 
 ```wcs
 SITE ?,,,,var=fattr,"C:\Windows\notepad.exe"
@@ -2030,7 +2266,8 @@ CALC &isCompressed=%&var% & 0x800
 
 ---
 
-### 52. WiFi Connect + Tray UI Pattern
+
+### 48. WiFi Connect + Tray UI Pattern
 
 Combined ADSL-wlan + TABL + minimize-to-tray typical pattern:
 
@@ -2057,10 +2294,11 @@ _END
 
 ---
 
-### 53. Display Mode Presets with Timeout
+
+### 49. Display Mode Presets with Timeout
 
 ```wcs
-_ENVI &&curDisp=
+ENVI &&curDisp=
 SUBM * &&curDisp
 DISP W%&w%H%&h%B%&b%F%&f% T10    // apply with 10s countdown
 FIND $%&YesNo%=NO,
@@ -2077,32 +2315,7 @@ _END
 
 ---
 
-### 43. EFI Boot Entry Management (FVAR UEFI NVRAM)
-
-```wcs
-// Read EFI firmware variable
-ENVI ?&var=FVAR,Boot0000;{8be4df61-93ca-11d2-aa0d-00e098032b8c}
-
-// Write EFI firmware variable
-ENVI ?-v =FVAR+,BootXXXX,&&buf   // create/modify boot entry
-
-// Get buffer byte length
-ENVI-addr ;&len=&&buf
-
-// Create view into buffer at offset (FVAR data starts at offset)
-ENVI-mkdummy &&view=&&buf@8
-
-// 16-bit WORD access for BootOrder entries
-SET?short &buf=&val:offset
-
-// Need SeSystemEnvironmentPrivilege to write
-CALL $--qd --ret:&bret ntdll.dll,RtlAdjustPrivilege,#22,#1,#0,&&pEnabled
-
-// Boot entry ID naming: Boot%IDXX% where IDXX = BootID + 0x100000
-// Clean empty IDs, compact BootOrder array
-```
-
-### 54. QueryDosDeviceW — All MS-DOS Devices
+### 50. QueryDosDeviceW — All MS-DOS Devices
 
 ```wcs
 ENVI$ &&buf=*0x100000 0
@@ -2114,7 +2327,8 @@ LPOS* * &&pos=0x00 0x00 0x00 0x00,1,&&buf
 CODE ***unicode,**.buf,*uni,&&result
 ```
 
-### 55. RtlGetNtVersionNumbers (Pointer-Based)
+
+### 51. RtlGetNtVersionNumbers (Pointer-Based)
 
 ```wcs
 ENVI$# &&Major=*4 0
@@ -2127,7 +2341,8 @@ SET?int &&Build=&&Build:0
 CALC &BuildNumber=%&Build% & 0xFFFF   // mask high 16 bits
 ```
 
-### 56. ScrollBar via GetScrollInfo API
+
+### 52. ScrollBar via GetScrollInfo API
 
 ```wcs
 SET &SIF_RANGE=0x0001
@@ -2151,6 +2366,30 @@ CALC &&col=ceil(%&nPos% / %&ColumnWidth%) + 1
 SET @@sendmsg=%&TBID%;%&lvm_scroll%;%&Pos%;0
 // Or scroll to row: SET @@sendmsg=%&TBID%;%&lvm_ensurevisible%;%&index%;0
 ```
+
+---
+
+### 56. Generic IOCTL Code Construction
+
+The universal formula for computing any IOCTL control code:
+```
+IOCTL = shl(DeviceType, 16) | shl(Access, 14) | shl(Function, 2) | Method
+```
+Where:
+- DeviceType: FILE_DEVICE_ prefix value (e.g., 0x2D for storage)
+- Access: FILE_READ_ACCESS=0, FILE_WRITE_ACCESS=1, FILE_ANY_ACCESS=0
+- Function: operation-specific number
+- Method: METHOD_BUFFERED=0, METHOD_IN_DIRECT=1, METHOD_OUT_DIRECT=2, METHOD_NEITHER=3
+
+| IOCTL Constant | DeviceType | Access | Function | Method | Result |
+|---|---|---|---|---|---|
+| IOCTL_STORAGE_QUERY_PROPERTY | 0x2D | 0 | 0x09 | 0 | 0x2D1400 |
+| IOCTL_DISK_GET_DRIVE_GEOMETRY_EX | 0x07 | 0 | 0x28 | 0 | 0x700A0 |
+| IOCTL_DISK_GET_DRIVE_LAYOUT_EX | 0x07 | 0 | 0x14 | 0 | 0x70050 |
+| IOCTL_DISK_GET_PARTITION_INFO_EX | 0x07 | 0 | 0x12 | 0 | 0x70048 |
+| IOCTL_STORAGE_GET_DEVICE_NUMBER | 0x2D | 0 | 0x05 | 0 | 0x2D1080 |
+| IOCTL_DISK_PERFORMANCE | 0x07 | 0 | 0x08 | 0 | 0x70020 |
+| IOCTL_DISK_UPDATE_PROPERTIES | 0x07 | 0 | 0x40 | 0 | 0x70100 |
 
 ---
 
@@ -2250,6 +2489,82 @@ Patterns 43-60 above use the same PECMD2012 API as patterns 1-42. Both `SET-long
 
 ---
 
+
 ## Notes on Chinese Variable Naming
 
 Real PECMD code from the Chinese WinPE community overwhelmingly uses Chinese variable names. This is the de facto standard. When writing scripts for this ecosystem, use Chinese names like `全部磁盘`, `分区信息`, `盘符`, `磁盘类型`, etc. However, PECMD fully supports English variable names and you may use either convention depending on the target audience. The code patterns above intentionally mix both to show both styles are valid.
+
+---
+
+## Pattern Index
+
+| # | Pattern | Description |
+|---|---------|-------------|
+| 1 | Disk Enumeration & Information | List disks, partitions, map drive letters |
+| 2 | Device Enumeration via Win32 API | SetupAPI enumeration, IOCTL calls |
+| 3 | Boot Environment & System Info | BIOS/UEFI, Secure Boot, WinPE detection |
+| 4 | File & Config Operations | READ, WRITE, GETF#, INI parsing |
+| 5 | Registry Operations | REGI read/write/enum, all types |
+| 6 | Process & Program Execution | EXEC*, callbacks, sub-PECMD |
+| 7 | GUI Patterns | Window templates, TABL, LIST, SWIN |
+| 8 | Threading & Async | THREAD*, POSTMSG, shared flags |
+| 9 | Single Instance / Mutex Pattern | LOCK mutex, window restore |
+| 10 | Hotkey Registration | HKEY, system-wide shortcuts |
+| 11 | String Manipulation | MSTR, SED, LPOS, RPOS, RSTR |
+| 12 | Dynamic Variables & Arrays | Indirect deref, delayed expansion |
+| 13 | Timer & Scheduler Patterns | TIME, one-shot, variable callbacks |
+| 14 | Compound Conditions & Flow Control | IFEX/FIND compound, EXIT variants |
+| 15 | Encryption & Hashing | BASE, HASH, CMPS |
+| 16 | Network Operations | IP config, WiFi scan/connect, ping |
+| 17 | Date/Time | DATE, TIME, DTIM |
+| 18 | Math & Calculation | CALC integer/float/hex |
+| 19 | Cross-Process Window Control | ENVI @@Visible, ENVI @@POS |
+| 20 | PART Operations (full toolkit patterns) | Partition management toolkit |
+| 21 | Resource Embedding & Extraction | LOAD #ID, EXEC* -exe:#ID |
+| 22 | System Tray Icon (Full Handler) | TIPS*, WM_TRAYNOTIFY handler |
+| 23 | System Power & Display Control | SHUT, DISP, SCRN |
+| 24 | Directory Search Across All Drives (FORX @) | FORX @ |
+| 25 | Offline Registry (Full CRUD) | offreg.dll API |
+| 26 | Window Style Flags & Window Hiding | -nocap, -trap, ENVI @@Visible |
+| 27 | BROW — File/Directory Browse Dialog | Save/open/folder dialogs |
+| 28 | SUBJ — Mount/Unmount Drive Letters | Drive letter assignment |
+| 29 | NET & Network Card Operations | PCIP query/set |
+| 30 | SEND / WAIT -cont — Keyboard | Send keys, wait for keypress |
+| 31 | Multi-Part Color Format | 4-part color for hover effects |
+| 32 | SWIN Nested Windows (Tab Pages) | TABS + SWIN property pages |
+| 33 | Dynamic Row Creation & Batch Deletion | Runtime control creation & loop deletion |
+| 34 | Parameter Validation Guard | Early-exit argument guards |
+| 35 | MSTR String Splitting — All Practical Variants | Complete MSTR parsing cookbook |
+| 36 | TABL Scrollbar Control via LVM Messages | LVM_SCROLL, LVM_ENSUREVISIBLE messages |
+| 37 | TABL In-Row Sorting (Bubble Sort) | Bubble sort on table data |
+| 38 | Custom Title Bar Window (Frameless + Manual Caption) | Frameless window with manual caption |
+| 39 | Struct Array Traversal (API Return Data) | API struct array enumeration |
+| 40 | EFI Boot Entry Management (FVAR UEFI NVRAM) | FVAR read/write UEFI NVRAM boot entries |
+| 41 | SSD Detection (Seek Penalty Query) | IOCTL_STORAGE_QUERY_PROPERTY seek penalty |
+| 42 | TRIM Support Detection | IOCTL_STORAGE_QUERY_PROPERTY trim support |
+| 43 | STORAGE_GET_DEVICE_NUMBER (Path → Disk/Partition Mapping) | Path-to-disk/partition mapping via IOCTL |
+| 44 | Drive Layout Information EX (Full Disk Layout) | IOCTL_DISK_GET_DRIVE_LAYOUT_EX MBR/GPT |
+| 45 | GetIfTable — Network Speed Monitoring | GetIfTable API real-time speed query |
+| 46 | FVAR Secure Boot (Direct EFI Variable) | Direct EFI global variable read/write |
+| 47 | SITE fattr — File Attribute Bitmask Decoding | File attribute bitmask decode with CALC |
+| 48 | WiFi Connect + Tray UI Pattern | ADSL-wlan + TABL + minimize-to-tray |
+| 49 | Display Mode Presets with Timeout | DISP preset + countdown revert |
+| 50 | QueryDosDeviceW — All MS-DOS Devices | DOS device path enumeration via API |
+| 51 | RtlGetNtVersionNumbers (Pointer-Based) | Windows version detection via pointer |
+| 52 | ScrollBar via GetScrollInfo API | SCROLLINFO struct + column pixel control |
+| 56 | Generic IOCTL Code Construction | CTL_CODE macro via bit shifts |
+| 57 | Win32 API Two-Call Buffer Pattern | Get-size → allocate → call-again template |
+| 58 | GUID Byte-Swap via SED Regex (CLSIDFromString Fallback) | CLSIDFromString fallback for minimal PE |
+| 59 | WndProc Binding for Win32 Callbacks | SET^ to register _SUB as WndProc callback |
+| 60 | WM_COMMAND + EN_CHANGE Edit Monitoring | Edit control change notification handler |
+| 61 | WM_MOUSEHOVER/LEAVE Hover Tooltips | Hover/leave state tooltips on controls |
+| 62 | WM_SIZE Responsive Layout with Saved Positions | DPI-aware resize with saved positions |
+| 63 | LoadLibraryExW for Resource-Only Loading | Load DLL for resources without execution |
+| 64 | TREE Control (Hierarchical Node View) | TreeView with icons, checkboxes, expand/collapse |
+| 65 | SOCK Networking (TCP/UDP Client-Server) | TCP/UDP socket, shared memory, named pipe |
+| 66 | COM/WMI Object Automation | CoCreateInstance, WMI query, vtable dispatch |
+| 67 | GDI Painting (WM_PAINT Drawing) | GDI primitives in WM_PAINT callback |
+| 68 | PBAR / SPIN Controls (Progress Bar & Up-Down) | Progress bar color/text + up-down spinner |
+| 69 | WM_DROPFILES Drag-and-Drop | File drag-and-drop handler for windows/controls |
+| 70 | RICHEDIT Rich Text Formatting | Rich text color, font, range formatting |
+| 71 | IMAG Advanced (GIF Animation & Dynamic Update) | Animated GIF, dynamic image update, image button |

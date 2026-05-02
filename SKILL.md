@@ -721,7 +721,7 @@ SET~ &&val=Arr.%&row%.%&col%                          // indirect read
 10. **Line continuation**: `\` as the first non-space character on a line merges that line with the previous one (continuation).
 11. **`_SUB` on separate lines**: Cannot define `_SUB` inside FIND/IFEX/TEAM commands.
 12. **Dashed names in CALL**: `FIND-JPG` as a command name is illegal (dash starts suffix). Use `CALL FIND-JPG` explicitly.
-13. **Empty string check**: `FIND $=%var%,` — when the left side of `$` is empty and right side is a variable, this tests "is not empty". `FIND $%var%=,` tests "is empty".
+13. **Empty string check**: `FIND $%var%=,` tests "is empty" (expanded var equals nothing). `FIND *=var,` tests "is not empty" (wildcard match on variable name).
 14. **Literal %**: Use `%%` to represent a literal `%` in strings.
 15. **Exit codes**: PECMD.exe exit code = last command's error code. 0=success, other=failure.
 16. **Thread safety**: Threads receive a COPY of the parent's PE variables at creation time. Use `&::` variables for true inter-thread sharing. Never share environment variables across threads.
