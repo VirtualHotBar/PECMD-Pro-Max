@@ -8,6 +8,8 @@
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
+Source: [github.com/VirtualHotBar/PECMD-Pro-Max](https://github.com/VirtualHotBar/PECMD-Pro-Max)
+
 ## What is this?
 
 PECMD Pro Max is a **Claude Code skill** that teaches AI coding assistants to write correct PECMD2012 scripts. PECMD is the WinPE Commander — a scripting language and command interpreter used for Windows PE boot scripts, lightweight GUI system tools, disk utilities, and pre-install environment automation. Its variable scope rules, hex memory model, and window system are notoriously tricky. This skill encodes 10+ years of PECMD scripting knowledge so your AI assistant can write production-ready `.wcs` / `.wci` / `.wce` files without the usual trial-and-error.
