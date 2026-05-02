@@ -738,5 +738,9 @@ When writing PECMD scripts and tools, follow these conventions:
 11. Window messages on controls use `_` prefix (`_0x0201`); window-level messages omit `_` (`0x0010`)
 12. Use `SED` for string manipulation and `MSTR` for field extraction from structured command output
 
+
+---
+
+
 GitHub: https://github.com/VirtualHotBar/PECMD-Pro-Max
 ClawHub: https://clawhub.ai/virtualhotbar/pecmd-pro-max

@@ -8,9 +8,6 @@
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
-源码仓库：[github.com/VirtualHotBar/PECMD-Pro-Max](https://github.com/VirtualHotBar/PECMD-Pro-Max)
-ClawHub：[clawhub.ai/virtualhotbar/pecmd-pro-max](https://clawhub.ai/virtualhotbar/pecmd-pro-max)
-
 ## 这是什么？
 
 PECMD Pro Max 是一个 **AI 编码助手技能文件**，教会 AI 如何编写正确的 PECMD2012 脚本。PECMD 是 WinPE 指挥官 —— 一种用于 Windows PE 启动脚本、轻量级 GUI 系统工具、磁盘实用程序和预安装环境自动化的脚本语言与命令解释器。其变量作用域规则、十六进制内存模型和窗口系统以复杂著称。本技能编码了十多年的 PECMD 脚本知识，让 AI 助手能够一次写出生产就绪的 `.wcs` / `.wci` / `.wce` 文件，无需反复试错。
@@ -75,3 +72,9 @@ CALL @MainWin
 ## 协议
 
 **NonCopyRight** —— 本技能完全自由、开源、无限制。随意使用、修改、用于商业产品。无需署名。无任何限制。
+
+---
+
+源码仓库：[github.com/VirtualHotBar/PECMD-Pro-Max](https://github.com/VirtualHotBar/PECMD-Pro-Max)
+
+ClawHub：[clawhub.ai/virtualhotbar/pecmd-pro-max](https://clawhub.ai/virtualhotbar/pecmd-pro-max)
