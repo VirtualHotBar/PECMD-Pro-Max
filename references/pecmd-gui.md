@@ -1341,3 +1341,656 @@ This example demonstrates:
 - Timer (TIME) for periodic updates
 - OK/Cancel buttons with event handlers
 - Full message flow through CALL handlers
+
+
+---
+
+## 8. GUI Code Recipes
+
+For practical GUI patterns (dynamic controls, tab pages, custom titlebar, GDI drawing, drag-drop, etc.), see [recipes/gui.md](recipes/gui.md).
+
+---
+
+## 9. Advanced Techniques
+## 9. Advanced Techniques
+
+### 9.1 Window-to-Tray Lifecycle
+
+```wcs
+_SUB OnSize                                         // WM_SIZE handler
+    IFEX $%&SIZE_MINIMIZED%=%1, OnHide              // minimize → hide window
+_END
+
+_SUB OnHide
+    ENVI @@Visable=%&WID%:0                         // hide without closing
+    TIPS* ,Status message,,,tray_icon.dll#1
+_END
+
+_SUB OnSwitch                                       // toggle visibility
+    ENVI @@Visable=?%&WID%:&&zzView
+    FIND |%&zzView%=0, ENVI @@Visable=%&WID%:1
+    ! ENVI @@Visable=%&WID%:0
+_END
+```
+
+### 9.2 SendMessage: ListView EnsureVisible
+
+Scroll a TABL to ensure a specific row is visible:
+
+```wcs
+set lvm_first=0x1000
+calc #lvm_ensurevisible=(%lvm_first% + 19)
+
+_SUB 滚动到行
+    ^calc #inx=%要选中的行% - 1                       // 0-based index
+    set @TABL.sendmsg=%lvm_ensurevisible%;%inx%;0
+_END
+```
+
+### 9.3 Window Auto-Position at Screen Edge
+
+Position a window at the right edge of the screen (used in WiFi tools):
+
+```wcs
+SCRN ScrW,ScrH                                       // get screen size
+CALC #ScrH=%ScrH% - %B_TRIM%                         // subtract taskbar height
+
+CALC &WinL=%ScrW%-%WinW%                              // right-aligned
+CALC &WinT=160
+CALC &WinH=%ScrH%-5
+
+_SUB Win,L%WinL%T%WinT%W%WinW%H%WinH%,Title
+_END
+```
+
+### 9.4 Taskbar Height Detection
+
+```wcs
+ENVI &B_TRIM=40                                       // fallback
+FIND --wid*@ &&all_win
+FORX *NL &&all_win,&&tray_win,
+{
+    MSTR &&win_type=<7>%tray_win%
+    FIND $%win_type%=Shell_TrayWnd,
+        TEAM MSTR &taskbar_wid=<2>%tray_win%|
+             ENVI @@POS=?%taskbar_wid%::::&B_TRIM
+}
+
+SCRN ScrW,ScrH
+CALC #ScrH=%ScrH% - %B_TRIM%                         // usable screen height
+```
+
+### 9.5 Network Adapter Enumeration
+
+Iterate all valid NICs (skip virtual adapters):
+
+```wcs
+_SUB GetNetStatus
+    ENVI NIC=0
+    ENVI &msg_all=
+    ENVI &net_icon=pnidui.dll#0                       // default icon
+    LOOP #1=1,
+    {
+        PCIP ?* IP,MASK,GW,DNS,%NIC%?NAME,MAC,LINK,...,TYPE
+        LSTR &&valid_name=1,%NAME%
+        FIND $%&valid_name%={,!EXIT LOOP              // NAME starts with { → invalid
+        LSTR &&virtual_mac=11,%MAC%
+        FIND $%&virtual_mac%=00-50-56-C0,!            // skip VMware adapters
+        {
+            FIND #%STATUS%=2, ENVI &&msg1=%LINK%\n%IP%
+            ! ENVI &&msg1=%LINK%\n未连接
+            ENVI &msg_all=%msg_all%%&msg1%\n\n
+        }
+        CALC NIC=%NIC%+1
+    }
+_END
+```
+
+### 9.6 Disk / Partition Info
+
+```wcs
+// Enumerate all drive letters:
+FDRV AllDrive=                                        // available drive letters
+FDRV AllDrive=*:                                      // existing volumes
+
+// Check partition type (ESP GUID = C12A7328-F81F-11D2-BA4B-00A0C93EC93B):
+PART -phy# LIST drv Z:,&&V
+MSTR id=5,36,%&V%                                      // extract GUID (bytes 5-40)
+MSTR EFIPF=-4,2,%&V%                                   // extract partition number
+FIND $%id%=C12A7328-F81F-11D2-BA4B-00A0C93EC93B,
+    MESS This is the ESP partition
+
+// Mount ESP with mountvol:
+EXEC!=!mountvol.exe Z: /S                              // mount ESP as Z:
+SUBJ -Z:                                                // dismount
+```
+
+### 9.7 Stealth / Hidden Taskbar
+
+```wcs
+// Hide taskbar:
+FIND --class:Shell_TrayWnd --wid*@ &任务栏
+MSTR* id=<2>%&任务栏%
+ENVI @@visible=%id%:0                                   // hide
+// ENVI @@visible=%id%:1                                // show
+```
+
+---
+
+## 10. API Call Integration
+
+Calling Win32 APIs directly from PECMD scripts for deep system access.
+
+### 10.1 DLL Function Call Syntax
+
+```wcs
+CALL $--qd --ret:&&ReturnVar DLL_Path,FunctionName,[param1],[param2],...
+```
+
+**Common flags:**
+
+| Flag | Purpose |
+|------|---------|
+| `--qd` | Quiet mode (suppress errors) |
+| `--bool` | Function returns BOOL type |
+| `--ret:var` | Save return value to variable |
+| `--cd` | Switch to DLL directory before calling |
+
+**Parameter types:**
+
+| Prefix | Type | Example |
+|--------|------|---------|
+| `#N` | Integer | `#0`, `#%&handle%` |
+| `$string` | Wide string (UTF-16) | `$一些文字` |
+| `@string` | ANSI string | `@text` |
+| `*buffer` | Pointer to buffer | `*&buf` |
+
+### 10.2 Buffer Operations
+
+```wcs
+// Allocate zero-filled buffer
+SET$# &buf=*4096 0                        // 4096 bytes of zeros
+
+// Write integer to buffer at offset
+SET-long &buf=value:offset                // write DWORD
+SET-ptr &buf=value:offset                 // write pointer-sized value
+
+// Read from buffer
+SET?int &buf=&&var:offset                 // read DWORD
+SET?longlong &buf=&&var:offset            // read QWORD
+SET?ptr &buf=&&var:offset                 // read pointer
+SET?short &buf=&&var:offset              // read WORD
+SET?byte &buf=&&var:offset               // read BYTE
+
+// Extract string from buffer
+SET-make &str=&buf@offset;length          // copy null-terminated string
+
+// Memory copy
+SET-copy &dest=&src;srcOff;len;destOff    // copy between buffers
+```
+
+### 10.3 SCROLLINFO Structure Pattern
+
+A recurring pattern for scrollbar control (7 DWORDs = 28 bytes):
+
+```wcs
+// SCROLLINFO: cbSize, fMask, nMin, nMax, nPage, nPos, nTrackPos
+// Offsets:       0       4      8     12    16     20       24
+
+SET$# &lpsi=*28 0                         // allocate
+SET-long &lpsi=%&sif_all%:4               // fMask at offset 4
+SET-long &lpsi=%&nMax%:12                 // nMax at offset 12
+
+CALL $--qd --bool --ret:&&bret User32.dll,SetScrollInfo,
+    #%&hwnd%,#%&sb_vert%,*&lpsi,#1
+
+// Read back:
+SET?int &lpsi=&&nPos:20                   // nPos at offset 20
+```
+
+### 10.4 GetIfTable (Network Traffic)
+
+Two-call pattern: get required size → allocate → get data:
+
+```wcs
+// 1st call: get size
+CALL $--qd --ret:&&ret Iphlpapi.dll,GetIfTable,*0,*&dwSize,#0
+
+// Allocate
+SET$# &pIfTable=*%&dwSize% 0
+
+// 2nd call: get data
+CALL $--qd --ret:&&ret Iphlpapi.dll,GetIfTable,*&pIfTable,*&dwSize,#1
+
+// Parse MIB_IFROW (each entry = 860 bytes starting at offset 4)
+// dwInOctets at offset 552, dwOutOctets at offset 576
+SET?int &pIfTable=&&dwIn:(4 + %i% * 860 + 552)
+SET?int &pIfTable=&&dwOut:(4 + %i% * 860 + 576)
+
+// Calculate speed (difference per second × 8 = bps)
+CALC &&down_bps=(%&dwIn% - %&lastIn%) * 8
+```
+
+### 10.5 DeviceIoControl (Disk Control)
+
+```wcs
+// Open physical drive
+CALL $--qd --ret:&&h Kernel32.dll,CreateFileW,
+    $\\.\PhysicalDrive0,              // device path
+    #0xC0000000,                      // GENERIC_READ | GENERIC_WRITE
+    #3,                               // FILE_SHARE_READ | FILE_SHARE_WRITE
+    #0,                               // no security
+    #3,                               // OPEN_EXISTING
+    #128,                             // FILE_ATTRIBUTE_NORMAL
+    #0                                // no template
+
+// IOCTL_STORAGE_QUERY_PROPERTY
+CALL $--qd --ret:&&ret Kernel32.dll,DeviceIoControl,
+    #%&h%,                            // handle
+    #0x2D1400,                        // IOCTL code
+    *&lpInBuffer,                     // input buffer
+    #%&inSize%,                       // input size
+    *&lpOutBuffer,                    // output buffer
+    #%&outSize%,                      // output size
+    *&lpBytesReturned,                // bytes returned
+    #0                                // no overlapped
+
+CALL $--qd --bool Kernel32.dll,CloseHandle,#%&h%
+```
+
+### 10.6 SetupAPI (Device Enumeration)
+
+```wcs
+// GUID for disk drives: {53f56307-b6bf-11d0-94af-0000c09ef10b}
+// Layout (little-endian): [4B Data1][2B Data2][2B Data3][8B Data4]
+SET$# &guid=*16 0
+SET-long &guid=0x53F56307:0       // Data1 — bytes 0-3
+SET-long &guid=0x11D0B6BF:4       // Data2(2B) + Data3(2B) as one DWORD — bytes 4-7
+SET-long &guid=0x0000AF94:8       // Data4[0..3]: 0x94 0xAF 0x00 0x00 — bytes 8-11
+SET-long &guid=0x0BF19EC0:12      // Data4[4..7]: 0xC0 0x9E 0xF1 0x0B — bytes 12-15
+
+// Get device list
+CALL $--qd --ret:&&h Setupapi.dll,SetupDiGetClassDevsW,
+    *&guid,#0,#0,#18                 // DIGCF_PRESENT | DIGCF_DEVICEINTERFACE
+
+// Enumerate
+ENVI &&i=0
+LOOP #1=1,
+{
+    CALL $--qd --bool --ret:&&ret Setupapi.dll,SetupDiEnumDeviceInterfaces,
+        #%&h%,#0,*&guid,#%&i%,*&data
+    FIND $%&ret%=0, EXIT LOOP
+
+    // Get detail
+    CALL $--qd --ret:&&ret Setupapi.dll,SetupDiGetDeviceInterfaceDetailW,
+        #%&h%,*&data,#0,#0,*&size,#0
+    // ... allocate and call again ...
+    CALC &&i=%&i%+1
+}
+
+CALL $--qd --bool Setupapi.dll,SetupDiDestroyDeviceInfoList,#%&h%
+```
+
+### 10.7 EnumResourceNames Callback Pattern
+
+```wcs
+// Bind callback function
+SET^ OnEnumProc,&&callbackAddr
+
+// Load DLL and enumerate
+CALL $--qd --ret:&&hMod Kernel32.dll,LoadLibraryExW,
+    $%file%,#0,#0x22                // LOAD_LIBRARY_AS_DATAFILE
+
+CALL $--qd --bool Kernel32.dll,EnumResourceNamesW,
+    #%&hMod%,#14,                    // RT_GROUP_ICON = 14
+    #%&callbackAddr%,#0
+
+CALL $--qd --bool Kernel32.dll,FreeLibrary,#%&hMod%
+
+// Unbind
+SET^ OnEnumProc=0
+
+// Callback function (receives: hModule, lpszType, lpszName, lParam)
+_SUB OnEnumProc
+    // Extract resource ID
+    ^CALC #&&id=%~3
+    // Return 1 to continue enumeration
+    EXIT _SUB 1
+_END
+```
+
+### 10.8 COM / GUID Operations
+
+```wcs
+// Create GUID (16-byte buffer)
+SET$# &guid=*16 0
+CALL $--qd --ret:&&ret Ole32.dll,CoCreateGuid,*&guid
+
+// GUID → string (allocated by COM, must free with CoTaskMemFree)
+SET$# &lplpsz=*8 0
+CALL $--qd --ret:&&ret Ole32.dll,StringFromCLSID,*&guid,*&lplpsz
+// pString now at address stored in lplpsz; CoTaskMemFree to clean up
+
+// String → GUID
+SET$# &pclsid=*16 0
+CALL $--qd --ret:&&ret Ole32.dll,CLSIDFromString,
+    ${GUID-string},*&pclsid
+
+// Free COM-allocated memory
+CALL $--qd Ole32.dll,CoTaskMemFree,*&lplpsz
+
+// DPI query (using desktop DC)
+CALL $--qd --ret:&&hdc User32.dll,GetDC,#0          // desktop HWND
+CALL $--ret:&&LogPx Gdi32.dll,GetDeviceCaps,#%&hdc%,#88  // LOGPIXELSX
+CALL $--qd User32.dll,ReleaseDC,#0,#%&hdc%
+CALC &DPI=%&LogPx% / 96
+```
+
+
+---
+
+## 11. System & Disk Operations
+
+For disk/partition/file/registry operations, see [commands-full.md](commands-full.md).
+
+For code recipes, see [recipes/storage.md](recipes/storage.md) and [recipes/system.md](recipes/system.md).
+
+---
+
+## 12. Supplementary Techniques
+## 12. Supplementary Techniques
+
+### 12.1 Execution Lock Pattern
+
+Prevents re-entry while an operation is in progress:
+
+```wcs
+_SUB StartOperation
+    // Lock
+    ENVI &&RUNNING=1
+    ENVI @BtnExec.Enable=0
+    ENVI @Tabs1.Enable=0
+    TIME Timer1,500,CALL UpdateProgress
+
+    // ... long operation ...
+
+    // Unlock
+    ENVI @Timer1=0
+    ENVI @BtnExec.Enable=1
+    ENVI @Tabs1.Enable=1
+    ENVI &&RUNNING=0
+_END
+```
+
+### 12.2 THREAD* Background Work
+
+```wcs
+_SUB MainWin,W300H200,Title
+    // Register completion handler
+    ENVI @this.MSG=#1: CALL OnTaskDone
+    // Launch background thread
+    THREAD* CALL LongTask
+_END
+
+// Long-running task in background
+_SUB LongTask
+    // ... heavy work ...
+    // Notify main window when done
+    ENVI @MainWin.POSTMSG=#1
+_END
+
+_SUB OnTaskDone
+    MESS Task complete!
+_END
+```
+
+### 12.3 ENVI-ret Return Value Pattern
+
+Pass a variable name as parameter and set it via `ENVI-ret`:
+
+```wcs
+// Calling code:
+CALL GetDriveInfo &&result
+
+// Called function:
+_SUB GetDriveInfo
+    // ... compute ...
+    ENVI-ret %~1=最终结果值
+_END
+```
+
+### 12.4 SET^ Callback Binding
+
+Bind a `_SUB` function as a Win32 callback (for EnumResourceNames, EnumWindows, etc.):
+
+```wcs
+// 1. Bind: creates a callable address from a _SUB
+SET^ OnMyCallback,&&addr
+
+// 2. Use in API call
+CALL $--qd --bool Kernel32.dll,SomeEnumFunction,
+    #%&h%,#%&addr%,#0
+
+// 3. Unbind when done
+SET^ OnMyCallback=0
+
+// 4. The callback function:
+_SUB OnMyCallback
+    // Parameters from Win32:
+    //   %1 = first arg, %2 = second arg, etc.
+    // Return non-zero to continue, 0 to stop
+    ENVI @@RET=1                         // set return value
+_END
+```
+
+### 12.5 Scroll Bar Pixel Control (SendMessage)
+
+```wcs
+CALC &&LVM_SCROLL=0x1000 + 20
+CALC &&LVM_ENSUREVISIBLE=0x1000 + 19
+
+// Scroll horizontally to pixel position
+SET @@sendmsg=%&hwnd%;%&LVM_SCROLL%;%pixels%;0
+
+// Ensure row is visible
+CALC #&&idx=%targetRow% - 1              // 0-based index
+SET @@sendmsg=%&hwnd%;%&LVM_ENSUREVISIBLE%;%&idx%;0
+```
+
+### 12.6 DPI Aware Window
+
+```wcs
+_SUB MainWin,L0T0W500H400,Title,,,,#,-ntab
+    // Set DPI awareness
+    CALL $--qd --bool --ret:&&r User32.dll,
+        SetProcessDpiAwarenessContext,#-4   // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE
+
+    // Query DPI
+    CALL $--ret:&&hdc User32.dll,GetDC,#%&__WinID%
+    CALL $--ret:&&dpi Gdi32.dll,GetDeviceCaps,#%&hdc%,#88
+    CALC &&scale=%&dpi% / 96
+
+    // Scale coordinates
+    CALC &&w=500 * %&scale%
+    CALC &&h=400 * %&scale%
+    ENVI @this.POS=:0::%&w%:%&h%          // resize window
+
+    // Set DPI scaled font
+    ENVI @this.Font=%&dpi%:Microsoft YaHei
+_END
+```
+
+### 12.7 Timer Countdown + Auto-Revert
+
+From the resolution adjustment tool:
+
+```wcs
+TEAM ENVI &&COUNT=0|ENVI &&SECONDS=20
+
+_SUB MainWin,W340H270,分辨率调节,,shell32.dll#43,,
+    PBAR PBar1,L18T15W100H13,1
+    LABE LabelK,L130T15W180H12,20秒后恢复
+
+    // ... resolution radio buttons ...
+
+    ITEM Button1,L30T150W125H40,应用更改,CALL ApplyRes
+    TIME TimerFill,200,CALL OnFill           // progress bar fill
+    TIME TimerCount,1000,CALL OnCount        // countdown
+_END
+
+_SUB OnFill
+    CALC &&COUNT=%&COUNT%+1
+    ENVI @PBar1=%&COUNT%
+_END
+
+_SUB OnCount
+    CALC &&SECONDS=%&SECONDS%-1
+    ENVI @LabelK=%&SECONDS%秒后恢复
+    IFEX $%&SECONDS%<1,
+    {
+        DISP                                    // auto-revert
+        ENVI @TimerCount=0
+    }
+_END
+```
+
+---
+
+## Appendix A: Control Style Flags Quick Reference
+
+| Control | Style (Hex) | Meaning | Source |
+|---------|-------------|---------|--------|
+| **EDIT** | `0x10` | Read-only | DISMGUI |
+| **EDIT** | `0x18` | Read-only + border | 打开方式 |
+| **EDIT** | `0x224` | Password + sunken border | WiFi_NEW |
+| **LIST** | `0x10` | Dropdown (non-editable) | 打开方式 |
+| **SWIN** | `0x100` | Auto vertical scrollbar | 打开方式 |
+| **TABL** | `0x416280` | Grid + full-row-select + sort-header + multi | 打开方式-TABL |
+| **TABL** | `0x10010` | Icons + single-select | WiFi_NEW |
+| **TABL** | `0x820` | Grid lines + full-row-select | demo |
+| **TABL** | `0x2000` | Editable cells | — |
+| **TABL** | `0x10000` | Sort by clicking header | 打开方式 |
+| **LABE** | (clickable) | Omit `-ncmd` for clickable | 打开方式 |
+| **LABE** | `-ncmd` | Non-clickable (static) | 打开方式 |
+
+---
+
+## Appendix D: File Header Standard Template
+
+```wcs
+#code=65001                                         // UTF-8 encoding
+ENVI^ EnviMode=1                                    // modern mode
+ENVI^ ForceLocal=1                                   // forced local vars
+SET$ &NL=0d 0a                                       // newline
+SET$ &TAB=09                                         // tab
+
+// ── Window Message Constants ──
+SET &::WM_LBUTTONDOWN=0x0201
+SET &::WM_RBUTTONDOWN=0x0204
+SET &::WM_LBUTTONUP=0x0202
+SET &::WM_LBUTTONDBLCLK=0x0203
+SET &::WM_MOUSEMOVE=0x0200
+SET &::WM_MOUSEHOVER=0x02A1
+SET &::WM_MOUSELEAVE=0x02A3
+SET &::WM_SIZE=0x0005
+SET &::WM_CLOSE=0x0010
+SET &::WM_DROPFILES=0x0233
+SET &::WM_TRAYNOTIFY=1109
+
+// ── Global Flags ──
+SET &::FLAG_RUNNING=0
+
+// ── Entry Point ──
+CALL @MainWindow
+EXIT FILE
+
+// ══════════════════════════════════════════
+//  Window Definitions
+// ══════════════════════════════════════════
+
+_SUB MainWindow,W500H400,Title
+    // controls ...
+_END
+
+// ══════════════════════════════════════════
+//  Event Handlers
+// ══════════════════════════════════════════
+
+// ══════════════════════════════════════════
+//  Helper Functions
+// ══════════════════════════════════════════
+```
+
+---
+
+## Appendix E: Best Practices Summary
+
+### Variable Management
+
+| Scope | Pattern | Usage |
+|-------|---------|-------|
+| Global constants | `SET &::NAME=value` | Cross-thread, readonly after init |
+| Module-level | `SET &var=value` | Within same `_SUB` scope |
+| Local (preferred) | `SET &&var=value` or `ENVI &&var=value` | Function-local, auto-cleaned |
+| Parameters | `%~1`, `%~2` | Use `%~N` for safe access |
+| Return value | `ENVI-ret %~N=%value%` | Caller: `CALL func &&result` |
+| Thread comms | `&::` prefix | Global vars for THREAD* coordination |
+
+### Safety & Error Handling
+
+- **Admin check**: `SET ?adminMODE=isadmin` → `IFEX $%adminMODE%<>1, MESS ... | EXIT`
+- **User confirm before destructive ops**: `MESS 确定要格式化？ #YN $N` + `FIND $%YESNO%=NO, EXIT`
+- **Disk number validation**: `CALC -err=-1 #disk=(%n%)+0` — if negative, invalid
+- **Lock running flag**: Prevent double-execution with `ENVI @Btn.Enable=0` + flag var
+- **Temp cleanup**: Always clean temp files after operations
+
+### UI Performance
+
+- **Batch table data**: Use `ENVI @Tbl.Val=1*;%data%` not row-by-row `ADD`
+- **Background loading**: `THREAD* CALL LoadData` + `POSTMSG` when done
+- **Destroy dynamic controls**: Before recreating, `ENVI @Ctrl.*del=` each old instance
+- **Timer cleanup**: `ENVI @TimerName=0` when no longer needed
+
+### Layout Conventions (from real code)
+
+- Group box: x = margin(9), y = 16, width = `(totalWidth - 2*margin)/N` - gap
+- Label inside group: x = group_x + 12, y = group_y + 27
+- Edit box: x = label_x + 70, same y as label
+- Browse button: right-aligned in group (group_x + group_width - 60)
+- Bottom buttons: right-aligned, y = window_height - 40
+
+---
+
+## Appendix F: ENVI @ Operation Quick Reference
+
+| Operation | Purpose | Example |
+|-----------|---------|---------|
+| `ENVI @Ctrl=Text` | Set text | `ENVI @Label1=Hello` |
+| `ENVI @Ctrl.Enable=0` | Disable | `ENVI @Btn1.Enable=0` |
+| `ENVI @Ctrl.Visible=0` | Hide | `ENVI @Panel1.Visible=0` |
+| `ENVI @Ctrl.Visible=1` | Show | `ENVI @Panel1.Visible=1` |
+| `ENVI @Ctrl.POS=L:T:W:H` | Move/resize | `ENVI @Btn1.POS=10:20:80:28` |
+| `ENVI @Ctrl.POS=?L:T:W:H` | Query position | `ENVI @this.POS=?;&l;&t;&w;&h` |
+| `ENVI @Ctrl.bkcolor=0xRRGGBB` | Background color | `ENVI @Lbl1.bkcolor=0xf0f0f0` |
+| `ENVI @Ctrl.Font=12:微软雅黑` | Font | `ENVI @this.Font=10:Tahoma` |
+| `ENVI @Ctrl.Check=1` | Checkbox on | `ENVI @Chk1.Check=1` |
+| `ENVI @Ctrl.Check=?&v` | Query checkbox | `ENVI @Chk1.Check=?;&st` |
+| `ENVI @Ctrl.Val=1*;%data%` | Batch set table | `ENVI @Tbl.Val=1*;%&rows%` |
+| `ENVI @Ctrl.Val=?*;&n` | Get row count | `ENVI @Tbl.Val=?*;&cnt` |
+| `ENVI @Ctrl.Sel=%n%` | Select row | `ENVI @Tbl.Sel=3` |
+| `ENVI @Ctrl.Sel=?&r` | Get selection | `ENVI @Tbl.Sel=?;&row` |
+| `ENVI @Ctrl.ADD=Item` | Append to list | `ENVI @List1.ADD=New Item` |
+| `ENVI @Ctrl.DEL=:n` | Delete by index | `ENVI @List1.DEL=:2` |
+| `ENVI @Ctrl.*del=` | Destroy control | `ENVI @Labe5A.*del=` |
+| `ENVI @Ctrl.MSG=msg:Cmd` | Message map | `ENVI @Btn1.MSG=_0x0201:CALL Fn` |
+| `ENVI @Ctrl.POSTMSG=#N` | Post message | `ENVI @Win.POSTMSG=#1` |
+| `ENVI @Ctrl.SENDMSG=#N;w;l` | Send message | `ENVI @Tbl.SENDMSG=#0x1000+19;%i%;0` |
+| `ENVI @Ctrl.Style=+0x1000` | Add style | `ENVI @Ed1.Style=+0x0800` |
+| `ENVI @Ctrl.Style=-0x1000` | Remove style | `ENVI @Ed1.Style=-0x0800` |
+| `ENVI @this.HitTest=31` | Drag window | `ENVI @this.HitTest=31` |
+| `ENVI @Ctrl.id=?&var` | Get HWND | `ENVI @Panel1.id=?&hwnd` |
+| `ENVI @Ctrl.InvalidateRect=` | Force redraw | `ENVI @Tbl.InvalidateRect=` |
+| `ENVI @@Visable=WID:0` | Cross-proc hide | `ENVI @@Visable=%&wid%:0` |
+| `ENVI @@POS=WID:L:T:W:H` | Cross-proc move | `ENVI @@POS=%&wid%:0:0:300:200` |
+| `ENVI @@style=WID:*remove:add` | Cross-proc style | `ENVI @@style=%&wid%:*:0x00800000` |
+| `SET @@sendmsg=WID;msg;w;l` | Cross-proc msg | `SET @@sendmsg=%&hwnd%;0x0111;%id%;0` |
