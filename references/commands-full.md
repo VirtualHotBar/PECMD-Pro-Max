@@ -260,16 +260,24 @@ LOOP [#]condition,
 
 ### FORX — Iterate
 ```
-FORX * list,&&item,              // space-delimited
-FORX *NL &multiLine,&&line,      // newline-delimited
-FORX *v &a &b &c,&&name,         // iterate variable names
-FORX /S[:depth] path\*.ext,&&name,0  // file enumeration (0=files, 1=dirs)
-FORX /S:3 /O:N path\*.ext,&&f,0     // max depth 3, sorted by name
-FORX /S /O:-N path\*.ext,&&f,0      // depth unlimited, reverse sort
-FORX /S /size:0:1048576:512 path\*.ext,&&f,0  // size 0-1MB, 512-aligned
-FORX @\Windows,&&dir,1           // search for directory root
-FORX !\*.ext,&&f,0               // reverse directory order
-FORX @\*.ext,&&d,1               // dirs only (@ prefix)
+FORX * list,&&item,                              // space-delimited iteration
+FORX *NL &multiLine,&&line,                      // newline-delimited
+FORX *v &a &b &c,&&name,                          // iterate variable names
+FORX /S[:depth] path\*.ext,&&name,0               // file enumeration (0=files, 1=dirs)
+FORX /S:3 /O:N path\*.ext,&&f,0                  // max depth 3, sorted by name
+FORX /S /O:-N path\*.ext,&&f,0                   // depth unlimited, reverse sort
+FORX /S /size:0:1048576:512 path\*.ext,&&f,0     // size 0-1MB, 512-aligned
+FORX @\Windows,&&dir,1                            // search for directory root
+FORX !\*.ext,&&f,0                                // reverse directory order
+FORX @\*.ext,&&d,1                                // dirs only (@ prefix)
+FORX *ab \*.ext,&&f,0                             // exclude A/B removable drives
+FORX *cur \*.ext,&&f,0                            // current drive preferred in search
+FORX *qu[~] \*.ext,&&name,0                       // support quoting in paths
+FORX *off \*.ext,&&name,0                         // return changed portion only
+FORX *bf \*.ext,&&name,0                          // breadth-first directory search
+FORX *L start step end,&&val,                     // numeric loop: FORX *L 0 2 10,&&val,
+FORX . \*.ext,&&f,0                               // ; can replace , as separator
+FORX : \*.ext,&&f,0                               // : can replace , as separator
 ```
 
 ### TEAM — Multi-command
@@ -369,46 +377,65 @@ FLNK -h linkPath,targetPath     // hard link
 
 ### PART — Partition management (comprehensive)
 ```
-// List operations
+// List/info operations
 PART list disk,&var                         // list all disk numbers
-PART list disk N,&var                       // disk info (size, cylinders, heads, etc.)
+PART list disk N,&var                       // disk info (size, cylinders, heads, media type, signature, bus, type, removable)
 PART list part N,&var                       // list partition numbers on disk N
-PART -hextp -phy# list part N#M,&var        // detailed partition info (hex type + physical#)
-PART -phy# list part N#M,&var               // partition info with physical numbering
-PART -devid list disk N,&var                // device path/ID
-PART -devidx list disk N,&var               // physical serial number
-PART -devida list disk N,&var               // device path/ID (alternative)
+PART -hextp list part N#M,&var              // partition info (hex type 0xNN)
+PART -hextp -phy list part N#M,&var         // partition info with physical numbering (1-4 primary, 5-N logical)
+PART -hextp -phy# list part N#M,&var        // partition info + physical# field appended
+PART -fill list part N#M,&var               // use * placeholder for empty drive letter
+PART -devid list disk N,&var                // device path/ID (like \\.\PHYSICALDRIVE0)
+PART -devidx list disk N,&var               // model + serial
+PART -devidn list disk N,&var               // name only
+PART -devida list disk N,&var               // full: product# + serial + version + DeviceType + RemovableMedia + CommandQueueing + VendorId + ProductRevision
 PART -iv=N list disk N,&var                 // query sub-field N of disk info
-PART -raw list disk N,&var                  // query raw disk info
-PART list drv D:,&var                       // info about specific drive letter
-PART list volume volumeName,&var            // info about volume
-PART -drv list volume N,&var                // list volumes by drive number
+PART -raw list disk N,&var                  // raw disk info (device path, media GUID, volume name)
+PART list drv D:,&var                       // drive letter → disk# partition# type bus drive media
+PART list volume volumeName,&var            // volume info
+PART -drv list volume N,&var                // volumes by drive number
+PART -report[:retvar][diskNum]              // show/list report (ignores other args)
+PART -floppy list disk N,&var               // list floppy devices
 
 // Modify operations
-PART -super -up -xup N#M type [attr]        // set partition type+attribute (use both -super -up)
-PART -super -up -swap:M N#P                // swap physical partition numbers
-PART -super -up N#M a|A|-a|-A type start len // create partition (a=active, A=extended)
-PART -super -up del N#M                    // delete partition
-PART -super -up N#M a|A                     // set active/inactive on existing partition
-PART -super -up -fs0 N#M init               // initialize partition as raw (no filesystem)
+PART -super -up -xup N#M type [attr]        // set partition type+attribute (both -super -up required)
+PART -super -up -axup N#M type [attr]       // enhanced xupdate for removable disks
+PART -super -up -swap:M N#P                 // swap physical partition numbers
+PART -super -up N#M a|A|-a|-A type start len// create (a=active, A=extended, -a=inactive)
+PART -super -up del N#M                     // delete partition
+PART -super -up N#M a|A|-a|-A               // toggle active on existing
+PART -super -up -fs0 N#M init               // initialize as raw (no filesystem)
+PART -super -up -force N#M ...              // force dangerous operation
 PART update N                               // refresh disk info from system
+PART hupdate[f] N                           // hard disk refresh (f=force with renumber)
+PART -ahup -up N#M ...                      // additional hard update for removable renumber
 
 // MBR/PBR operations
 PART /mbr[=nt6|=win|=nt5|=dos|=file] N      // rewrite MBR on disk N
 PART /pbr[=nt6|=win|=nt5|=dos|=file] N#M    // rewrite PBR on partition
+PART -img=[*offs*len*]file|disk[/mbr|/pbr]  // operate on image file instead of physical disk
 
 // GPT operations
 PART -gpt init N                            // initialize as GPT
 PART -super -up -gpt N#M a type start len guid attr name  // create GPT partition
-PART -gpt -cmp N                            // compress GPT partition table
-PART -super -up -gpt -fs0 -mbr init N       // init GPT+MBR, raw FS
+PART -super -up -gpt -fs0 -mbr init N       // init GPT+MBR hybrid, raw FS
+PART -gpt -cmp N                            // compress GPT table (make 1-based, contiguous)
+PART fix N                                  // fix GPT: correct checksums, flags, partition count
 
-// Other
+// Smart drive letter control
+PART -lock[:\\\\.\D:] N                     // lock drive letter (prevent auto-assign)
+PART -locku[:\\\\.\D:] N                    // unlock
+PART -lock *                                // lock all volumes
+PART -dvol N#M,&volGUID                     // dynamic corrected VolumeGUID
+PART -mount-                                // don't show labels for unassigned partitions
+PART -fill                                  // fill empty drive letter slots
+
+// Utility
 PART -gui                                   // launch GUI partition manager
 PART -usb                                   // USB-only mode
 PART -admin                                 // advanced mode (dangerous)
 PART -align[=size]                          // alignment (default or specify)
-PART -fill                                  // fill empty drive letter slots
+PART -CHS=C:H:S                             // override cylinder/head/sector geometry
 ```
 
 PART MBR output fields: `分区号 类型(hex) 激活 起始(字节) 长度(字节) 隐藏扇区 结束(字节) 物理# 盘符`
@@ -458,6 +485,35 @@ FORM -raw &type,&bus,&drvType=&dsk,<drive>  // comprehensive: all type info in o
 | DRIVE_CDROM | 5 | Optical disc (CD/DVD/BD) |
 | DRIVE_RAMDISK | 6 | RAM disk |
 | DRIVE_CDROMUSB | 7 | USB optical disc |
+| DRIVE_USBFLASH | 8+ | USB flash drive |
+| DRIVE_USBDISK | 9+ | USB disk |
+| FUNCTION_ERROR | -1 | API error |
+
+### Bus Type Constants (FORM -raw &busType,&bus,drvType=&id,D:)
+| Constant | Value | Description |
+|---|---|---|
+| BusTypeUnknown | 0x00 | Unknown |
+| BusTypeScsi | 0x01 | SCSI |
+| BusTypeAtapi | 0x02 | ATAPI |
+| BusTypeAta | 0x03 | ATA |
+| BusType1394 | 0x04 | 1394 (FireWire) |
+| BusTypeSsa | 0x05 | SSA |
+| BusTypeFibre | 0x06 | Fibre Channel |
+| BusTypeUsb | 0x07 | USB |
+| BusTypeRAID | 0x08 | RAID |
+| BusTypeiScsi | 0x09 | iSCSI |
+| BusTypeSas | 0x0A | SAS |
+| BusTypeSata | 0x0B | SATA |
+| BusTypeSd | 0x0C | SD |
+| BusTypeMmc | 0x0D | MMC |
+| BusTypeVirtual | 0x0E | Virtual |
+| BusTypeFileBackedVirtual | 0x0F | File-backed Virtual |
+| BusTypeSpaces | 0x10 | Storage Spaces |
+| BusTypeNvme | 0x11 | NVMe |
+| BusTypeSCM | 0x12 | SCM |
+| BusTypeUfs | 0x13 | UFS |
+| BusTypeMax | 0x14 | |
+| BusTypeMaxReserved | 0x7F | Reserved max |
 
 ### DFMT — Format
 ```
@@ -467,19 +523,48 @@ DFMT d:,FAT32,,quick
 
 ### EJEC — Eject
 ```
-EJEC d:                                    // eject CD/DVD
-EJEC * d:                                  // eject removable disk
+EJEC D:                       // eject optical drive D:
+EJEC * D:                     // eject removable USB disk D:
+EJEC C-                       // close all optical drive trays
+EJEC U-                       // eject all USB disks
+EJEC C- X:                    // close tray on X:
+EJEC U- X:                    // eject USB disk X:
+EJEC C- HDD#1                 // close tray on disk 1
+EJEC U- HDD#1                 // eject USB disk on disk 1
 ```
 
 ### DISK — Disk operations
 ```
-DISK 1,,,3                                 // assign drive letters: disk 1, USB, rearrange
-DISK 0,,,1,U:                              // assign USB starting from U:
-DISK &drvLetter,diskNum,partitionNum        // get drive letter of specific partition
+DISK [varName],[diskNum],[partNum],function,[USBDriveLetters][,options]
+  // function 1=allocate, 2=free, 3=reallocate, 22=first primary partition
+  // USBDriveLetters: e.g. "UW" means start from W: for USB (drive letter table)
 ```
-Options (4th parameter): 0x1=rearrange only assigned, 0x2=verify partition validity,
-0x4=skip 0xEE/0xEF partitions, 0x10=include hidden, 0x20=include CDROM, 0x40=limit letter table
-Flags: `-check`=skip if already loaded, `-skiptp:tp1;tp2`=skip types, `-skippt:hd:pt`=skip partitions, `-from:D:`=start from letter, `-cdrom`=CDROM
+| Function | Description |
+|---|---|
+| 1 | Allocate drive letters |
+| 2 | Free drive letters |
+| 3 | Reallocate (rearrange + allocate) |
+| 22 | First primary partition allocation |
+| **varName special forms:** | |
+| `&drvLetter,diskNum,partNum` | Get drive letter of specific partition |
+| `uAllPart,diskNum,partNum` | Assign USB → new partition letter |
+| `Vol:volLabel,diskNum,partNum` | Find by volume label |
+| `Part:partName,diskNum,partNum` | Find by partition name |
+| `\Windows\|\WinXP\|\WinNT\|` | Search system dirs across drives |
+| **Options (0x**):** ||
+| 0x1 | Only rearrange already-drive-lettered partitions |
+| 0x2 | Verify partition validity |
+| 0x4 | Skip 0xEE/0xEF partitions |
+| 0x10 | Hidden partitions too |
+| 0x20 | CDROM too |
+| 0x40 | Limit drive letter table |
+| **Flags:** ||
+| `-check` | Skip if already loaded |
+| `-skiptp:tp1;tp2` | Skip partition types |
+| `-skippt:hd:pt` | Skip specific harddisk:partition |
+| `-from:D:` | Start drive letter from D: |
+| `-from:UW` | USB drive letter table "UW" |
+| `-cdrom` | Include CDROM |
 ```
 
 ---
@@ -488,35 +573,60 @@ Flags: `-check`=skip if already loaded, `-skiptp:tp1;tp2`=skip types, `-skippt:h
 
 ### WIM mounting
 ```
-MOUN wimFile,mountDir,[index],[tempDir]     // mount WIM image
-MOUN -u mountDir                            // unmount WIM
-MOUN -query &var                            // query mounted images
-MOUN -svr wimFile,mountDir                  // persistent mount (server mode)
+MOUN[-svr] [!] wimFile,mountDir,[imageID],[tempDir]    // mount (read-write)
+MOUN[-svr] -w [!] wimFile,mountDir,[imageID],[tempDir]  // mount writable
+MOUN[-svr] -m [!] wimFile,mountDir,[imageID],[tempDir]  // mount read-only (no -w)
+MOUN -u mountDir                                         // unmount
+MOUN -query &var                                        // query mounted images
+MOUN[-svr] -u [!] wimFile,mountDir,[imageID],[tempDir]   // unmount with commit
+MOUN[-svr] -rw [!] wimFile,mountDir,...                  // mount read-write (alias)
 ```
+Option: `-dll WIMDLLpath:` to specify wimgapi.dll location.
 
 ### VHD/VHDX mounting
 ```
-MOUN-vhd -c[x] file.vhd,size                // create (x=expand first)
-MOUN-vhd -c[x] -d file.vhd,size             // create dynamic (sparse)
-MOUN-vhd -r file.vhd,mountDir               // mount read-only
-MOUN-vhd -u mountDir                        // unmount
-MOUN-vhd -iso file.iso,mountDir             // mount ISO
-MOUN-vhd -query file.vhd,&var              // query VHD info
+MOUN-vhd -c[x] file.vhd,size                            // create (x=expand to size first)
+MOUN-vhd -c[x] -d file.vhd,size                         // create dynamic (sparse)
+MOUN-vhd -c[x] -s:512 file.vhd,size                     // sector size override
+MOUN-vhd -r file.vhd,mountDir                           // mount read-only
+MOUN-vhd -d file.vhd,mountDir                           // mount dynamic VHD
+MOUN-vhd -u mountDir                                    // unmount
+MOUN-vhd -iso file.iso,mountDir                         // mount ISO
+MOUN-vhd -query file.vhd,&var                          // query VHD info
 ```
+PECMD-private PE var: when var goes out of scope, auto-unmount. Use `PEvar` as 3rd parameter.
 
 ### UDM (Ultra Deep Mount) — hidden partition mounting
 ```
-MOUN-udm [flags] \\.\PhysicalDriveN
-MOUN-udm -findboot -ret:&retVar             // find and mount boot device
-MOUN-udm -mhide \\.\PhysicalDriveN D:       // mount hidden partition
-MOUN-udm -udimg:file.img                    // mount UD image file
-MOUN-udm -u mountDir                        // unmount
+MOUN-udm [flags] \\\\.PhysicalDriveN                     // mount all or specific
+MOUN-udm -findboot -ret:&retVar                         // find and mount boot device
+MOUN-udm -u mountDir                                    // unmount
 ```
-Flags: `-ud` (UD partition), `-uh` (UD high), `-muh` (mount UD high),
-`-u+` (U+ partition), `-udfs` (UD filesystem), `-udm-` (disable UDM),
-`-mall` (mount all), `-mhide` (mount hidden only),
-`-findboot` (auto-find boot device), `-ret:var` (return device path),
-`-CheckFile:path` (verify by file existence), `-tag:name` (tag to identify)
+| Flag | Description |
+|---|---|
+| `-ud` | UD partition |
+| `-uh` | UD high |
+| `-muh` | Mount UD high |
+| `-u+` | U+ partition |
+| `-udfs` | UD filesystem |
+| `-udm-` | Disable UDM |
+| `-mall` | Mount ALL (not just hidden) |
+| `-mhide` | Mount hidden only |
+| `-mhide1` | Mount hidden only (variant 1) |
+| `-onlys` | Only mount specific system types |
+| `-findboot` | Auto-find boot device |
+| `-ret:` | Return device path to variable |
+| `-CheckFile[+]:path` | Verify by file existence |
+| `-CheckVol[R]` | Verify by volume label |
+| `-CheckUuid[R]` | Verify by UUID |
+| `-CheckPtType` | Verify by partition type |
+| `-check[-]` | Only mount valid filesystem partitions |
+| `-tag[+]:name` | Tag identification for matching |
+| `-opts:`/`-opt:` | Mount options (separate or combined) |
+| `-nbrd[-]` | Don't broadcast drive letter |
+| `-ainf:var` | Store partition table buffer to variable |
+| `-udmid:pt#physicalNum` | Soft mount by physical partition number (read-only default) |
+| `-udmdev:device` | Specify boot device and UDM |
 
 ---
 
@@ -545,21 +655,41 @@ The indented line(s) execute when the shell transition happens.
 
 ### SHUT — Shutdown/restart
 ```
-SHUT                        // shutdown
-SHUT R                      // restart
-SHUT S                      // suspend/standby
-SHUT H                      // hibernate
-SHUT L                      // logoff
-SHUT K                      // lock workstation
-SHUT E                      // eject optical drive
-SHUT C                      // close optical drive
-SHUT O                      // eject optical + wait 10s
+SHUT                              // shutdown
+SHUT R                            // restart
+SHUT S                            // suspend/standby
+SHUT H                            // hibernate
+SHUT L                            // logoff
+SHUT K                            // lock workstation
+SHUT E                            // eject optical drive
+SHUT C                            // close optical drive
+SHUT O                            // eject optical + wait 10s
+SHUT -force R                     // force restart
+SHUT -- [scriptFile]              // run script on shutdown
+SHUTDOWN -s|-r|-f|-t 秒           // pass raw args to shutdown.exe
+  // -s=shutdown -r=reboot -f=force --f=cancel force -t=delay
 ```
+// OnShutdown.wcs hook 操作码: shutdown reboot logout suspend hiber poweroff unknown lock
 
 ### DISP — Display settings
 ```
-DISP W1024H768B32F60       // width, height, color bits, refresh rate
-DISP                       // auto-detect best mode
+DISP W1024H768B32F60                             // width, height, color bits, refresh rate
+DISP                                             // auto-detect best mode
+DISP =N W1024H768B32F60                         // target display N (0-based)
+DISP W1024H768B32F60 T15                         // apply with 15s timeout (auto-restore)
+DISP W1024H768B32F60 P                           // set as primary display
+DISP W1024H768B32F60 O0                          // orientation (0=default, 1=90, 2=180, 3=270)
+DISP -confirm W1024H768B32F60                    // confirmation prompt
+DISP -nwb W1024H768B32F60                        // no broadcast wait
+DISP -delay W1024H768B32F60                      // registry-only (don't apply), wait for broadcast
+DISP @X0:Y0:X1:Y1:...                            // multi-monitor positions (matrix)
+DISP S0x84                                        // multi-display: 0x81=single, 0x82=clone, 0x84=extend, 0x88=dual
+DISP ?[?*] [=N] &var                             // query current (*=all possible) modes
+DISP -reset                                       // reset to defaults
+DISP -bright[?]:value/&var                        // brightness control
+DISP -ori [?] &var                                // query orientation
+DISP -guis                                        // graphical interface
+DISP -sort[-r|-n]                                 // sort modes (r=reverse, n=by name)
 ```
 
 ### PAGE — Virtual memory
@@ -575,13 +705,13 @@ RAMD ImDisk* -D -m G:                 // remove
 
 ### SERV — Service management
 ```
-SERV servicename                     // start service
-SERV -stop servicename               // stop
-SERV -query servicename,&var         // query status
-SERV -create name,path,type,start   // create service
-SERV -delete name                    // delete service
+SERV servicename                             // start service
+SERV !servicename                            // stop service (! prefix)
+SERV ?servicename,&var                       // query status
+SERV -create name,path,type,start            // create service
+SERV -delete [-stop-] name                   // delete (-stop-=auto-stop before delete)
 ```
-Start types: `-boot`, `-system`, `-auto`, `-demand`, `-disabled`
+Start types: `-boot`, `-system`, `-auto`, `-demand`, `-disabled`, `-delayed-auto`
 
 ### HOTK — System-wide hotkey
 ```
@@ -605,25 +735,38 @@ HKEY --del:keyname                          // unregister by name
 
 ### DATE — Date/time variables and sub-variables
 ```
-DATE &var                                  // get current date (yyyy-mm-dd format)
-DATE &var yyyy-mm-dd                       // set system date
-DATE *[name] &var                          // get named day of week (e.g. "Monday")
-DATE &var -now                             // get current date+time
-DATE &var -utc                             // get UTC date+time
+DATE &var                                  // get current date (yyyy mm dd HH MM SS ms weekday format)
+DATE &var yyyy-mm-dd-HH-MM-SS-ms-wd        // set system date/time (partial ok)
+DATE -h &var                               // high-precision timer (microseconds)
+DATE -r &var                               // sync + read high-precision timer
+DATE -space0 &var                          // space-delimited, 0-padded
+DATE -space &var                           // space-delimited (default compact)
+DATE -bsys &var                            // output system time
+DATE -utc:UTCtime &var                     // convert FROM UTC time
+DATE -gmt:GMTtime &var                     // convert FROM GMT time
+DATE -local:LOCALtime &var                 // convert FROM local time
+DATE -sys:internTime &var                  // international/UTC time
+DATE -us &var                              // microseconds (4 decimal places)
 ```
-Sub-variables extracted from a DATE result (use `MSTR` or direct sub-variable syntax):
-| Sub-variable | Meaning | Example |
-|---|---|---|
-| `%&var:ym%` | Year-Month | `2026-05` |
-| `%&var:y%` | Year (4-digit) | `2026` |
-| `%&var:mon%` | Month (2-digit) | `05` |
-| `%&var:day%` | Day (2-digit) | `02` |
-| `%&var:h%` | Hour (24h, 2-digit) | `14` |
-| `%&var:min%` | Minute (2-digit) | `30` |
-| `%&var:s%` | Second (2-digit) | `45` |
-| `%&var:ms%` | Milliseconds (3-digit) | `123` |
-| `%&var:w%` | Day of week (1=Mon..7=Sun) | `6` |
-| `%&var:wd%` | Day of week name | `Saturday` |
+Sub-items (use `MSTR` or direct `%&var:item%` syntax):
+| Sub-item | Meaning |
+|---|---|
+| `y` / `year` | Year (4-digit) |
+| `mon` / `month` | Month (2-digit) |
+| `d` / `day` | Day (2-digit) |
+| `w` / `weekday` | Day of week (1=Mon..7=Sun) |
+| `h` / `hour` | Hour (24h, 2-digit) |
+| `min` / `minute` | Minute (2-digit) |
+| `s` / `second` | Second (2-digit) |
+| `ms` / `msec` | Milliseconds (3-digit) |
+| `ws[1]` | Week of year ([1]=Sunday as weekend boundary) |
+| `ds` / `daysofyear` | Day of year (1-366) |
+| `Freq` / `frequency` | Counter frequency |
+| `Counter` / `counter` | Hardware timer counter value |
+| `gmt` | Seconds since 1970-01-01 |
+| `uptime` / `uptime_ms` | Milliseconds since boot |
+| `utc` | 100ns units since 1601-01-01 |
+| `uptimens` | Nanoseconds since boot |
 
 ### Various system commands
 ```
@@ -699,6 +842,23 @@ SITE +R+H,dirPath\*                      // apply to all files in directory (add
 SITE ?-all,VAR=variable                  // encode variable (PECMD-style)
 SITE ?-sys,VAR=variable                  // encode with system flag
 SITE ?H:hWnd,variable1[,variable2]       // copy to clipboard
+
+// File version query
+SITE ?fileVerVar[,prodVerVar]=FVER,filePath  // query file version (e.g. "1.2.3.4")
+
+// File time query
+SITE ?[-local -ws -link] [[*]creationVar,[*]writeVar,[*]accessVar]=FTIME,filePath
+  // * prefix → returns UTC time integer (directly comparable)
+  // no * → returns "yyyy mm dd HH MM SS us weekday" (fixed-width fields)
+  // -local → local time (default: UTC)
+  // -ws → append week-of-year; -ws1 → Sunday as weekend boundary
+  // -link → follow symbolic links
+
+// File attribute query
+SITE ?[attrVar][,hidVar][,roVar][,sysVar][,fullVar]=FATTR,filePath
+
+// Update file timestamp
+SITE *touch[:[cr][*local:|*local0:|*sys:|*sys0:|*utc:]time],<file>[,retVar]
 ```
 Attribute flags in query result: `R`=Read-only, `H`=Hidden, `S`=System, `A`=Archive,
 `N`=Normal, `D`=Directory, `C`=Compressed, `E`=Encrypted, `T`=Temporary, `O`=Offline.
@@ -768,11 +928,28 @@ REGI $HKLM\SOFTWARE\Key\Val=string         // write REG_SZ
 REGI #HKLM\SOFTWARE\Key\Val=#0x100        // write REG_DWORD (hex)
 REGI $HKLM\SOFTWARE\Key\Val=               // delete value
 
-// Advanced
-REGI --ak HKCU\Software\Key\,&all         // enumerate ALL values for key
-REGI --av HKCU\Software\Key\,&all         // enumerate ALL subkeys
-REGI .? \HKLM\SOFTWARE\Key\Val,&type      // query type (dot+question)
-REGI --16 ...                              // hex data input
+// Advanced operations
+REGI --ak HKCU\Software\Key\,&all             // enumerate ALL values for key
+REGI --av HKCU\Software\Key\,&all             // enumerate ALL subkeys  
+REGI .?\HKLM\SOFTWARE\Key\Val,&type           // query value type (dot+question)
+REGI --16 ...                                 // hex data input
+REGI --su path\val=value                      // run elevated (SYSTEM) — for 32bit on 64bit
+REGI --init path\val,&var                     // return empty string on read failure
+REGI --name path\val,&var                     // data variable name mode
+REGI --k path\key\                            // only create key (don't set value)
+REGI --byte path\val,&var                     // byte stream mode
+REGI --v[-] path\val,&var                     // don't save changes (read snapshot)
+REGI --qk path\val,&var                       // quick mode
+REGI --r10 path\val,&var                      // output decimal (for DWORD)
+REGI --t:NUM path\val,&var                    // specify arbitrary registry type by number
+REGI --0[:N] path\key\                        // clear key: 1=clear default, 2=delete subkeys, 4=delete values (combine: 5=1+4)
+
+// Query existence (returns ERROR if not found)
+REGI ?HKLM\SOFTWARE\Key\,&&VT
+FIND $%&VT%=ERROR, MESS Key not found! MESS Key exists
+REGI ?HKLM\SOFTWARE\Key\Val,&&VT           // check value existence
+REGI ?HKLM\SOFTWARE\Key\,&&VT               // check key existence
+FIND $%&VT%=NI, MESS Data not set!          // NI = key exists but no data
 ```
 
 ### HIVE — Load/unload offline registry hive (comprehensive)
@@ -959,11 +1136,22 @@ NUMK 1|0                                       // NumLock on/off
 
 ### ADSL — Broadband/WiFi
 ```
-ADSL userEncoded,passEncoded,[retries],[name|*|retVar]   // dial-up
-ADSL stop|list[on],connectionName                        // stop/list
-ADSL-wlan SSID|&var,password,encType,[index]              // WiFi connect (WPA2PSK default)
-ADSL-wlan ,,list,&&result                                 // WiFi scan (basic)
-ADSL-wlan ,,[?][^|*|-]list|query[all]|scan,&&result       // detailed scan/query
+// Dial-up (PPPoE)
+ADSL userEncoded,passEncoded,[retries],[name|*|retVar]     // dial-up
+ADSL start[+] userEncoded,passEncoded,[retries],[retVar]    // start (connect)
+ADSL stop,connectionName                                    // hang up
+ADSL list[on],connectionName                                // list connections
+
+// WiFi (ADSL-wlan)
+ADSL-wlan SSID|&profileVar,password,encType,[index]        // connect (enc default=WPA2PSK AES)
+ADSL-wlan -start SSID|&profileVar,password,encType,[index]  // explicit start
+ADSL-wlan index,,list,&&result                              // list WiFi profiles
+ADSL-wlan index,,query[all],&&result                        // query details (序号 guid State Desc)
+ADSL-wlan index,,scan,&&result                              // scan networks
+ADSL-wlan index,,-list,&&result                             // net-broadcast scan
+// Result format (list): SSID SignalQuality Flags BssType NumBssid bConnectable ...
+// Result format (query[all]): index guid State Description
+// Flags & 1 = currently connected
 ```
 
 ### PCIP — IP configuration
@@ -1111,17 +1299,46 @@ CMPS -utf8 source.wcs,dest.wcz           // encode as UTF-8
 
 ### WAIT — Pause / key wait
 ```
-WAIT ms                                 // pause milliseconds
-WAIT -1                                 // wait forever
-WAIT -cont [-timeout],[&var]            // non-blocking key press wait
+WAIT ms                                    // pause milliseconds
+WAIT -1                                    // wait forever
+WAIT -cont [-timeout],[&var]              // non-blocking key press wait
+WAIT *pid|*tid                             // wait for process/thread completion
+WAIT **                                     // wait for grandparent process
+WAIT =tid                                   // wait for specific thread ID
+WAIT -del file1 [-del file2]               // delete files after wait (with retry)
+WAIT -delms:N                               // delay between delete retries (ms)
+WAIT -scanall|scan:key,&var                // get keyboard scan state table
+WAIT -sys[0] [switch] -cmd                 // system proxy agent execution
+WAIT -sys[0]cmd                            // system direct agent execution
+WAIT -thread                                // wait for all child threads
+WAIT $handle                                // wait for handle
+WAIT -freemem                               // free memory
+WAIT -pad                                   // distinguish numpad keys
+WAIT -ncd                                   // don't change directory during wait
+WAIT &&PressKey.Hex                         // sub-var for hex key code
+WAIT time1 time2                            // time1>0&<1: *100000 = pending message count
 ```
 
 ### KILL — Terminate
 ```
-KILL process.exe                        // by name
-KILL *12345                             // by PID
-KILL \                                  // current script's windows
-KILL \WinName                           // specific window
+KILL process.exe                           // by name
+KILL *12345                                // by PID
+KILL \                                     // current script's windows
+KILL \WinName                              // specific window title
+KILL process.exe|username                   // by name + owner
+KILL \[windowTitle]                        // by window title
+KILL @[windowName]                         // by window class name
+KILL @@windowID                            // by window ID
+KILL **tid                                 // by thread ID (async kill)
+KILL *&hpid                                // by process HANDLE
+KILL **&htid                               // by thread HANDLE (async)
+KILL -force process.exe                    // force terminate
+KILL -explorer process.exe                 // prevent explorer auto-restart
+KILL -gui                                  // process manager GUI
+KILL -tree process.exe                     // terminate process tree
+KILL -svr2                                 // for MESS-svr2
+KILL -exitcode:NUM process.exe             // set exit code
+KILL ** process.exe                        // force synchronous kill
 ```
 
 ### LOGS — Debug logging
