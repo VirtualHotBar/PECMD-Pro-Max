@@ -1661,6 +1661,427 @@ Key points:
 | 40 | TABL In-Row Sorting | Bubble sort on table data |
 | 41 | Custom Title Bar Window | Frameless window with manual caption |
 | 42 | Struct Array Traversal | API struct array enumeration |
+| 43 | EFI Boot Entry Management | FVAR read/write UEFI NVRAM; Create/Remove/SetNext boot entry |
+| 44 | SSD Detection (Seek Penalty) | IOCTL_STORAGE_QUERY_PROPERTY |
+| 45 | TRIM Support Detection | IOCTL_STORAGE_QUERY_PROPERTY |
+| 46 | Disk Device Number from Path | IOCTL_STORAGE_GET_DEVICE_NUMBER mapping |
+| 47 | Drive Layout Information EX | IOCTL_DISK_GET_DRIVE_LAYOUT_EX with MBR/GPT tables |
+| 48 | Network Speed Monitoring | GetIfTable API real-time speed |
+| 49 | PE Icon Extraction | EnumResourceNames + ICO binary construction |
+| 50 | USB Drive Enumeration | SetupAPI + SCSI inquiry + device ID chain |
+| 51 | Advanced DPI v2 + Layered Windows | Per-monitor V2 DPI, transparency, mirror |
+| 52 | GPT Multi-Partition USB | Full create/format/verify with retry |
+| 53 | Offline Registry Full CRUD | ORLoadHive + Get/Set + Enum + Save |
+| 54 | FVAR Secure Boot (EFI Variable) | Direct EFI global variable read |
+| 55 | ScrollBar via GetScrollInfo | SCROLLINFO struct, column-pixel conversion |
+| 56 | QueryDosDeviceW All DOS Devices | Null-delimited parse + CODE decode |
+| 57 | File Attribute Bitmask Decoding | SITE fattr query + CALC flag & constant |
+| 58 | WiFi Connect + Tray UI | ADSL-wlan + TABL + minimize-to-tray |
+| 59 | Display Presets with Timeout | DISP + KILL explorer + countdown revert |
+| 60 | Generic IOCTL Code Formula | shl(base,16) \| shl(access,14) \| shl(func,2) \| method |
+
+---
+
+### 44. SSD Detection (Seek Penalty Query)
+
+IOCTL formula: `CALC &ioctl = shl(0x2D,16) | shl(0,14) | shl(0x09,2) | 0` → 0x2D1400
+
+```wcs
+SET &STORAGE_PROPERTY_QUERY_Unknown=0
+SET &StorageDeviceSeekPenaltyProperty=7
+SET &STORAGE_PROPERTY_QUERY.INPUT=12  // PropertyId(4)+QueryType(4)+AdditionalParams(4)
+ENVI$ &&input=*0xC 0
+ENVI-long &&input=7:0       // PropertyId=7 (SeekPenalty)
+ENVI-long &&input=0:4       // QueryType=0 (Standard)
+ENVI-long &&input=0:8       // AdditionalParams=0
+SET &output.SIZE=12         // DEVICE_SEEK_PENALTY_DESCRIPTOR: Version(4)+Size(4)+IncursSeekPenalty(1)+3pad
+ENVI$ &&output=*0xC 0
+ENVI$# &&dwSize=*4 0
+CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0xC,*&&dwSize,#0
+ENVI?int &&output=&&IncursSeekPenalty:8
+// 0=SSD (no seek penalty), 1=HDD
+```
+
+---
+
+### 45. TRIM Support Detection
+
+Same IOCTL 0x2D1400, PropertyId=8 (StorageDeviceTrimProperty).
+
+```wcs
+SET &StorageDeviceTrimProperty=8
+ENVI-long &&input=8:0       // PropertyId=8
+ENVI-long &&input=0:4       // QueryType
+ENVI-long &&input=0:8       // AdditionalParams
+CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0x20,*&&dwSize,#0
+// DEVICE_TRIM_DESCRIPTOR: Version(4)+Size(4)+TrimEnabled(1)
+ENVI?int &&output=&&TrimEnabled:8
+```
+
+### 60. Generic IOCTL Code Construction
+
+The universal formula for computing any IOCTL control code:
+```
+IOCTL = shl(DeviceType, 16) | shl(Access, 14) | shl(Function, 2) | Method
+```
+Where:
+- DeviceType: FILE_DEVICE_ prefix value (e.g., 0x2D for storage)
+- Access: FILE_READ_ACCESS=0, FILE_WRITE_ACCESS=1, FILE_ANY_ACCESS=0
+- Function: operation-specific number
+- Method: METHOD_BUFFERED=0, METHOD_IN_DIRECT=1, METHOD_OUT_DIRECT=2, METHOD_NEITHER=3
+
+| IOCTL Constant | DeviceType | Access | Function | Method | Result |
+|---|---|---|---|---|---|
+| IOCTL_STORAGE_QUERY_PROPERTY | 0x2D | 0 | 0x09 | 0 | 0x2D1400 |
+| IOCTL_DISK_GET_DRIVE_GEOMETRY_EX | 0x07 | 0 | 0x28 | 0 | 0x700A0 |
+| IOCTL_DISK_GET_DRIVE_LAYOUT_EX | 0x07 | 0 | 0x14 | 0 | 0x70050 |
+| IOCTL_DISK_GET_PARTITION_INFO_EX | 0x07 | 0 | 0x12 | 0 | 0x70048 |
+| IOCTL_STORAGE_GET_DEVICE_NUMBER | 0x2D | 0 | 0x05 | 0 | 0x2D1080 |
+| IOCTL_DISK_PERFORMANCE | 0x07 | 0 | 0x08 | 0 | 0x70020 |
+| IOCTL_DISK_UPDATE_PROPERTIES | 0x07 | 0 | 0x40 | 0 | 0x70100 |
+
+---
+
+### 46. STORAGE_GET_DEVICE_NUMBER (Path → Disk/Partition Mapping)
+
+```wcs
+CALC &IOCTL_STORAGE_GET_DEVICE_NUMBER = shl(0x2D,16) | shl(0,14) | shl(0x05,2) | 0
+// 0x2D1080
+SET &STORAGE_DEVICE_NUMBER.SIZE=12  // DeviceType(4)+DeviceNumber(4)+PartitionNumber(4)
+ENVI$ &&output=*0xC 0
+ENVI$# &&dwSize=*4 0
+CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_STORAGE_GET_DEVICE_NUMBER%,#0,#0,*&&output,#0xC,*&&dwSize,#0
+ENVI?long &&output=&&DeviceType:0
+ENVI?long &&output=&&DeviceNumber:4
+ENVI?long &&output=&&PartitionNumber:8
+```
+
+Opening by device path: `\\.\C:` → returns partition info. Opening by `\\.\PhysicalDrive0` → returns disk info with PartitionNumber=0.
+
+---
+
+### 47. Drive Layout Information EX (Full Disk Layout)
+
+```wcs
+CALC &IOCTL_DISK_GET_DRIVE_LAYOUT_EX = shl(0x07,16) | shl(0,14) | shl(0x14,2) | 0  // 0x70050
+ENVI$ &&output=*8M 0
+ENVI$# &&dwSize=*4 0
+CALL $**qd **ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_DISK_GET_DRIVE_LAYOUT_EX%,#0,#0,*&&output,#%&output.SIZE%,*&&dwSize,#0
+
+// MBR:  PartitionStyle=0, Header at offset 48: Signature(4)+CheckSum(4)
+// GPT:  PartitionStyle=1, Header at offset 48: DiskId(16)+StartingUsableOffset(8)+UsableLength(8)+MaxPartitionCount(4)
+// Then partition entries at offset 112, each 120 bytes (PARTITION_INFORMATION_EX)
+```
+
+Complete MBR type table (26 entries): 0x00=Empty→0xEF=EFI System, includes 0x07=NTFS, 0x0B/0x0C=FAT32, 0x0E/0x0F=EFI FAT, 0x27=Windows RE
+
+Complete GPT type GUID table (23 entries): includes EBD0A0A2 (MS Basic Data), C12A7328 (EFI System), E3C9E316 (MSR), DE94BBA4 (Recovery)
+
+---
+
+### 48. GetIfTable — Network Speed Monitoring
+
+```wcs
+ENVI$ &&buf=*0x1000 0
+ENVI$# &&dwSize=*4 0
+CALL $**qd **ret:&&bret Iphlpapi.dll,GetIfTable,*&&buf,*&&dwSize,#0
+// If GetLastError==122 (ERROR_INSUFFICIENT_BUFFER), re-allocate with returned size
+ENVI-addr ;&&bufsize=&&buf
+// MIB_IFENTRY: 860 bytes per entry, name at offset 0, dwInOctets at offset 344, dwOutOctets at offset 356
+// Filter: skip dwType==24 (loopback), keep dwOperStatus==5 (operational)
+// Delta: save previous values, subtract for speed
+// CalcSize helper: B→KB→MB→GB→TB→PB→EB→ZB
+```
+
+---
+
+### 49. Offline Registry Full CRUD + Enumeration (Complete Package)
+
+```wcs
+// Load hive
+ENVI$ &&hResult=*4 0
+CALL $**qd **ret:&bret offreg.dll,ORLoadHive,$%&hivepath%,*&&hResult
+ENVI?int &&hResult=&&hKey:0
+
+// Read REG_SZ
+ENVI-copy &&lpData=&&null
+ENVI$# &&lpcbData=*4 0
+CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
+ENVI?int &&lpcbData=&&cbData:0
+ENVI$ &&lpData=*%&cbData% 0
+CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#1,*&&lpData,*&&lpcbData
+
+// Read REG_DWORD (type 4)
+ENVI$# &&dwData=*4 0
+ENVI$# &&lpcbData=*4 4
+CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#4,*&&dwData,*&&lpcbData
+
+// Read REG_QWORD (type 11)
+ENVI$# &&qwData=*8 0
+ENVI$# &&lpcbData=*8 8
+CALL $**qd **ret:&bret offreg.dll,ORGetValue,%&hKey%,$,$%&lpSubKey%,$%&lpValue%,#11,*&&qwData,*&&lpcbData
+
+// Write: same pattern but ORSetValue
+
+// Enumerate subkeys
+CALL $**qd **ret:&bret offreg.dll,ORQueryInfoKey,%&hKey%,$#0,*&&cSubKeys,*&&cValues,*&&maxSubKeyLen,*&&lpcbMaxValNameLen,*&&lpcbMaxValLen,*&&lpcbSecurityDescriptor,*&&lpftLastWriteTime
+CALC #&&KeySize=%&maxSubKeyLen%*2
+ENVI$# &&cSubKeys=*4 0
+ENVI$ &&lpName=*%&KeySize% 0
+ENVI$# &&lpcchName=*4 %&KeySize%
+CALL $**qd **ret:&bret offreg.dll,OREnumKey,%&hKey%,%&i%,*&&lpName,*&&lpcchName,#0,#0,#0
+
+// Save hive (use correct NT version number)
+CALL $**qd **ret:&bret offreg.dll,ORSaveHive,%&hKey%,$%&savepath%,#%&MajorVersion%,#%&MinorVersion%
+
+// Unload
+CALL $**qd **ret:&bret offreg.dll,ORCloseKey,%&hKey%
+```
+
+Backup-before-write safety: copy hive file → operate → if success delete backup, else restore from backup.
+
+---
+
+### 50. FVAR Secure Boot (Direct EFI Variable)
+
+```wcs
+// Method 1: Direct EFI global variable read (simplest)
+ENVI ?&ret=FVAR,SecureBoot;{8be4df61-93ca-11d2-aa0d-00e098032b8c}
+// Returns 0=off, 1=on
+
+// Method 2: NtQuerySystemInformation #145 (already in codebook section 37)
+```
+
+### 51. SITE fattr — File Attribute Bitmask Decoding
+
+```wcs
+SITE ?,,,,var=fattr,"C:\Windows\notepad.exe"
+CALC &isReadOnly=%&var% & 0x1
+CALC &isHidden=%&var% & 0x2
+CALC &isSystem=%&var% & 0x4
+CALC &isArchive=%&var% & 0x20
+CALC &isCompressed=%&var% & 0x800
+// FILE_ATTRIBUTE_ constants: 0x1=READONLY, 0x2=HIDDEN, 0x4=SYSTEM,
+//   0x10=DIRECTORY, 0x20=ARCHIVE, 0x80=NORMAL, 0x100=TEMPORARY,
+//   0x200=SPARSE, 0x400=REPARSE, 0x800=COMPRESSED, 0x1000=OFFLINE,
+//   0x2000=NOT_CONTENT_INDEXED, 0x4000=ENCRYPTED, 0x8000=INTEGRITY_STREAM,
+//   0x10000=VIRTUAL, 0x20000=NO_SCRUB_DATA, 0x40000=EA, 0x80000=PINNED,
+//   0x100000=UNPINNED, 0x80000000=DEVICE
+```
+
+---
+
+### 52. WiFi Connect + Tray UI Pattern
+
+Combined ADSL-wlan + TABL + minimize-to-tray typical pattern:
+
+```wcs
+// Scan WiFi networks
+ADSL-wlan ,,scan,&&result
+// result format: one per line, TAB-delimited fields
+// Parse into TABL for display
+TABL &TABL1,L10T10W400H200,...
+FORX *NL &result,&&line,
+{   MSTR &&ssid,&&signal,&&flags,&&type...=<1><2><3><4>%&line%
+    ENVI @&TABL1.ADD=%&ssid%;%&signal%
+}
+
+// Connect to selected SSID
+ADSL-wlan %&ssid%,%&password%,,
+
+// Minimize to tray
+_SUB OnClose
+    ENVI @@Visable=::0        // hide window
+    // Show tray icon with notification
+_END
+```
+
+---
+
+### 53. Display Mode Presets with Timeout
+
+```wcs
+_ENVI &&curDisp=
+SUBM * &&curDisp
+DISP W%&w%H%&h%B%&b%F%&f% T10    // apply with 10s countdown
+FIND $%&YesNo%=NO,
+{   // User cancelled or timeout → revert
+    KILL explorer.exe
+}
+
+// Or multi-try with timer fallback:
+TIME &TM,2000,CALL OnTwoSeconds   // 2-second timer
+_SUB OnTwoSeconds
+    FIND $0=%&&__YesNo%, DISP     // if still 0, auto-revert
+_END
+```
+
+---
+
+### 43. EFI Boot Entry Management (FVAR UEFI NVRAM)
+
+```wcs
+// Read EFI firmware variable
+ENVI ?&var=FVAR,Boot0000;{8be4df61-93ca-11d2-aa0d-00e098032b8c}
+
+// Write EFI firmware variable
+ENVI ?-v =FVAR+,BootXXXX,&&buf   // create/modify boot entry
+
+// Get buffer byte length
+ENVI-addr ;&len=&&buf
+
+// Create view into buffer at offset (FVAR data starts at offset)
+ENVI-mkdummy &&view=&&buf@8
+
+// 16-bit WORD access for BootOrder entries
+SET?short &buf=&val:offset
+
+// Need SeSystemEnvironmentPrivilege to write
+CALL $**qd **ret:&bret ntdll.dll,RtlAdjustPrivilege,#22,#1,#0,&&pEnabled
+
+// Boot entry ID naming: Boot%IDXX% where IDXX = BootID + 0x100000
+// Clean empty IDs, compact BootOrder array
+```
+
+### 54. QueryDosDeviceW — All MS-DOS Devices
+
+```wcs
+ENVI$ &&buf=*0x100000 0
+CALL $**qd **ret:&bret kernel32.dll,QueryDosDeviceW,#0,*&&buf,#0x80000
+// Returns null-delimited, double-null terminated device list
+// lpos* * for binary null pattern search
+LPOS* * &&pos=0x00 0x00 0x00 0x00,1,&&buf
+// Extract and decode: GETF -bin → MSTR * → SED -ex → CODE ***unicode
+CODE ***unicode,**.buf,*uni,&&result
+```
+
+### 55. RtlGetNtVersionNumbers (Pointer-Based)
+
+```wcs
+ENVI$# &&Major=*4 0
+ENVI$# &&Minor=*4 0  
+ENVI$# &&Build=*4 0
+CALL $**qd **ret:&bret ntdll.dll,RtlGetNtVersionNumbers,*&&Major,*&&Minor,*&&Build
+ENVI?int &&Major=&&Major:0
+ENVI?int &&Minor=&&Minor:0
+ENVI?int &&Build=&&Build:0
+CALC &BuildNumber=%&Build% & 0xFFFF   // mask high 16 bits
+```
+
+### 56. ScrollBar via GetScrollInfo API
+
+```wcs
+SET &SIF_RANGE=0x0001
+SET &SIF_PAGE=0x0002
+SET &SIF_POS=0x0004
+SET &SIF_TRACKPOS=0x0010
+SET &SIF_ALL=0x0017
+
+SET &SCROLLINFO.SIZE=28  // cbSize(4)+fMask(4)+nMin(4)+nMax(4)+nPage(4)+nPos(4)+nTrackPos(4)
+ENVI$ &&si=*28 0
+ENVI-long &&si=28:0           // cbSize=28
+ENVI-long &&si=%SIF_ALL%:4    // fMask
+
+CALL $**qd **ret:&bret user32.dll,GetScrollInfo,#%&TBID%,#0,*&&si  // SB_HORZ=0
+ENVI?int &&si=&&nPos:20        // current scroll position
+
+// Horizontal column position:
+CALC &&col=ceil(%&nPos% / %&ColumnWidth%) + 1
+
+// Scroll to specific position via message:
+SET @@sendmsg=%&TBID%;%&lvm_scroll%;%&Pos%;0
+// Or scroll to row: SET @@sendmsg=%&TBID%;%&lvm_ensurevisible%;%&index%;0
+```
+
+---
+
+## Non-Codebook Quick Reference (PECMD补充说明.doc extracts)
+
+The `PECMD补充说明.doc` is the authoritative source for advanced patterns:
+
+### THREAD* Stack Chain Rules
+- In a window_SUB (persistent stack): THREAD* shares PE variables directly
+- In a temporary function/block ({}) : THREAD* copies PE variables (isolated)
+- `THREAD$` : pre-interpret once before launch (uses literal values, avoids async clash)
+- `-link` : maintain parent-child window connection; wait for child thread end
+
+### PE Variable Destructor
+```wcs
+SET-def ~CloseHandleX~h=0    // define h AND register destructor CloseHandleX
+// When scope exits: CloseHandleX %&h% → PE var h released
+// Destructors run in reverse order of definition
+```
+
+### Function Destructor (`_SUB Func,*,析构命令`)
+```wcs
+_SUB F1,*,IFEX #[ %&h%>0 ], CALL $kernel32.dll,CloseHandle,#%&h%
+    // ... function body with early EXIT
+_END  // destructor command runs automatically on exit
+```
+
+### #& Control Naming (Shared PE Variable)
+```wcs
+LIST #&L7,L410T55W46H23,1|2|3|4,,1,    // control name is #&L7, variable is %&L7%
+// Access from parent/other pages: ENVI @Page1:#&L7.VAL=...
+```
+
+### ENVI^ Alias System
+```wcs
+ENVI^ Alias aliasName=[cmd prefix]
+ENVI^ Alias * aliasName=cmd             // * = enable prefix+space syntax
+```
+
+### ENVI @@POSTMSG/SENDMSG Full Syntax
+```wcs
+ENVI @@SENDMSG=[:retVar;]windowID;messageID[;wParam[;lParam]]
+// wParam,lParam: @PEvar (buffer), $string (SENDMSG only), number
+// message with # prefix = PECMD custom message 1-N
+// _ = second-half response mode (responds after system)
+```
+
+### PUT/GET Binary Resource Export
+```wcs
+// #.N = raw (original) resource data
+PUTF -dd -bs=10M out.dat,0,"%MyName%""#.101|SCRIPT"
+// #N = decompressed resource
+PUTF -dd -bs=10M out.dat,0,"%MyName%""#2|INDATA"
+// Resource type IDs: CURSOR=1 BITMAP=2 ICON=3 MENU=4 DIALOG=5, STRING=6,
+//   FONTDIR=7 ACCELERATOR=9 RCDATA=10 GROUP_ICON=14 VERSION=16 MANIFEST=24
+```
+
+### FIND/IFEX Shortened Block Syntax (>=79N-59D)
+```wcs
+FIND $1=1,FIND body! ELSE body          // single-line TRUE + ;ELSE
+FIND $1=1,
+{   MESS TRUE
+}! MESS FALSE                           // multi-line TRUE, single-line ELSE on }!
+FIND $1=1, { MESS TRUE                  // TRUE block first line inline
+}! { MESS FALSE }
+```
+
+### SED Regex Syntax (from PECMD2012正则表达式.doc)
+```
+.   = any char       [abc] = char class  [^abc] = negated class
+?   = 0-1 times      + = 1+ times        * = 0+ times
+??  = non-greedy ?   +? = non-greedy +   *? = non-greedy *
+()  = group          {} = named group (reference via \1-\9)
+^   = start anchor  $ = end anchor      | = alternation
+\\a = [a-zA-Z0-9]   \\d = [0-9]          \\h = [0-9a-fA-F]
+\\w = [a-zA-Z]+     \\z = [0-9]+          \\n = newline
+Replacement: \\0=entire match \\1-\\9=group refs \\u=uppercase \\l=lowercase
+```
+
+### PECMD Variable → CMD Variable (3 methods)
+```
+// Method 1 (best): WRIT to stdout
+WRIT -,$+0,a 111        // CMD FOR /F captures output
+
+// Method 2: Temp file
+WRIT %tmpf%,$+0,set a=%val%   // then CALL .\tmpf.CMD
+
+// Method 3: Registry
+REGI HKCU\PECMD_U\var=%val%   // CMD reads via reg query
+```
 
 ---
 

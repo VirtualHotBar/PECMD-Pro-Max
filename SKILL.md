@@ -724,7 +724,117 @@ SET~ &&val=Arr.%&row%.%&col%                          // indirect read
 | `%&__wParam.wNotifyCode%` | PE | WM_COMMAND: notification code |
 | `%PECMDBUILD%` | Env | PECMD build date |
 
-## $11 OUTPUT CONVENTIONS
+## $11 ADVANCED PATTERNS (from PECMD补充说明.doc)
+
+These patterns come from the authoritative `PECMD补充说明.doc` by mdyblog, the author of PECMD2012.
+
+### Thread Stack Rules for THREAD*
+
+- In **persistent** stack (window `_SUB`, `_SUB Func,*`): `THREAD*` **shares** PE variables — no copy
+- In **temporary** stack (function/block `{}`): `THREAD*` **copies** PE variables — isolated
+- Wrap in `{}` to force copy mode even in persistent stacks
+
+### THREAD$ Pre-Interpretation
+`THREAD$ cmd` pre-interprets once before launch. Uses literal values of `%1 %@ %&var%`, avoiding async variable clash:
+```
+THREAD*$ TEAM WAIT 100| MESS I=%&I%    // %&I% resolved BEFORE thread starts
+```
+`-link` : maintain parent-child window connection. `-htid:var` : get thread handle. `#` : proxy mode (proxy exits when thread ends).
+
+### PE Variable Destructor (Auto-Release Resources)
+```wcs
+SET-def ~CloseHandleX~h=0    // define h AND register CloseHandleX destructor
+// When scope exits: CloseHandleX %&h% runs, then h is freed
+// Destructors run in REVERSE order of definition
+```
+
+### Function Destructor (`_SUB Func,*`,optional destructor command)
+```wcs
+_SUB F1,*,IFEX #[ %&h%>0 ], CALL $kernel32.dll,CloseHandle,#%&h%
+    SET-def h=0
+    CALL $**ret:&h kernel32.dll,CreateFileW,\\.\PhysicalDrive0,...
+    EXIT _SUB   // early exit without releasing h — destructor auto-runs
+_END
+```
+
+### #& Control Naming (Shared PE Variable Across Pages)
+```wcs
+LIST #&L7,L410T55W46H23,1|2|3|4,,1,    // control: #&L7, variable name is L7
+// Access from parent: ENVI @Page1:#&L7.VAL=1|2|3
+// Useful for property sheet pages sharing the same PE variable
+```
+
+### ENVI^ Alias System
+```wcs
+ENVI^ Alias aliasName=[cmdPrefix]
+ENVI^ Alias *GETF=GETF                  // * = enable space-delimited syntax
+// Now: GETF -bin src,0#*,&var   works
+```
+
+### ENVI @@POSTMSG / @@SENDMSG (Cross-Thread/Process Messaging)
+```
+ENVI @@POSTMSG=[:retVar;]WinID;MsgID[;wParam[;lParam]]   // async
+ENVI @@SENDMSG=[:retVar;]WinID;MsgID[;wParam[;lParam]]   // sync (waits)
+// MsgID with # prefix = PECMD custom message 1-N
+// wParam,lParam: @PEvar (buffer pointer), $string (SENDMSG only), number
+// Underscore after = → second-half response mode
+```
+
+### ENVI @@POS / @@Enable / @@Visable
+```wcs
+ENVI @@POS=WinID:left:top:width:height:layer:alpha:front:active    // set window pos
+ENVI @@Enable=WinID:0|1            // 0=disable, 1=enable (# for child thread)
+ENVI @@Visable=WinID:0|1|*value    // 0=hide, 1=show, *=alt method. #2=minimize, #3=maximize
+```
+
+### ENVI @@Cur — Mouse Cursor
+```wcs
+ENVI @@Cur=?&&X0;&&Y0              // query cursor position
+ENVI @@Cur=%&X0%;%&Y0%             // set cursor position
+ENVI @@Cur=0                       // hide cursor
+ENVI @@Cur=1                       // show cursor
+```
+
+### ENVI$# / ENVI%# — Byte/Binary Memory Allocation
+```wcs
+ENVI$# &PEvarName= *1M #           // 1MB uninitialized
+ENVI$# &PEvarName= *1M 0           // 1MB zero-filled (bytes, not wchars)
+ENVI$# &PEvarName= *1M 0x30        // 1MB filled with 0x30
+ENVI$ &PEvarName= *1M #            // 1M WCHARS (2MB bytes) uninitialized
+```
+
+### FIND/IFEX Shortened Block Syntax
+```wcs
+// Single-line TRUE + inline ELSE
+FIND $1=1,code! ELSEcode
+// Multi-line TRUE, single-line ELSE on same line as }!
+FIND $1=1, { MESS YYY }! MESS NNN
+// TRUE block first line inline after { 
+FIND $1=1, { MESS inline code }! { MESS ELSE block }
+```
+
+### SED Regex Quick Reference (from PECMD2012正则表达式.doc)
+```
+.    any char     [abc] char class    [^abc] negated     [0-9] range
+?    0-1 times    +    1+ times       *    0+ times
+??/+?/*? non-greedy variants    () group    {named} =\1-\9
+^    start        $    end            |    alternation
+\d   digits       \h   hex digit      \w   word            \z   integer
+\\n  newline      \n   replacement newline   \t replacement tab
+\0   full match   \1-\9  group refs   \u   uppercase       \l   lowercase
+```
+
+### Non-Codeblock Patterns for SKILL.md context
+
+- **Tray menu submenus**: Unlimited nesting, mixed POPUP/MENUITEM/SEPARATOR via `MENU` block
+- **RUNDLL32 via CALL**: `CALL $--win dll,func,args...` — auto-handles hidden RUNDLL32 params
+- **Auto-app scripts**: `%MyName%.autoapp.wcs` auto-runs on PECMD startup (via built-in 101 script)
+- **Resource export raw vs decompressed**: `#.N` = original raw, `#N` = auto-decompressed
+- **HIVE -super_r** for full admin access to offline registry hives
+- **Variable encoding**: `SITE ?-all,VAR=var` / `SITE ?-sys,VAR=var` for obfuscation
+- **LOGS for PE debugging**: `LOGS **2 *D:\PE.LOG` — realtime logging; final line with `[]` = last completed, `{}` = current
+
+## $12 OUTPUT CONVENTIONS
 
 When writing PECMD scripts and tools, follow these conventions:
 
