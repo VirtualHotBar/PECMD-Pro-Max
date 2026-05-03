@@ -29,6 +29,12 @@ PECMD 脚本是一组平铺的顶层语句。从上到下顺序执行。`_SUB` �
 - 循环体内 `EXIT -` 继续下一次迭代；`EXIT LOOP` / `EXIT FORX` 跳出循环
 - 脚本文件常用 `.wcs` 扩展名。中文脚本首行加 `#code=65001` 声明 UTF-8 编码。若首行以 `#!` 开头，编码指令放在第二行。
 
+**标准 I/O（stdin/stdout/stderr）：**
+- `READ -,n,&var` — 从 stdin 读取一行
+- `WRIT -,$+0,text` — 写入 stdout
+- `WRIT --,$+0,text` — 写入 stderr
+- `LOGS * CONOUT$` — 输出到控制台（替代 ECHO）
+
 ## $2 变量系统
 
 PECMD 有**四种访问前缀**对应三层存储体系。搞错这一点是绝大多数错误的根源。
