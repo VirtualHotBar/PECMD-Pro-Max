@@ -199,7 +199,7 @@ ADSL-wlan %&ssid%,%&password%,,
 
 // Minimize to tray
 _SUB OnClose
-    ENVI @@Visable=::0        // hide window
+    ENVI @@Visible=::0        // hide window
     // Show tray icon with notification
 _END
 ```

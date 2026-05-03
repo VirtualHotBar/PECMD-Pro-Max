@@ -1361,14 +1361,14 @@ _SUB OnSize                                         // WM_SIZE handler
 _END
 
 _SUB OnHide
-    ENVI @@Visable=%&WID%:0                         // hide without closing
+    ENVI @@Visible=%&WID%:0                         // hide without closing
     TIPS* ,Status message,,,tray_icon.dll#1
 _END
 
 _SUB OnSwitch                                       // toggle visibility
-    ENVI @@Visable=?%&WID%:&&zzView
-    FIND |%&zzView%=0, ENVI @@Visable=%&WID%:1
-    ! ENVI @@Visable=%&WID%:0
+    ENVI @@Visible=?%&WID%:&&zzView
+    FIND |%&zzView%=0, ENVI @@Visible=%&WID%:1
+    ! ENVI @@Visible=%&WID%:0
 _END
 ```
 
@@ -1988,7 +1988,7 @@ _END
 | `ENVI @this.HitTest=31` | 拖动窗口 | `ENVI @this.HitTest=31` |
 | `ENVI @Ctrl.id=?&var` | 获取 HWND | `ENVI @Panel1.id=?&hwnd` |
 | `ENVI @Ctrl.InvalidateRect=` | 强制重绘 | `ENVI @Tbl.InvalidateRect=` |
-| `ENVI @@Visable=WID:0` | 跨进程隐藏 | `ENVI @@Visable=%&wid%:0` |
+| `ENVI @@Visible=WID:0` | 跨进程隐藏 | `ENVI @@Visible=%&wid%:0` |
 | `ENVI @@POS=WID:L:T:W:H` | 跨进程移动 | `ENVI @@POS=%&wid%:0:0:300:200` |
 | `ENVI @@style=WID:*remove:add` | 跨进程样式 | `ENVI @@style=%&wid%:*:0x00800000` |
 | `SET @@sendmsg=WID;msg;w;l` | 跨进程消息 | `SET @@sendmsg=%&hwnd%;0x0111;%id%;0` |

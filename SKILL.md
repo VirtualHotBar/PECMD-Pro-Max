@@ -273,7 +273,7 @@ EXEC* -exe:#101 &out=*embedded.exe                        // 从 PECMD 资源运
 IFEX $1=%&exists%,
 {
     REGI $HKCU\Software\MyApp\WID,&&wid
-    IFEX $%&wid%>0, TEAM ENVI @@Visable=%&wid%:2| ENVI @@POS=%&wid%:::::::1
+    IFEX $%&wid%>0, TEAM ENVI @@Visible=%&wid%:2| ENVI @@POS=%&wid%:::::::1
     EXIT FILE
 }
 LOCK #MyAppLock,&ret2
@@ -312,7 +312,7 @@ LPOS &&pos=needle,,%&haystack%                            // 查找首次出现�
 17. **MSG 上的 `_` 前缀**：控件通知用 `_msg#`；窗口级消息省略 `_`。搞错这一点是非常常见的错误。
 18. **THREAD\* 与 THREAD**：只有持久（窗口）栈中的 THREAD* 共享 PE 变量。在 `{}` 块中，两者都复制。
 19. **FIND 展开规则**：FIND 中的裸标识符被视为字面字符串。始终使用 `FIND $%&var%=值` 引用 PE 变量。
-20. **`@@Visable` 与 `@Visible`**：跨进程用 `ENVI @@Visable=窗口ID:值`。进程内用 `ENVI @控件.Visible=0|1`。
+20. **`@@Visible` 与 `@Visible`**：跨进程用 `ENVI @@Visible=窗口ID:值`。进程内用 `ENVI @控件.Visible=0|1`。
 
 ## $9 参考文件
 

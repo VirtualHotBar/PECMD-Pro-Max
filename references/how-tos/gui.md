@@ -185,11 +185,11 @@ _SUB MyWin,W400H300,Title,,,,, -trap -nocap -ntab -nfocus
 //   -minb: enable minimize button
 
 // Cross-process window hide/show
-ENVI @@Visable=%&WID%:0                           // SW_HIDE (hide to tray)
-ENVI @@Visable=%&WID%:1                           // SW_SHOW (show)
-ENVI @@Visable=%&WID%:2                           // SW_RESTORE (restore from minimize)
-ENVI @@Visable=%&WID%:*4                          // SW_MINIMIZE
-ENVI @@Visable=?%&WID%:&&state                    // query visibility state
+ENVI @@Visible=%&WID%:0                           // SW_HIDE (hide to tray)
+ENVI @@Visible=%&WID%:1                           // SW_SHOW (show)
+ENVI @@Visible=%&WID%:2                           // SW_RESTORE (restore from minimize)
+ENVI @@Visible=%&WID%:*4                          // SW_MINIMIZE
+ENVI @@Visible=?%&WID%:&&state                    // query visibility state
 ```
 
 ---

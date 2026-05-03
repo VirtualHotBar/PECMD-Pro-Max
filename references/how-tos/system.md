@@ -157,7 +157,7 @@ _SUB CheckSingle *
     {
         IFEX $%&wid%>0,
         {
-            ENVI @@Visable=%&wid%:2                 // restore window
+            ENVI @@Visible=%&wid%:2                 // restore window
             ENVI @@POS=%&wid%:::::::1               // bring to foreground
         }
         EXIT FILE
@@ -351,7 +351,7 @@ CALC &&pct=100 - 100 * %&used% / %&total% ##1       // percentage, force decimal
 
 ```wcs
 // From second instance, restore first instance:
-ENVI @@Visable=%&windowID%:2                         // SW_RESTORE
+ENVI @@Visible=%&windowID%:2                         // SW_RESTORE
 ENVI @@POS=%&windowID%:::::::1                       // bring to foreground + activate
 
 // In Window, save its HWND:
@@ -420,8 +420,8 @@ _SUB OnTray
 _END
 
 _SUB OnSwitch                                // toggle window visibility
-    ENVI @@Visable=?%&WID%:&&view
-    FIND |%&view%=0, ENVI @@Visable=%&WID%:1! ENVI @@Visable=%&WID%:0
+    ENVI @@Visible=?%&WID%:&&view
+    FIND |%&view%=0, ENVI @@Visible=%&WID%:1! ENVI @@Visible=%&WID%:0
 _END
 ```
 ---
