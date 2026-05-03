@@ -404,7 +404,8 @@ READ path,*r,&var     // 原始（不转换行尾符）
 READ path,*,&var      // UNIX LF -> 本地
 READ path,**,&var     // DOS CRLF -> 本地
 READ -,-1,&count,&var // 获取行数
-READ -,lineNo,&line,&var  // 读取指定行
+READ -,lineNo,&line,&var  // 读取指定行（lineNo=-1 获取行数）
+READ -,10,&line,&var  // 从 stdin 读取一行
 ```
 
 ### WRIT — 写入文件
@@ -417,9 +418,18 @@ WRIT[-UNICODE|-UNICODEB|-UTF8|-GBK|-BIG5|-ANSI|-<codepage>] [*fix] [*-nl] [*v] [
 星号前缀修饰符：`*fix`=单独的 CR 视为换行，`*-nl`=不添加尾部换行，`*v`=写入变量，`*fv`=FileData 是变量名，`*c`=先清空文件，`*nobom`=写入时不添加 BOM。
 
 位置：`$`=展开环境变量，`+`=插入新行，`-`=删除行，纯数字=替换行。`0` = 最后一行。
-特殊文件名：`-`=stdout，`--`=stderr，`CONOUT$`=调试终端。
+
+**标准 I/O（特殊文件名）：**
+| 文件名 | 含义 |
+|--------|------|
+| `-` | stdin（READ）/ stdout（WRIT）|
+| `--` | stderr |
+| `CONOUT$` | 调试终端 |
 
 ```
+READ -,10,&line,&var     // 从 stdin 读取一行
+WRIT -,$+0,Hello         // 写入 stdout
+WRIT --,$+0,Error        // 写入 stderr
 WRIT C:\BOOT.INI,+0,text              // 追加新行
 WRIT path,$0,a=%var%                  // 替换最后一行，展开变量
 WRIT -,$+0,result                     // 写入 stdout
@@ -1388,11 +1398,17 @@ KILL -exitcode:NUM process.exe             // 设置退出代码
 KILL ** process.exe                        // 强制同步终止
 ```
 
-### LOGS — 调试日志
+### LOGS — 调试日志 / 控制台输出
 ```
-LOGS * C:\log.txt                       // 开始记录日志
-LOGS                                    // 停止
+LOGS * C:\log.txt                       // 开始记录日志到文件
+LOGS * CONOUT$                          // 输出到控制台（调试终端）
+LOGS --t=1 --ln=1                       // 包含时间戳和行号
+LOGS                                    // 停止记录
 ```
+- `CONOUT$` — 输出到控制台/调试终端（替代 ECHO）
+- `--thread` — 本线程日志，`@` — 公共日志，`3` — 两者
+- `--p` — 执行前打印，`--2` — 前后都打印
+- `--ln=1/0` — 显示/隐藏行号，**logs_ln** 环境变量可替代
 
 ### COME / NOTE — 注释开关
 ```
