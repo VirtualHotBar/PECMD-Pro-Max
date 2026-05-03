@@ -38,7 +38,7 @@ pecmd-pro-max/
 - **Complete GUI reference** — all 22 controls & sub-windows (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `TREE`...), ENVI @ properties full reference, message system, window management
 - **WinPE boot flow** — from `winpeshl.exe` → `PECMD MAIN PECMD.INI` through to `EXPLORER.EXE`, with `WinXShell` integration
 - **50 built-in variables table** — path/shell vars, process/thread vars, window/GUI vars, script/runtime vars, command-result vars
-- **20 ENVI^ runtime control commands** — EnviMode, ForceLocal, WndProc, Alias, memvar, LoadPlugin, and more
+- **17 ENVI^ runtime control commands** — EnviMode, ForceLocal, Alias, WndProc, memvar, LoadPlugin, DisX64, zero, Arg, Clipboard, EnviBroad, __arg, LoadEnvi, HelpColor, DeskTopFresh, TaskIcoMenu, EXPORTLOCAL
 - **ForceLocal + EnviMode defaults** — ensures every generated script uses the safest variable scoping by default
 - **Code organization rules** — `_SUB` declaration at parse time vs runtime, `SET^` Win32 callback binding, `CALL @` variants cheat sheet
 - **ENVI @ control properties reference** — universal, EDIT/ITEM/window-specific, TABL 30+ operations, TREE 10+ operations, cross-process control

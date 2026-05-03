@@ -38,7 +38,7 @@ pecmd-pro-max/
 - **完整 GUI 参考** —— 所有 22 种控件与子窗口（`LABE`、`EDIT`、`CHEK`、`RADI`、`IMAG`、`TABL`、`LIST`、`MEMO`、`TREE`...）、ENVI @ 控件属性大全、消息系统、窗口管理
 - **WinPE 启动流程** —— 从 `winpeshl.exe` → `PECMD MAIN PECMD.INI` 直至 `EXPLORER.EXE`，包含 `WinXShell` 集成
 - **50 个内置变量全表** —— 路径/Shell变量、进程/线程变量、窗口/GUI变量、脚本/运行时变量、命令结果变量
-- **20 个 ENVI^ 运行时控制命令** —— EnviMode、ForceLocal、WndProc、Alias、memvar、LoadPlugin 等
+- **17 个 ENVI^ 运行时控制命令** —— EnviMode、ForceLocal、Alias、WndProc、memvar、LoadPlugin、DisX64、zero、Arg、Clipboard、EnviBroad、__arg、LoadEnvi、HelpColor、DeskTopFresh、TaskIcoMenu、EXPORTLOCAL
 - **ForceLocal + EnviMode 默认值** —— 确保每个生成的脚本都使用最安全的变量作用域
 - **代码组织规则** —— `_SUB` 声明时解析 vs 运行时调用、`SET^` Win32 回调绑定、`CALL @` 变体速查表
 - **ENVI @ 控件属性大全** —— 通用属性、EDIT/ITEM/窗口专用、TABL 30+ 操作、TREE 10+ 操作、跨进程控制

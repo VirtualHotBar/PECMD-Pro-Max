@@ -56,7 +56,29 @@ PECMD 有**四种访问前缀**对应三层存储体系。搞错这一点是绝�
 8. `ENVI-ret %~1=%var%` — 将值设置到*名称*存储在 `%~1` 中的变量（引用返回）。
 9. `SET-def var=value` — 仅在变量未定义时设置（安全默认值）。
 
-### 标准文件头
+### ENVI^ 运行时控制命令
+
+| 命令 | 功能 |
+|------|------|
+| `ENVI^ EnviMode=1` | 标准模式：空变量解释为空字符串，顺序解释1遍 |
+| `ENVI^ ForceLocal=1` | 强制所有变量为 PE 变量，最简多线程/并行窗口 |
+| `ENVI^ EXPORTLOCAL=1\|0\|&1` | PE 变量继承：1=传播，0=隔离，&=递归 |
+| `ENVI^ Alias name=cmd` | 命令别名：替代命令前半部 |
+| `ENVI^ WndProc[1\|2\|3][C][,ptr]` | Win32 回调绑定（C=C 调用约定） |
+| `ENVI^ memvar=[?返回名,][:字节数:]偏移,值` | 修改/查询 PECMD 内存变量 |
+| `ENVI^ LoadPlugin=basename` | 加载插件 |
+| `ENVI^ DisX64=1[,Old]` | 禁用/恢复 WOW64 文件系统重定向 |
+| `ENVI^ zero=0\|1` | 私密模式：内存用完清零 |
+| `ENVI^ Arg=*[字符集]字符串` | 词语分断 |
+| `ENVI^ Clipboard=text\|?=var` | 读写剪贴板 |
+| `ENVI^ EnviBroad=0\|1\|-` | 环境变量广播开关 |
+| `ENVI^ __arg=0\|1` | 兼容模式：启用 `&&__arg` 参数表 |
+| `ENVI^ LoadEnvi [路径\|-] [变量名]` | 从注册表刷新环境变量 |
+| `ENVI^ HelpColor=[*高度] [前景色][#背景色]` | HELP 显示颜色 |
+| `ENVI^ DeskTopFresh=[clearicon][;][1\|2\|4\|8\|16][;[-+]path]` | 桌面刷新 |
+| `ENVI^ TaskIcoMenu=0\|1\|2` | 托盘菜单切换 |
+
+> 完整 ENVI^ 控制命令、二进制缓冲区操作（SET-cmp、SET-tom、SET-copy、SET?int 等）和函数参数引用，参见 [commands-full.md](references/commands-full.md)。
 
 ```wcs
 #code=65001

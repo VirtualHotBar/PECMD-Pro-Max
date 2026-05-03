@@ -184,6 +184,15 @@ ENVI^ Arg=*                      // 将单词拆分为参数
 ENVI^ DeskTopFresh=[clearicon][;][1|2|4|8|16][;[-+]path]  // 桌面刷新
 ENVI @@TaskIcoMenu=0|1|2         // 托盘菜单切换
 ENVI^ HelpColor=[*cmdHeight] [fgColor][#bgColor]  // HELP 显示颜色
+ENVI^ Alias name=cmd              // 命令别名：替代命令前半部
+ENVI^ Alias -opt name=cmd         // -opt 优化模式
+ENVI^ WndProc[1|2|3][C][,ptr]    // Win32 回调绑定（C=C 调用约定）
+ENVI^ memvar=[?返回名,][:字节数:]偏移,值  // 修改/查询 PECMD 内存变量
+ENVI^ LoadPlugin=basename         // 加载插件
+ENVI^ zero=0|1                    // 私密模式：内存用完清零
+ENVI^ EnviBroad=0|1|-             // 环境变量广播开关：1=开启，0=关闭，-=后台
+ENVI^ __arg=0|1                   // 兼容模式：启用 &&__arg 参数表
+ENVI^ LoadEnvi [路径|-] [变量名]  // 从注册表刷新环境变量
 ```
 
 ### CALC — 计算/求值
