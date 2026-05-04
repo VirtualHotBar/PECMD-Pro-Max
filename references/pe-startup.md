@@ -203,7 +203,7 @@ WAIT -1
 ## 重要注意事项
 
 1. PECMD.INI 末尾的 `WAIT -1` 保持脚本无限运行（否则 PE 启动后立即关闭）
-2. `SHEL` 必须在 `INIT` **之后**——Shell 需要先完成初始化
+2. `SHEL` 必须在 `INIT` **之后**——PECMD 运行时需先初始化，才能加载 Shell；若使用 HOTK/HIDE，SHEL 也须在其之后
 3. PE 中注册表配置单元可能未完全加载。离线注册表访问用 `REGI .`（点前缀）
 4. PE 中 `%SystemDrive%` 通常是 `X:`（RAM 磁盘），而非 `C:`
 5. PE 环境通常缺少许多 DLL。在真实 PE 中测试脚本，或使用 `IFEX` 防护

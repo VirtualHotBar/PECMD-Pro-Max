@@ -274,7 +274,7 @@ _END
 ```
 
 关键点：
-- `SWIN` 容器必须放在其 `_SUB` 定义**之前**。
+- `_SUB` 类定义可在文件中任意位置（PECMD 解析时解析），但 SWIN 实例需引用已定义的类名。
 - 使用 `0x10` 标志初始隐藏页面。
 - `TABS.SEL=<n>` 选择选项卡；`TABS.SEL=?` 查询当前选择。
 - 通过 `ENVI @PageName.Visible=0` / `=1` 切换可见性。
@@ -492,7 +492,7 @@ SET &::HTCAPTION=2
 
 CALL @CustomWin
 
-_SUB CustomWin,W500H350,My Custom Tool,,,#1,,,  -trap -nocap
+_SUB CustomWin,W500H350,My Custom Tool,,#1,, -trap -nocap
     ENVI @this.Font=12:Microsoft YaHei
     ENVI @this.bkcolor=0xF0F0F0
 
@@ -530,7 +530,7 @@ _SUB SysMenu
 _END
 
 _SUB OnMin
-    ENVI @@Visible=%&__WinID%:4                      // SW_MINIMIZE (1=SHOW, 2=NORMAL, 3=MAXIMIZE, 4=MINIMIZE, 5=RESTORE)
+    ENVI @@Visible=%&__WinID%:4                      // PECMD 枚举: 1=SHOW, 2=NORMAL, 3=MAXIMIZE, 4=MINIMIZE, 5=RESTORE（非 WinAPI 常量）
 _END
 
 _SUB OnClose
@@ -571,9 +571,9 @@ SET &IMAGELIST=icons.16:16%&TAB%icon1.ico%&TAB%icon2.ico
 TREE Tree1,L10T10W300H300,%&IMAGELIST%,%&MUI_NODE_DATA%,0x10000127
 
 // Expand / Collapse nodes
-ENVI @Tree1.Expand=1                 // expand node 1
-ENVI @Tree1.Expand=2.1;0x0001       // collapse (TVE_COLLAPSE)
-ENVI @Tree1.Expand=4;0x4002         // expand partial (TVE_EXPANDPARTIALX)
+ENVI @Tree1.Expand=2                 // expand node 1 (2=expand)
+ENVI @Tree1.Expand=2.1;1             // collapse node 2.1 (1=collapse)
+ENVI @Tree1.Expand=4;3               // toggle node 4 (3=toggle)
 
 // Select a node
 ENVI @Tree1.Sel=2.2                 // select node 2.2
@@ -588,6 +588,7 @@ ENVI @Tree1.Check=?*;&&state        // query checkbox state
 ### 处理 TVN_ITEMCHANGEDW（复选框变更通知）
 
 ```wcs
+ENVI @Tree1.ID=?;&&Tree1_ID                        // 获取控件 ID
 CALC -base=16 #&&TVN_ITEMCHANGEDW=0x100000000-419
 ENVI @this.MSG=NOTIFY#%&Tree1_ID%#%&&TVN_ITEMCHANGEDW%::&&wp,&&lp, CALL OnItemChanged %&&wp% %&&lp%
 
@@ -618,16 +619,16 @@ _SUB CanvasWin,W260H320,Canvas Demo,
     TIME &Timer1,50, ENVI @this.InvalidateRect=;;;230;
 _END
 
-_SUB OnPaint                               // %1 = HDC handle
-    CALC #L=%x0% - %w% - %L0%
-    CALC #T=%y0% - %h%
-    CALC #R=%x0% + %w% - %L0%
-    CALC #B=%y0% + %h%
+_SUB OnPaint                               // %1=HDC, %2=width, %3=height
+    CALC #L=%&w0% - %&w%
+    CALC #T=%&h0% - %&w%
+    CALC #R=%&w0% + %&w%
+    CALC #B=%&h0% + %&w%
     Rectangle %1,%L%,%T%,%R%,%B%
     Ellipse %1,%L%,%T%,%R%,%B%
-    CALC #w=%&w% + %&aw%
-    IFEX $%&w%>100, TEAM SET aw=-2|CALC #w=%&w% + %&aw%!
-    IFEX $%&w%<0, TEAM SET aw=2|CALC #w=%&w% + %&aw%
+    CALC #&w=%&w% + %&aw%
+    IFEX $%&w%>100, TEAM SET &aw=-2| CALC #&w=%&w% + %&aw%!
+    IFEX $%&w%<0, TEAM SET &aw=2| CALC #&w=%&w% + %&aw%
 _END
 ```
 
@@ -650,21 +651,18 @@ _END
 
 ```wcs
 PBAR PBAR1,L22T13W200H16,20               // initial value = 20%
-ENVI @PBAR1.color=0xFF                     // foreground (red)
-ENVI @PBAR1.bkcolor=0xFF00                 // background (green)
+ENVI @PBAR1.color=0xFF                     // text color (BGR red)
 
-// Update progress with text overlay
+// Update progress with text overlay (help.txt: 进度[;[#颜色:]文本])
+ENVI @PBAR1=50;#00FF00Processing...        // 50%, green text
 ENVI @PBAR1=%&p%;%&K%s  %&p%%%            // value;text
-
-// Advanced: percent display with colored text
-ENVI @PBAR1.percent=%&p%C:0xFF00:0xCFFF:0xFF:%&K%s  %&p%%%
 ```
 
 ### 绑定到 EDIT 的 SPIN 微调控件
 
 ```wcs
 EDIT EDIT1,L28T14W158H29,0,,
-SPIN SPIN1,L192T13W22H30,EDIT1,&&npos:&&button:&&old,
+SPIN SPIN1,L192T13W22H30,EDIT1:-20:5,&&npos:&&button:&&old,
     ENVI @LABE3= SPIN1 [%&&npos%] [%&&button%] [%&&old%], 0xA0
 
 // Query value and range
@@ -720,7 +718,7 @@ MEMO-+ -rich &&RichBox,L10T10W400H300,,0x200
 // B=Bold, I=Italic, U=Underline, T=Strikeout, L=Link
 ENVI @RichEdit1.COLOR=:20:Consolas:BI;0xFF;0;3      // Bold+Italic, red, pos 0-3
 ENVI @RichEdit1.COLOR=:12;0xFF00;3;6                  // green, pos 3-6
-ENVI @RichEdit1.COLOR=:9;0xFF0000;6;9                 // blue, pos 6-9
+ENVI @RichEdit1.COLOR=:9;0xFF0000;6;9                 // red (BGR), pos 6-9
 ENVI @RichEdit1.COLOR=:10;0xFF00FF;2:;4:              // magenta, line 2 to line 4
 ```
 

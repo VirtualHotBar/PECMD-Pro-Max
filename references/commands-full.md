@@ -530,7 +530,7 @@ READ path,*,&var      // UNIX LF -> 本地
 READ path,**,&var     // DOS CRLF -> 本地
 READ -,-1,&count,&var // 获取行数
 READ -,lineNo,&line,&var  // 读取指定行（lineNo=-1 获取行数）
-READ -,10,&line,&var  // 从 stdin 读取一行
+READ -,10,&line,&var  // 从 stdin 读取最多 10 字节
 READ -*[?],lineNo,&line,&var  // 从变量读取（? = 测试/查询编码）
 ```
 编码缩写：`-UNI` = `-UNICODE`，`-UNIBE` = `-UNICODEB`。

@@ -26,9 +26,8 @@ FORX *NL &ipcfg,&&line,
 ```wcs
 ADSL-wlan ,,list,&&wifiInfo                     // scan nearby networks
 ADSL-wlan ,,scan,&&detail                        // detailed scan
-BASE "SSID",&&encSSID
-BASE "password",&&encPSK
-ADSL-wlan %&encSSID%,%&encPSK%                  // connect
+ADSL-wlan MyNetwork,mypassword,WPA2PSK          // connect (plain text SSID/password)
+ADSL-wlan -start MyNetwork,mypassword           // connect and start
 ```
 
 ### Ping 检测

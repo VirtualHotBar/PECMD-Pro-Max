@@ -119,7 +119,7 @@ _END
 CALL 函数名 [参数]                 // 调用函数
 CALL *函数名 [参数]                // this-call（调用者栈）
 CALL @窗口名 [参数]                // 创建/显示窗口（模态，阻塞）
-CALL @*窗口名 [参数]               // 并行窗口
+CALL @*窗口名 [参数]               // 并行窗口（可同时操作，但关闭前阻塞后续命令）
 CALL @-窗口名 [参数]               // 后台窗口
 CALL @~窗口名 [参数]               // 后台，完全非阻塞
 CALL @~~窗口名 [参数]              // 后台快速调用（非阻塞）
@@ -158,15 +158,17 @@ _ENDFILE-IMPORT                // 此行以下内容在 IMPORT 时被丢弃
 
 ## $4 流程控制
 
-### FIND — 字符串比较（默认区分大小写）
+### FIND — 字符串比较（默认不区分大小写，`*c` 后缀区分）
 
 ```wcs
-FIND $%var%=hello, 命令               // 相等
+FIND $%var%=hello, 命令               // 相等（不区分大小写）
+FIND $%var%*c=hello, 命令             // 相等（区分大小写，*c 后缀）
 FIND $%var%<>hello, 命令              // 不等
 FIND $=%var%, 命令                    // "为空" 测试
 FIND *=var, 命令                      // 惯用法："为空"
 FIND *<>var, 命令                     // 惯用法："非空"
-FIND |%a%>%b%, 命令                   // | 前缀 = 数值比较
+FIND |%a%>%b%, 命令                   // | 前缀 = 浮点数比较
+FIND #%a%>%b%, 命令                   // # 前缀 = 整数比较（INT64）
 FIND [ $A & $B ], 命令                // 复合 AND
 FIND [ $A | $B ], 命令                // 复合 OR（| 分隔）
 FIND --pid &var,                     // 获取进程/CPU 信息
@@ -181,7 +183,7 @@ FIND --menu &var,窗口ID              // 查询窗口的 MENU 句柄
 IFEX C:\boot.ini, 命令                // 文件/目录存在
 IFEX C:\boot.ini,! 命令               // 不存在
 IFEX x:\, 命令                        // 盘符存在且有文件系统
-IFEX $%val%>=5, 命令                  // $=数值比较
+IFEX $%val%>=5, 命令                  // $=浮点数比较（#=整数比较）
 IFEX [ 条件1 & 条件2 ], 命令          // AND 复合条件
 IFEX [ 条件1 | 条件2 ], 命令          // OR 复合条件（| 分隔）
 IFEX MEMU=?,&var                     // 查询可用内存
@@ -317,13 +319,13 @@ CALL $--qd --ret:&&r user32.dll,GetSystemMetrics.#0              // 返回空
 // ❌ 整数无前缀返回 0
 CALL $ --ret:&&r user32.dll,GetSystemMetrics,0                   // 返回 0
 
-// ❌ GetProcAddress 始终返回 0x0（32/64 均如此）
-CALL $ --ret:&&p ,-GetProcAddress,*%&hDll%,$GetSystemMetrics     // 返回 0x0
+// ⚠ GetProcAddress：无 --qd 时常返回 0x0，加 --qd 后可工作
+CALL $ --ret:&&p ,-GetProcAddress,*%&hDll%,$GetSystemMetrics     // 可能返回 0x0
+CALL $--qd --ret:&&p ,-GetProcAddress,*%&hDll%,GetSystemMetrics  // 加 --qd 更可靠
 
-// ❌ 缓冲区输出参数：DLL 写入的数据无法回传到 PE 变量
+// ⚠ 缓冲区输出：无 --qd 时数据可能不回传，加 --qd 后可工作
 SET$ &buf=*256 0
-CALL $ --ret:&&r kernel32.dll,GetWindowsDirectoryW,*&buf,#256
-// len=10（正确），但 buf 仍为空
+CALL $--qd --ret:&&r kernel32.dll,GetWindowsDirectoryW,*&buf,#256  // --qd 模式
 
 // ❌ 无 --qd 时字符串含 null 终止符，FindWindowW 等失败
 CALL $ --ret:&&r user32.dll,FindWindowW,$Progman,#0             // 返回 0
@@ -339,8 +341,8 @@ CALL $ --ret:&&r user32.dll,FindWindowW,$Progman,#0             // 返回 0
 | 变量作参数 | `CALL $ --qd --ret:&&r kernel32.dll,lstrlenW,$%&str%` | ✅ |
 | LoadLibrary | `CALL $ --ret:&&h ,-LoadLibrary,^user32.dll` | ✅ |
 | 通过句柄调用 | `CALL $ --ret:&&r *%&h%,GetSystemMetrics,#0` | ✅ |
-| 缓冲区输出 | DLL 写入不回传到 PE 变量 | ❌ |
-| GetProcAddress | 始终返回 0x0 | ❌ |
+| 缓冲区输出 | 加 `--qd` 后可回传到 PE 变量 | ⚠ |
+| GetProcAddress | 加 `--qd` 后可工作 | ⚠ |
 | 点语法 | Func.#Param 不解析 | ❌ |
 
 ### 32-bit vs 64-bit 区别

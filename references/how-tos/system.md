@@ -85,7 +85,7 @@ _END
 ```wcs
 EXEC =!"%MyNAME%" TEAM WAIT 1000|LOAD other.ini
 ENVI ?WinPE=&&isPE
-EXEC* &&ver=*PECMD                              // * prefix = internal PECMD command
+EXEC* &&ver=*PECMD                              // * prefix = capture stdout to variable
 ```
 
 ### 终止进程
@@ -226,7 +226,7 @@ RPOS &&pos=needle,,%&haystack%                     // find last
 ### RSTR — 零填充
 
 ```wcs
-RSTR &&padded=3,000%num%                            // pad to 3 digits: 8 -> 008
+RSTR &&padded=3,000%num%                            // 取右边3字符: "0008" -> "008"
 ```
 
 ---
@@ -442,8 +442,10 @@ _END
 SHUT                        // shutdown (SHUTDOWN)
 SHUT R                      // reboot (RESTART)
 SHUT L                      // logoff
-SHUT E                      // standby
+SHUT S                      // standby (suspend)
 SHUT H                      // hibernate
+SHUT E                      // eject optical drive + wait 10s
+SHUT K                      // lock workstation
 ```
 
 ### 显示分辨率

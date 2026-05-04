@@ -31,7 +31,6 @@ _END
 | `-top` | 始终置顶 (TOPMOST) |
 | `-nocap` | 无标题栏/标题 |
 | `-nosysmenu` | 无系统菜单（标题栏无图标） |
-| `-nofix` | 窗口位置不固定；允许操作系统默认放置 |
 | `-trap` | 关闭按钮不退出；改为触发 closeCmd |
 | `-size` | 可调整大小的窗口（可调边框） |
 | `-maxb` | 启用最大化按钮 |
@@ -47,7 +46,7 @@ _END
 | `-nxp` | 禁用 XP 视觉样式（经典扁平外观） |
 | `-csize` | shape 尺寸指定**客户区**（不包括标题栏/边框） |
 | `-na` | 不激活（创建时不抢夺焦点） |
-| `-nb` | 无边框 |
+| `-layer` | 支持渐变透明（可配合 `SetLayeredWindowAttributes`） |
 
 ### 样式：透明与隐藏窗口
 
@@ -412,7 +411,7 @@ CHEK [-right -center -scale[:[H_Dpi][[<sW;sH>]:图片]]] [*] <名称>,<形状>,[
 |-------|---------|
 | `0` | 未勾选 |
 | `1` | 已勾选 |
-| `2` | 不确定 / "无所谓"（需要 BS_3STATE 样式：`0x0005`） |
+| `2` | 未勾选（同 0，help.txt: "0，2或-2为没有钩选"） |
 
 **操作：**
 ```wcs
@@ -479,8 +478,7 @@ LIST [-h] Name,LxTyWwHh,item1|item2|item3,[EventCmd],[默认选中条目],[状�
 ENVI @List.VAL=                                    // 清空所有项目
 ENVI @List.ADD=New Item                            // 在末尾添加一个项目
 ENVI @List.ADDSEL=New Item                         // 添加项目并选中
-ENVI @List.DEL=Item Text                           // 按文本删除项目
-ENVI @List.DEL=:3                                   // 按从 1 开始的索引删除项目
+ENVI @List.DEL=Item Text                           // 按文本删除项目（help.txt: DEL=被删除的条目）
 ENVI @List.isel=3                                   // 按索引选中（从 1 开始）
 ENVI @List.Sel=Item Text                            // 按文本选中
 ENVI @List.Sel=3;0                                  // 取消选中
@@ -555,11 +553,11 @@ PBAR [*] [-smooth] Name,LxTyWwHh,[InitPercent]
 
 **操作：**
 ```wcs
-ENVI @PBar.Value=50                                 // 设为 50%
-ENVI @PBar.Value=?;&percent                          // 查询当前值
-ENVI @PBar.text=Processing...                        // 进度条上的文字
-ENVI @PBar.bkcolor=0x00FF00                          // 进度条颜色（绿色）
-ENVI @PBar.bkcolor=0xFFFFFF                          // 背景颜色（白色）
+ENVI @PBar=50                                       // 设为 50%
+ENVI @PBar=50;#00FF00Processing...                  // 设为 50%，绿色文字
+ENVI @PBar.color=0xFF0000                           // 文字颜色（BGR 红色）
+ENVI @PBar.percent=-smooth                          // 切换平滑模式
+ENVI @PBar.Visible=0                                // 隐藏（-1 也隐藏）
 ```
 
 **范围：** 默认 0–100。可通过 Windows 消息更改。
@@ -756,6 +754,7 @@ SWIN [*] [画框名]:类名:[实例名],<形状>,[内部位置],[状态]
 - 类名（ClassName）：`_SUB` 定义的窗口类名
 - 实例名（InstanceName）：可选，用于引用该实例
 - `*` 表示退出代码块或函数时自动回收
+- 状态：负数=灰色禁用，`0x10`=不可见，`0x40`=有边框，`0x80`=水平滚动条，`0x100`=垂直滚动条，`0x200`=标题栏
 
 ```wcs
 _SUB Page1
@@ -763,8 +762,8 @@ _SUB Page1
     ITEM Btn,L10T40W80H28,Click,CALL OnClick1
 _END
 
-// 简单形式（类名 = 实例名）：
-SWIN SwinPg1,L20T40W380H260,Page1     // 将 Page1 作为子窗口嵌入
+// 简单形式（画框名:类名）：
+SWIN SwinPg1:Page1,L20T40W380H260     // 将 Page1 作为子窗口嵌入
 
 // 完整形式（画框名:类名:实例名）：
 SWIN Frame1:Page1:PgInst,L20T40W380H260    // 区分框架、类和实例
@@ -773,9 +772,9 @@ SWIN Frame1:Page1:PgInst,L20T40W380H260    // 区分框架、类和实例
 **多面板管理：**
 ```wcs
 // 创建多个 SWIN，只显示当前活动的那一个
-SWIN Panel1,L20T40W380H260,Page1Win
-SWIN Panel2,L20T40W380H260,Page2Win
-SWIN Panel3,L20T40W380H260,Page3Win
+SWIN Panel1:Page1Win,L20T40W380H260
+SWIN Panel2:Page2Win,L20T40W380H260
+SWIN Panel3:Page3Win,L20T40W380H260
 
 ENVI @Panel2.Visible=0                 // 隐藏不用的面板
 ENVI @Panel3.Visible=0
@@ -876,7 +875,7 @@ DTIM Name,LxTyWwHh,[InitDateTime],[EventCmd],[Style]
 DTIM Dt1,L10T10W120H22,,CALL OnDateChange,0x20         // 长日期格式
 DTIM Dt2,L10T40W80H22,,,0x40                             // 时间格式
 DTIM Dt3,L10T70W180H22                                    // 默认：短日期
-DTIM Dt4,L10T100W180H22,,,0x240                           // 长日期 + 时间 (0x20|0x40)
+DTIM Dt4,L10T100W180H22,,,0x60                            // 长日期 + 时间 (0x20|0x40)
 ```
 
 **操作：**
@@ -2164,7 +2163,7 @@ _END
 | `ENVI @Ctrl.Sel=%n%` | 选择行 | `ENVI @Tbl.Sel=3` |
 | `ENVI @Ctrl.Sel=?&r` | 获取选择 | `ENVI @Tbl.Sel=?;&row` |
 | `ENVI @Ctrl.ADD=Item` | 添加到列表 | `ENVI @List1.ADD=New Item` |
-| `ENVI @Ctrl.DEL=:n` | 按索引删除 | `ENVI @List1.DEL=:2` |
+| `ENVI @Ctrl.DEL=text` | 按文本删除 | `ENVI @List1.DEL=Item Text` |
 | `ENVI @Ctrl.*del=` | 销毁控件 | `ENVI @Labe5A.*del=` |
 | `ENVI @Ctrl.MSG=msg:Cmd` | 消息映射 | `ENVI @Btn1.MSG=_0x0201:CALL Fn` |
 | `ENVI @Ctrl.POSTMSG=#N` | 投递消息 | `ENVI @Win.POSTMSG=#1` |

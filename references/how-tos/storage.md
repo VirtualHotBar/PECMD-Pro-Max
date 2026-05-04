@@ -189,8 +189,8 @@ REGI #HKLM\SOFTWARE\App\Count=#0x100         // hex DWORD
 REGI $HKLM\SOFTWARE\App\OldKey=              // empty = delete
 
 // Enumerate
-REGI HKCU\Software\,&&keys                   // subkeys (NL-delimited)
-REGI HKCU\Software\MyApp,&vals               // values in key
+REGI --ak HKCU\Software\,&&keys              // enumerate subkeys (--ak)
+REGI --av HKCU\Software\MyApp\,&vals         // enumerate all values (--av)
 ```
 
 ---
