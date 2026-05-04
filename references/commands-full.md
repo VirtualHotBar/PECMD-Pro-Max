@@ -25,7 +25,7 @@ _ENDFILE[-IMPORT]
 ```
 _SUB FuncName [*]                   // 函数 (* = this-call，使用调用者栈)
 _SUB FuncName,*,,destroyCmd         // 带析构命令的函数
-_SUB WinName,<shape>,[title],[closeCmd],[icon],[style],[mask],[flags]  // 窗口
+_SUB WinName,<shape>,[title],[closeCmd],[icon],[style],[mask] [-flag1 -flag2 ...]  // 窗口
 ```
 窗口形状：`LleftTtopWwidthHheight`。省略 L/T 为居中。
 窗口标志：
@@ -34,7 +34,6 @@ _SUB WinName,<shape>,[title],[closeCmd],[icon],[style],[mask],[flags]  // 窗口
 `-minb`（启用最小化），`-disminb`（禁用最小化按钮），
 `-discloseb`（禁用关闭按钮），`-nfocus`（不接受键盘焦点），
 `-ntab`（无 Tab 键导航），`-disaltmv`（禁用 ALT 拖动），
-`-nb`（无边框），`-nofix`（非固定位置），
 `-forcenomin`（阻止最小化），`-scalef`（XP 风格 DPI 缩放），
 `-scale[:DPI]`（Win8+ DPI 缩放），`-nxp`（无 XP 视觉样式），
 `-csize`（尺寸=客户区），`-na`（创建时不激活）
@@ -1258,8 +1257,8 @@ REGI $HKLM\SOFTWARE\Key\Val=               // 删除值
 REGI HKCU\abc=""                           // 写入空字符串（"" 表示空值写入）
 
 // 高级操作
-REGI --ak HKCU\Software\Key\,&all             // 枚举键的所有值
-REGI --av HKCU\Software\Key\,&all             // 枚举所有子键
+REGI --ak HKCU\Software\Key\,&all             // 枚举所有子键 (k=keys)
+REGI --av HKCU\Software\Key\,&all             // 枚举所有值 (v=variables)
 REGI .?\HKLM\SOFTWARE\Key\Val,&type           // 查询值类型（点+问号）
 REGI --16 ...                                 // 十六进制数据输入
 REGI --su path\val=value                      // 以 SYSTEM 身份运行（提升权限）— 用于 32 位在 64 位系统上

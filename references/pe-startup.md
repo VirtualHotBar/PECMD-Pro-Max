@@ -14,7 +14,7 @@ Windows Boot Manager (bootmgr / bootmgfw.efi)
                         -> PECMD.EXE MAIN X:\Windows\System32\PECMD.INI
 ```
 
-`winpeshl.exe` 是标准 WinPE Shell 启动器。它检查 `HKLM\SYSTEM\CurrentControlSet\Control\MiniNT` 获取自定义 Shell 路径。如果 `SetupComplete.cmd` 存在，会先执行它，然后启动配置的 Shell。
+`winpeshl.exe` 是标准 WinPE Shell 启动器。它读取 `HKLM\SYSTEM\CurrentControlSet\Control\MiniNT` 下的 `WinPEShell` 值作为自定义 Shell 命令；如果该值不存在，则回退到 `cmd.exe`。如果 `SetupComplete.cmd` 存在，会先执行它，然后启动配置的 Shell。
 
 ### WinXShell 集成
 
@@ -151,8 +151,8 @@ _SUB WaitForUSB
         FDRV &盘符=*:
         FORX * &盘符,&&drv,
         {
-            FORM -raw &type=%&drv%            // -raw 返回驱动器类型常量
-            IFEX $%&type%=2,                  // 2 = DRIVE_REMOVABLE
+            FORM -raw &type=%&drv%            // -raw 返回字符串常量（不区分USB/软驱）
+            FIND $DRIVE_REMOVABLE=%&type%,    // 字符串比较（FORM 返回 "DRIVE_REMOVABLE" 等字符串）
             {
                 IFEX %&drv%\PETOOLS\LOAD.INI, TEAM LOAD %&drv%\PETOOLS\LOAD.INI| EXIT _SUB
             }

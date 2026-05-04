@@ -8,7 +8,7 @@
 ### 获取网卡 IP
 
 ```wcs
-EXEC* &&ipcfg=*ipconfig                         // * prefix = internal PECMD command
+EXEC* &&ipcfg=!ipconfig                          // EXEC* 捕获标准输出; ! = 隐藏执行
 FORX *NL &ipcfg,&&line,
 {
     SED &&found=1,IPv4,,%&line%

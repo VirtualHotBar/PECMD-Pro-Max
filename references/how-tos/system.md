@@ -223,10 +223,10 @@ LPOS &&pos=needle,1,%&haystack%                    // ,1, flag (case sensitivity
 RPOS &&pos=needle,,%&haystack%                     // find last
 ```
 
-### RSTR — 零填充
+### RSTR — 取右边字符
 
 ```wcs
-RSTR &&padded=3,000%num%                            // 取右边3字符: "0008" -> "008"
+RSTR &&last3=3,%&str%                               // 从右边取3个字符: "12345" -> "345"
 ```
 
 ---

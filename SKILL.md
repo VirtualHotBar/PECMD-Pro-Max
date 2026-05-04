@@ -132,13 +132,13 @@ CALL @--popmenu 窗口名 [x.y]       // 在指定位置弹出菜单
 ### 窗口（GUI）
 
 ```wcs
-_SUB 窗口名,L200T100W400H300,窗口标题,[关闭命令],[图标],[样式],[遮罩],[标志]
+_SUB 窗口名,L200T100W400H300,窗口标题,[关闭命令],[图标],[样式],[遮罩] [-标志1 -标志2 ...]
 _END
 ```
 
 窗口形状：`L<左>T<上>W<宽>H<高>`。省略 L/T 则居中。
 窗口样式：`-` = 无标题栏，`#` = 无边框，数字 1-99 = 透明度，`:`透明色。
-常用标志：`-trap`（关闭按钮不退出）、`-nocap`（无标题栏）、`-nosysmenu`、`-top`、`-size`、`-maxb`、`-disminb`、`-discloseb`、`-nfocus`、`-ntab`、`-forcenomin`、`-scalef`、`-scale[:DPI]`、`-nxp`、`-csize`、`-na`、`-layer`（支持渐透明）、`-disaltmv`（禁用 ALT 拖动）、`-nb`（无边框）、`-nofix`（非固定位置）
+常用标志：`-trap`（关闭按钮不退出）、`-nocap`（无标题栏）、`-nosysmenu`、`-top`、`-size`、`-maxb`、`-disminb`、`-discloseb`、`-nfocus`、`-ntab`、`-forcenomin`、`-scalef`、`-scale[:DPI]`、`-nxp`、`-csize`、`-na`、`-layer`（支持渐透明）、`-disaltmv`（禁用 ALT 拖动）
 
 ### IMPORT 与代码块
 
@@ -164,7 +164,7 @@ _ENDFILE-IMPORT                // 此行以下内容在 IMPORT 时被丢弃
 FIND $%var%=hello, 命令               // 相等（不区分大小写）
 FIND $%var%*c=hello, 命令             // 相等（区分大小写，*c 后缀）
 FIND $%var%<>hello, 命令              // 不等
-FIND $=%var%, 命令                    // "为空" 测试
+FIND $%var%=, 命令                    // "为空" 测试（惯用法）
 FIND *=var, 命令                      // 惯用法："为空"
 FIND *<>var, 命令                     // 惯用法："非空"
 FIND |%a%>%b%, 命令                   // | 前缀 = 浮点数比较
@@ -499,7 +499,7 @@ CALC -err=0 &r=%&a% / %&b%                            // 出错时返回默认�
 1. **CALC 空格**：`CALC &J=1+2` 可以正常执行。右侧以 `%&I%` 等变量开头时，用空格分隔（`CALC &J= %&I%+1`）。PECMD 要求减号后必须有空格（`3 - 2`）。
 2. **注释标记**：`//` 和 `;` 在行尾时必须前面有空格。行首的 `//comment` 可能不被识别。
 3. **SET 就是 ENVI &**：`SET var=val` 语义上等价于 `ENVI &var=val`。启用 ForceLocal=1 后，两者都创建局部 PE 变量。
-4. **FIND 与 IFEX 前缀相反**：FIND 中 `$` = 字符串比较、`|` = 数值比较；IFEX 中 `$` = 数值比较、`|` = 字符串比较。两者前缀含义**相反**，务必区分。
+4. **FIND 与 IFEX 前缀不同**：FIND 中 `$` = 字符串比较、`|` = 浮点比较、`#` = 整数比较；IFEX 中 `$` = 浮点比较、`#` = 整数比较（无 `|` 前缀——IFEX 中 `|` 是 OR 逻辑运算符，仅在 `[]` 复合条件内使用）。
 5. **盘符冒号**：`FDRV`、`FORM`、`FIND C:\=?` 都需要 `:` 后缀。
 6. **带空格的路径**：`LOAD "C:\Program Files\a.ini"` 需要引号。
 7. **文件编码**：中文脚本首行声明编码（`#code=65001` = UTF-8，`#code=936` = GBK）且文件编码须与声明一致。SDK 示例普遍使用 GBK（936）。

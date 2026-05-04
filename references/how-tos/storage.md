@@ -320,7 +320,7 @@ CALL $--qd offreg.dll,ORCloseHive,#%&hHive%
 BROW &saveFile,&%Desktop%\output.iso,Save ISO file,iso           // save dialog
 BROW &openFile,,Select a file,INI|*.INI|All Files|*.*|           // open dialog with filter
 BROW &folder,*C:\,Select a folder                                // folder browser (* prefix)
-// Additional flags: 0x200=multi-select, 0x10=edit box
+// Additional flags: 0x10=edit box; 0x200=multi-select(文件对话框) / 无新建文件夹按钮(目录对话框)
 ```
 
 ---
@@ -474,7 +474,7 @@ IOCTL = shl(DeviceType, 16) | shl(Access, 14) | shl(Function, 2) | Method
 
 | IOCTL Constant | DeviceType | Access | Function | Method | Result |
 |---|---|---|---|---|---|
-| IOCTL_STORAGE_QUERY_PROPERTY | 0x2D | 0 | 0x09 | 0 | 0x2D1400 |
+| IOCTL_STORAGE_QUERY_PROPERTY | 0x2D | 0 | 0x0500 | 0 | 0x2D1400 |
 | IOCTL_DISK_GET_DRIVE_GEOMETRY_EX | 0x07 | 0 | 0x28 | 0 | 0x700A0 |
 | IOCTL_DISK_GET_DRIVE_LAYOUT_EX | 0x07 | 0 | 0x14 | 0 | 0x70050 |
 | IOCTL_DISK_GET_PARTITION_INFO_EX | 0x07 | 0 | 0x12 | 0 | 0x70048 |

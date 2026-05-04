@@ -9,7 +9,7 @@ PECMD 窗口/控件系统的完整参考。涵盖窗口定义、全部 25 种控
 ### `_SUB` 窗口结构
 
 ```wcs
-_SUB WinName,<shape>,<title>,[closeCmd],[icon],[style],[mask],[flags]
+_SUB WinName,<shape>,<title>,[closeCmd],[icon],[style],[mask] [-flag1 -flag2 ...]
     // control definitions
 _END
 ```
@@ -560,7 +560,7 @@ ENVI @PBar.percent=-smooth                          // 切换平滑模式
 ENVI @PBar.Visible=0                                // 隐藏（-1 也隐藏）
 ```
 
-**范围：** 默认 0–100。可通过 Windows 消息更改。
+**范围：** 1–100（help.txt: "浮点数(1~100)"）。0 为默认初始状态。
 
 ---
 
@@ -912,7 +912,7 @@ ENVI @Ip1.VAL=?;&ipString                               // 查询："192.168.1.1
 TIME TimerName,interval,[EventCmd]
 ```
 
-`TimerName` 必须**以 `Timer` 为前缀**（例如 `Timer1`、`TimerMain`）。
+`TimerName` 应具有描述性名称（社区惯例使用 `Timer` 前缀，如 `Timer1`、`TimerMain`，但 help.txt 无强制要求）。
 
 ```wcs
 TIME Timer1,1000,CALL OnTick                            // 每 1000ms 触发
@@ -931,7 +931,6 @@ TIME Timer3,0,CALL OnFire                               // 0 = 立即触发一�
 ENVI @Timer1=500                                        // 更改间隔
 ENVI @Timer1=0                                           // 暂停/停止
 ENVI @Timer1=-del                                        // 销毁定时器
-ENVI @Timer1=-1                                          // 以当前间隔重新启动
 
 // 多定时器：
 TIME TimerPulse,100,CALL Heartbeat
