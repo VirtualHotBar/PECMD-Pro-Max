@@ -481,8 +481,8 @@ ENVI @List.ADD=New Item                            // 在末尾添加一个项�
 ENVI @List.ADDSEL=New Item                         // 添加项目并选中
 ENVI @List.DEL=Item Text                           // 按文本删除项目
 ENVI @List.DEL=:3                                   // 按从 1 开始的索引删除项目
-ENVI @List.isel=3                                   // 选中从 1 开始的索引
-ENVI @List.Sel=3                                    // 选中从 1 开始的索引（同上）
+ENVI @List.isel=3                                   // 按索引选中（从 1 开始）
+ENVI @List.Sel=Item Text                            // 按文本选中
 ENVI @List.Sel=3;0                                  // 取消选中
 ENVI @List.Sel=?;&selectedIndex                     // 获取从 1 开始的选中索引
 ENVI @List.QUERY=;&allItems                         // 获取所有项目（换行符分隔）
@@ -550,7 +550,7 @@ ENVI @Img.update=32:32:100:50::;shell32.dll#52      // 更换图标（update 语
 ### 4.8 PBAR — 进度条
 
 ```wcs
-PBAR Name,LxTyWwHh,[InitValue],[Style],[Color]
+PBAR [*] [-smooth] Name,LxTyWwHh,[InitPercent]
 ```
 
 **操作：**
@@ -881,9 +881,9 @@ DTIM Dt4,L10T100W180H22,,,0x240                           // 长日期 + 时间 
 
 **操作：**
 ```wcs
-ENVI @Dt1.VAL=2025-01-15                                // 设置日期 (YYYY-MM-DD)
-ENVI @Dt1.VAL=?;&dateValue                              // 查询日期字符串
-ENVI @Dt2.VAL=14:30:00                                   // 设置时间
+ENVI @Dt1.VAL=2025;1;15                                 // 设置日期 (年;月;日 分号分隔)
+ENVI @Dt1.VAL=?&&yr;&&mo;&&dy;&&wf;&&tf                 // 查询：年/月/日/星期标志/时间标志
+ENVI @Dt2.VAL=14;30;0                                    // 设置时间 (时;分;秒)
 ```
 
 ---
@@ -1169,7 +1169,8 @@ ENVI @Tr1.Check=node;0|1|2             // set/get checkbox (2=toggle)
 ENVI @Tr1.Enable=~node;val             // gray state (0=grayed, 1=normal, 2=toggle)
 
 // Expand/Collapse
-ENVI @Tr1.Expand=[?]node;val           // 1=collapse, 2=expand, 3=toggle
+ENVI @Tr1.Expand=[?]node;val           // 0x0001=collapse, 0x0002=expand, 0x0003=toggle
+                                       // 0x4002=expand partial, 0x8000=collapse+reset
 
 // Position
 ENVI @Tr1.UPos=?[#]node;L;T;R;B      // query node rectangle
@@ -2048,9 +2049,9 @@ _END
 | **SWIN** | `0x100` | 自动垂直滚动条 | 打开方式 |
 | **TABL** | `0x416280` | 网格 + 整行选择 + 排序表头 + 多选 | 打开方式-TABL |
 | **TABL** | `0x10010` | 图标 + 单选 | WiFi_NEW |
-| **TABL** | `0x820` | 网格线 + 整行选择 | demo |
-| **TABL** | `0x2000` | 可编辑单元格 | — |
-| **TABL** | `0x10000` | 点击表头排序 | 打开方式 |
+| **TABL** | `0x820` | 网格线 + 整行选择（实测组合值） | demo |
+| **TABL** | `0x2000` | 无标题行 | help.txt |
+| **TABL** | `0x10000` | 单行选择（只能选一行） | help.txt |
 | **LABE** | (默认) | 可点击（接收命令） | 打开方式 |
 | **LABE** | `-ncmd` | 静态，不可点击 | 打开方式 |
 

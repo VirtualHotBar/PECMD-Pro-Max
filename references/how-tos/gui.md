@@ -120,7 +120,7 @@ ENVI @List1.QUERY=;&allItems             // get all items (NL-delimited)
 ENVI @Table1.MSG=_%&::WM_RBUTTONDOWN%: CALL @--popmenu MyMenu
 
 _SUB MyMenu
-    MENU 打开位置,打开文件位置,TEAM ENVI @Table1.Sel=?&s| CALL FileDir
+    MENU MnuOpenLoc,打开文件位置,TEAM ENVI @Table1.Sel=?&s| CALL FileDir
     MENU -
     MENU 复制,复制到剪贴板,CALL Clipboard
     MENU -
@@ -492,7 +492,7 @@ SET &::HTCAPTION=2
 
 CALL @CustomWin
 
-_SUB CustomWin,W500H350,My Custom Tool,-trap -nocap,#1,,
+_SUB CustomWin,W500H350,My Custom Tool,,,#1,,,  -trap -nocap
     ENVI @this.Font=12:Microsoft YaHei
     ENVI @this.bkcolor=0xF0F0F0
 
@@ -556,14 +556,14 @@ _END
 
 ```wcs
 // TREE 格式: TREE [名称],<形状>,[图片数据],[节点数据],[状态]
-// 节点数据格式: <图标索引:选择图标索引>文本，0x09分隔节点，0x0B开始子节点，0x0C结束子节点
+// 节点数据格式: \图标索引:选择图标索引:文本，0x09分隔节点，0x0B开始子节点，0x0C结束子节点
 // 图片数据格式: 表头.[:图标宽:图标高]图标1%TAB%图标2...
 
 // 用 SET$ 构建含控制字符的节点数据
 SET$ &TAB=09
 SET$ &CHILDBEGIN=0b
 SET$ &CHILDEND=0c
-SET &MUI_NODE_DATA=<0:0>Root1%&CHILDBEGIN%<0:0>Child1.1%&TAB%<0:0>Child1.2%&CHILDEND%<1:1>Root2%&CHILDBEGIN%<1:1>Child2.1%&CHILDEND%
+SET &MUI_NODE_DATA=\0:0:Root1%&CHILDBEGIN%\0:0:Child1.1%&TAB%\0:0:Child1.2%&CHILDEND%\1:1:Root2%&CHILDBEGIN%\1:1:Child2.1%&CHILDEND%
 
 // 图片数据（可选，不需要图片时留空）
 SET &IMAGELIST=icons.16:16%&TAB%icon1.ico%&TAB%icon2.ico
@@ -603,8 +603,8 @@ _END
 ### 将 GDI 函数注册为别名
 
 ```wcs
-ENVI^ Alias -opt Rectangle=CALL $--qd# --ret:* Gdi32,Rectangle,*dummy,
-ENVI^ Alias -opt Ellipse=CALL $--qd# --ret:* Gdi32,Ellipse,*dummy,
+ENVI^ Alias -opt Rectangle=CALL $--qd# --ret:* Gdi32.dll,Rectangle,*dummy,
+ENVI^ Alias -opt Ellipse=CALL $--qd# --ret:* Gdi32.dll,Ellipse,*dummy,
 ENVI^ Alias -opt Polyline=CALL $--qd# --ret:* Gdi32.dll,Polyline,*dummy,
 ```
 
