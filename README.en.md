@@ -4,7 +4,7 @@
 
 [简体中文](./README.md) | English
 
-[![Version](https://img.shields.io/badge/version-1.6-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.5.1-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
