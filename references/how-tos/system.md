@@ -1,5 +1,8 @@
 # 进程/线程/系统信息/工具 — 写法示例
 
+> **版本兼容性：** 以下示例使用 DLL 调用（`CALL $--qd`）获取系统信息。DLL 调用需要 PECMD2012 v1.88+ 完整版支持（32-bit 和 64-bit 行为一致）。
+> 如果 DLL 调用返回空，说明当前版本不支持，可使用 `REGI`、`EXEC*`、`FIND --pid*@` 等内置命令替代。
+
 ## 3. 启动环境与系统信息
 
 ### 检测 BIOS 与 UEFI
@@ -71,8 +74,7 @@ EXEC* -cmd:::OnLine -err+ &output=!"%program%" %args%
 
 _SUB OnLine
     READ -,0,&output,%&output%              // read captured content so far
-    SED &&pct=1,\(,,%&output%
-    SED &&pct=1,\).*,,%&pct%
+    SED &&pct=1,\(.*\),,%&output%                    // remove parenthesized content (e.g. "50%")
     MSTR &&w1,&&w2=<1><2>%&output%
     ENVI @ProgressBar=%&w2% %&pct%          // update GUI
 _END
@@ -195,11 +197,11 @@ HKEY Ctrl+Shift+#0x41,--del                       // unregister
 
 ```wcs
 MSTR &&a,&&b=<1><3>%&data%                         // fields 1 and 3 (space-delimited)
-MSTR &&rest=<~5>%&data%                             // fields 5 through end
+MSTR &&rest=<5->%&data%                             // fields 5 through end (`-` = to end)
 MSTR &&last=<-1>%&data%                             // last field (negative index)
 MSTR &&prefix=1,5,%&str%                           // chars 1-5
 MSTR &&suffix=6,0,%&str%                           // from position 6 to end
-MSTR -delims:. &&a,&&b,&&c,&&d=<1*>%&ip%          // split by colon (IP: 192.168.1.1)
+MSTR -delims:. &&a,&&b,&&c,&&d=<1><2><3><4>%&ip%  // split by dot (IP: 192.168.1.1)
 ```
 
 ### SED — 正则替换
@@ -217,7 +219,7 @@ SED &&r=0:0,%&NL%,%&NL%ENVI ,%&source%             // transform newlines to comm
 
 ```wcs
 LPOS &&pos=needle,,%&haystack%                     // find first (case-insensitive)
-LPOS &&pos=needle,1,%&haystack%                    // case-sensitive search
+LPOS &&pos=needle,1,%&haystack%                    // ,1, flag (case sensitivity unconfirmed)
 RPOS &&pos=needle,,%&haystack%                     // find last
 ```
 
@@ -285,7 +287,7 @@ SET callback=CALL OnTimerB                            // switch handler on next 
 ```wcs
 IFEX [ %file% & %var%<> ], command                  // file exists AND var not empty
 IFEX [ %n%<=6 & %m%<6000 ], command                // numeric AND
-IFEX [| %a%<>%b% | %c%<>%d% ], command             // OR
+IFEX [ %a%<>%b% | %c%<>%d% ], command              // OR
 ```
 
 ### FIND 复合条件
@@ -297,12 +299,13 @@ FIND [ $1=%&RET% & %WID%>0 ], command               // AND in FIND
 ### EXIT 变体
 
 ```wcs
-EXIT LOOP       // break loop
-EXIT FORX       // break FORX
-EXIT BLOCK      // exit {} code block
+EXIT LOOP       // break loop (同 EXIT BREAK)
+EXIT FORX       // break FORX (同 EXIT BREAK)
+EXIT CONTINUE   // continue to next iteration (LOOP/FORX)
+EXIT BLOCK      // jump to current {} block tail
 EXIT _SUB       // return from function
 EXIT FILE       // terminate entire script
-EXIT -          // continue (skip to next iteration)
+EXIT -          // same as EXIT BLOCK
 ```
 
 ---
@@ -325,12 +328,17 @@ CMPS -u source.wcz,dest.wcs                 // decompress
 ## 17. 日期/时间
 
 ```wcs
-DATE &&dateVar                                     // get current date
-DATE &&dateVar -now                                // get date+time
-TIME &&timeVar                                     // get current time
-DTIM &&ts,&&dateVar,&&timeVar                       // combine to timestamp (seconds)
-CALC &&ts=%&ts% + 3600                              // add 1 hour
-DTIM &&newDate,%&ts%                                // convert back to date string
+// 默认格式: "年-月-日|星期|时:分:秒"（如 "2025-1-15|3|14:30:0"）
+DATE &&dateVar
+MSTR &&yr,&&mo,&&dy=<1><2><3>%&dateVar%            // 提取年、月、日
+MSTR &&hr,&&min,&&sec=<5><6><7>%&dateVar%          // 提取时、分、秒（<4>是星期）
+
+// -space 标志用空格分隔（更易解析）：
+DATE -space &&dateVarSp                             // "2025 1 15 3 14 30 0"
+MSTR &&yr,&&mo,&&dy=<1><2><3>%&dateVarSp%
+
+// 排序用字符串：
+SET &&dateSort=%&yr%%&mo%%&dy%%&hr%%&min%%&sec%
 ```
 
 ---
@@ -461,11 +469,11 @@ CALC &&rightEdge=%&scrW% - 300
 FIND --class:Shell_TrayWnd --wid*@ &tbars
 FORX *NL &tbars,&&tb,
 {
-    MSTR &tbtype=<7>&&tb
+    MSTR* &tbtype=<7>%&tb%
     FIND $%&tbtype%=Shell_TrayWnd,
     {
-        MSTR &tbWid=<2>&&tb
-        ENVI @@POS=?%&tbWid%::::&TB_H
+        MSTR* &tbWid=<2>%&tb%
+        ENVI @@POS=?%&tbWid%;;;;&TB_H
     }
 }
 MESS Taskbar height: %&TB_H% px
@@ -476,7 +484,7 @@ MESS Taskbar height: %&TB_H% px
 ## 30. SEND / WAIT -cont — 键盘
 
 ```wcs
-SEND {ENTER}                                        // send Enter key
+SEND VK_RETURN                                      // send Enter key
 SEND 0x11_,0x12_,0x2E,0x12^,0x11^                  // Ctrl+Alt+Del (press order)
 WAIT -cont -1000,&&key                              // wait up to 1s for key, returns VK code
 ```
@@ -514,7 +522,7 @@ _SUB SafeFunc
 
     // --- Guard 3: format validation (IP) ---
     SET &ip=%~3
-    MSTR -delims:. &&a,&&b,&&c,&&d=<1*>&ip
+    MSTR -delims:. &&a,&&b,&&c,&&d=<1><2><3><4>%&ip%
     IFEX [ $%&a%<0 | $%&a%>255 | $%&b%<0 | $%&b%>255 | $%&c%<0 | $%&c%>255 | $%&d%<0 | $%&d%>255 ], EXIT _SUB
     FIND $X=X%&a%, EXIT _SUB
     FIND $X=X%&b%, EXIT _SUB
@@ -554,13 +562,13 @@ _END
 // Typical use: extract filename from path, IP from "IPv4 ... x.x.x.x"
 SET &line=   IPv4 Address. . . . . . . . : 192.168.1.100
 MSTR &&ip=<-1>%&line%                             // "192.168.1.100"
-MSTR &&ip=<2>%&ip%                                 // strip leading space → first field after trim
+MSTR &&ip=<1>%&ip%                                 // strip leading space → first field after trim
 
 // === N-th field and range ===
 SET &data=DISK 0 500107862016 GPT F6E0B 2048 976773127
 MSTR &&name,&&nr,&&sz=<1><2><3>%&data%              // "DISK" "0" "500107862016"
-MSTR &&rest=<~4>%&data%                              // everything from field 4 onward
-MSTR &&mid=<3~5>%&data%                              // fields 3 through 5
+MSTR &&rest=<4->%&data%                              // everything from field 4 onward (`-` = to end)
+MSTR &&mid=<3->%&data%                               // fields 3 through end
 
 // === Trimmed split (default whitespace strips leading blanks) ===
 SET &line=     Label:    BOOT      FS: NTFS
@@ -569,13 +577,15 @@ MSTR &&label=<2>%&line%                              // "BOOT" (whitespace colla
 // === Custom delimiter: IP address parsing ===
 SET &ip=192.168.1.100
 MSTR -delims:. &&a,&&b,&&c,&&d=<1><2><3><4>%&ip%    // "192" "168" "1" "100"
-MSTR -delims:. &&net=<1~3>%&ip%                       // "192.168.1"
+MSTR -delims:. &&oct1,&&oct2,&&oct3=<1><2><3>%&ip%    // "192" "168" "1"
 
 // === Custom delimiter: PATH parsing ===
 SET &path=C:\Windows\System32\drivers\etc\hosts
 MSTR -delims:\ &&root,&&sub=<1><2>%&path%             // "C:" "Windows"
-MSTR -delims:\ &&file=<-1>%&path%                      // "hosts"
-MSTR -delims:\ &&ext=<-1.>%&path%                      // "hosts" (same; last segment before dot use <->)
+MSTR -delims:\ &&file=<-1>%&path%                      // "hosts" (最后一个段)
+// 去掉扩展名：先取最后段，再用 SED 去掉 .xxx
+MSTR -delims:\ &&basename=<-1>%&path%                   // "hosts"
+SED &&nameNoExt=0,\.[^.]*$,,%&basename%                 // "hosts"（无扩展名时不变）
 
 // === Custom delimiter: Multi-char (PART output parsing) ===
 PART list disk 0,&&info
@@ -887,7 +897,7 @@ FIND $%&YesNo%=NO,
 // Or multi-try with timer fallback:
 TIME &TM,2000,CALL OnTwoSeconds   // 2-second timer
 _SUB OnTwoSeconds
-    FIND $0=%&&__YesNo%, DISP     // if still 0, auto-revert
+    FIND $0=%&YesNo%, DISP     // if still 0, auto-revert
 _END
 ```
 
@@ -897,7 +907,7 @@ _END
 
 ```wcs
 ENVI$ &&buf=*0x100000 0
-CALL $--qd --ret:&bret kernel32.dll,QueryDosDeviceW,#0,*&&buf,#0x80000
+CALL $--qd --ret:&bret kernel32.dll,QueryDosDeviceW,#0,*&buf,#0x80000
 // Returns null-delimited, double-null terminated device list
 // lpos* * for binary null pattern search
 LPOS* * &&pos=0x00 0x00 0x00 0x00,1,&&buf
@@ -912,7 +922,7 @@ CODE ***unicode,**.buf,*uni,&&result
 ENVI$# &&Major=*4 0
 ENVI$# &&Minor=*4 0  
 ENVI$# &&Build=*4 0
-CALL $--qd --ret:&bret ntdll.dll,RtlGetNtVersionNumbers,*&&Major,*&&Minor,*&&Build
+CALL $--qd --ret:&bret ntdll.dll,RtlGetNtVersionNumbers,*&Major,*&Minor,*&Build
 SET?int &&Major=&&Major:0
 SET?int &&Minor=&&Minor:0
 SET?int &&Build=&&Build:0
@@ -971,12 +981,12 @@ SET &CSet=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 STRL * &&LCSET=CSet
 SET &V=
 SET &n=10                                            // desired length
-LOOP #%n%>0,
+LOOP #%&n%>0,
 {
-    CALC n=%n% - 1
-    ^CALC &&i=%RANDOM% % %LCSET% + 1
-    MSTR * &&vi=%i%,1,CSet
-    SET< V=%vi%
+    CALC &n=%&n% - 1
+    ^CALC &&i=%RANDOM% % %&LCSET% + 1
+    MSTR * &&vi=%&i%,1,CSet
+    SET< &V=%&vi%
 }
 // &V now contains 10 random alphanumeric characters
 ```

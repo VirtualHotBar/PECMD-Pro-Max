@@ -1,5 +1,8 @@
 # 磁盘/分区/文件/注册表/设备 — 写法示例
 
+> **版本兼容性：** 部分示例使用 DLL 调用（`CALL $--qd`）。DLL 调用需要 PECMD2012 v1.88+ 完整版支持（32-bit 和 64-bit 行为一致）。
+> 如果 DLL 调用不工作，可使用 `PART`、`FDRV`、`REGI`、`EXEC*` 等内置命令替代。
+
 ## 1. 磁盘枚举与信息
 
 ### 列出所有物理磁盘及详细信息
@@ -9,7 +12,7 @@ PART list disk,&&全部磁盘
 FORX * %&全部磁盘%,&&磁盘,
 {
     PART list disk %&磁盘%,&&磁盘信息
-    MSTR &&sz,&&bus,&&mbr,&&sign=<2><9><10><9>%&磁盘信息%
+    MSTR &&sz,&&bus,&&mbr,&&sign=<2><7><8><9>%&磁盘信息% // ⚠ 字段索引因 PART 输出格式而异
     MESS Disk#%&磁盘%: Size=%&sz% bytes, Bus=%&bus%, Type=%&mbr%
 }
 ```
@@ -149,8 +152,9 @@ FORX *NL &cfg,&&line,
 ### 写入文件
 
 ```wcs
-WRIT C:\output.txt,$0,First line          // $ = ANSI, 0 = overwrite
-WRIT C:\output.txt,$+0,Second line        // + = append
+WRIT C:\output.txt,1,First line           // 1 = 替换第1行
+WRIT C:\output.txt,+0,Second line        // +0 = 在末尾追加新行
+WRIT C:\output.txt,$0,a=%var%            // $ = 展开环境变量，0 = 替换最后一行
 PUTF -dd -len=0 C:\file.bin,0,zero        // create/truncate
 PUTF C:\file.bin,%offset%,#%&data%        // write at offset
 ```
@@ -372,7 +376,7 @@ SET-long &&input=0:8       // AdditionalParams=0
 SET &output.SIZE=12         // DEVICE_SEEK_PENALTY_DESCRIPTOR: Version(4)+Size(4)+IncursSeekPenalty(1)+3pad
 ENVI$ &&output=*0xC 0
 ENVI$# &&dwSize=*4 0
-CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0xC,*&&dwSize,#0
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&input,#0xC,*&output,#0xC,*&dwSize,#0
 SET?int &&output=&&IncursSeekPenalty:8
 // 0=SSD (no seek penalty), 1=HDD
 ```
@@ -389,7 +393,7 @@ SET &StorageDeviceTrimProperty=8
 SET-long &&input=8:0       // PropertyId=8
 SET-long &&input=0:4       // QueryType
 SET-long &&input=0:8       // AdditionalParams
-CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&&input,#0xC,*&&output,#0x20,*&&dwSize,#0
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&input,#0xC,*&output,#0x20,*&dwSize,#0
 // DEVICE_TRIM_DESCRIPTOR: Version(4)+Size(4)+TrimEnabled(1)
 SET?int &&output=&&TrimEnabled:8
 ```
@@ -404,7 +408,7 @@ CALC &IOCTL_STORAGE_GET_DEVICE_NUMBER = shl(0x2D,16) | shl(0,14) | shl(0x05,2) |
 SET &STORAGE_DEVICE_NUMBER.SIZE=12  // DeviceType(4)+DeviceNumber(4)+PartitionNumber(4)
 ENVI$ &&output=*0xC 0
 ENVI$# &&dwSize=*4 0
-CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_STORAGE_GET_DEVICE_NUMBER%,#0,#0,*&&output,#0xC,*&&dwSize,#0
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_STORAGE_GET_DEVICE_NUMBER%,#0,#0,*&output,#0xC,*&dwSize,#0
 SET?long &&output=&&DeviceType:0
 SET?long &&output=&&DeviceNumber:4
 SET?long &&output=&&PartitionNumber:8
@@ -419,9 +423,10 @@ SET?long &&output=&&PartitionNumber:8
 
 ```wcs
 CALC &IOCTL_DISK_GET_DRIVE_LAYOUT_EX = shl(0x07,16) | shl(0,14) | shl(0x14,2) | 0  // 0x70050
+SET &outBufSz=0x1000                               // 4096 bytes (足够容纳布局+分区表)
 ENVI$ &&output=*8M 0
 ENVI$# &&dwSize=*4 0
-CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_DISK_GET_DRIVE_LAYOUT_EX%,#0,#0,*&&output,#%&output.SIZE%,*&&dwSize,#0
+CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_DISK_GET_DRIVE_LAYOUT_EX%,#0,#0,*&output,#%&outBufSz%,*&dwSize,#0
 
 // MBR:  PartitionStyle=0, Header at offset 48: Signature(4)+CheckSum(4)
 // GPT:  PartitionStyle=1, Header at offset 48: DiskId(16)+StartingUsableOffset(8)+UsableLength(8)+MaxPartitionCount(4)
@@ -507,7 +512,7 @@ FIND $%&VT%<>ERROR,
 FDIR --fullfile &&F=%&NAME1%
 IFEX %&F%,   SET &bfile=1                           // file or directory exists
 IFEX %&F%\,  SET &bfile=0                           // trailing slash = it's a directory
-FIND $""="%&NAME1", SET &bfile=0                    // empty input check
+FIND *=NAME1, SET &bfile=0                           // empty input check
 ```
 
 ---

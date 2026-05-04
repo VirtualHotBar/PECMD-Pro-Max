@@ -57,7 +57,7 @@ ENVI $TEMP=%SystemDrive%\TEMP
 ENVI $TMP=%SystemDrive%\TEMP
 
 // 7. 注册热键
-HKEY Ctrl+Alt+#0x44, EXEC cmd.exe       // Ctrl+Alt+D -> 命令提示符
+HKEY $Ctrl+Alt+#0x44, EXEC cmd.exe       // Ctrl+Alt+D -> 命令提示符（$ = 系统级热键）
 
 // 8. 加载外部工具
 LOAD %CurDir%\Tools\Network.ini
@@ -69,7 +69,7 @@ EXEC %SystemRoot%\system32\cmd.exe /c start /b PECMD.EXE TEAM WAIT 5000|LOAD %Cu
 // 10. 清除 Logo
 LOGO
 
-// 11. 无限等待（保持 PE 运行）
+// 11. 无限等待（保持 PE 运行，阻塞当前线程直到脚本终止）
 WAIT -1
 ```
 
@@ -78,18 +78,29 @@ WAIT -1
 ### INIT — 初始化 PECMD 运行时
 
 ```wcs
-INIT [选项],[超时毫秒]
+INIT [选项列表],[等待时间],[USB起始盘符]
 ```
 
-`INIT IU,3000` — 最常用形式。I=键盘布局，U=USB 初始化，3000ms 超时。
+`INIT IU,3000` — 最常用形式。I=安装 PECMD 托盘菜单功能，U=检测 USB 移动硬盘并自动分配盘符，3000ms 超时。
+`INIT IU,3000,U:` — 同上，但从 U: 开始分配 USB 盘符。
 
-`INIT CIK` — C=将 CDROM 盘符写入环境变量，I=安装托盘图标菜单，K=立即安装低级键盘钩子
+`INIT CIK` — C=将 CDROM 盘符写入环境变量，I=安装 PECMD 托盘菜单功能，K=执行 INIT 时立即安装低级键盘钩子
 
 ### SHEL — 设置 Windows Shell
 
 ```wcs
+SHEL [-user|-sys] [-shel:"自动命令"] <文件名|命令>[,密码BASE字符串][,重试次数]
+```
+
+- `-user`：强制配合 `MAIN -user` 使用
+- `-sys`：直接强制为系统 Shell
+- Shell 被杀时自动重新加载（自动锁定功能）
+- 若使用 HOTK/HIDE 命令，SHEL **必须在其之后**（否则 HIDE 无法隐藏 PECMD 进程）
+
+```wcs
 SHEL %SystemRoot%\explorer.exe              // 使用 Explorer 作为 Shell
 SHEL PECMD.EXE LOAD %CurDir%\MyShell.ini    // 使用 PECMD 脚本作为 Shell
+SHEL -sys %SystemRoot%\explorer.exe         // 强制为系统 Shell
 ```
 
 下一行缩进的命令在 Shell 变更时执行：
@@ -116,9 +127,10 @@ TEXT 正在初始化系统...#0x00FF00 L100T200 R600B400 $18:Microsoft YaHei
 ### DEVI — 安装驱动程序
 
 ```wcs
-DEVI %CurDir%\Drivers\NetCard.cab      // 从 CAB 安装
-DEVI %CurDir%\Drivers\*.inf             // 从 INF 文件安装
-DEVI $%CurDir%\Drivers                  // 安装目录中所有驱动
+DEVI $%CurDir%\Drivers\NetCard.cab      // 从 CAB 安装（$ = 标准安装模式）
+DEVI $$%CurDir%\Drivers\NetCard.inf     // 从 INF 标准安装（$$ = INF 安装模式）
+DEVI %CurDir%\Drivers\*.inf             // 从 INF 文件安装（无需 $）
+DEVI %CurDir%\Drivers                   // 安装目录中所有驱动（无需 $）
 ```
 
 ### LINK — 创建快捷方式
@@ -137,10 +149,10 @@ _SUB WaitForUSB
     LOOP #1=1,
     {
         FDRV &盘符=*:
-        FORX * %&盘符%,&&drv,
+        FORX * &盘符,&&drv,
         {
-            FORM &type=%&drv%
-            FIND $DRIVE_USBDISK=%&type%,
+            FORM -raw &type=%&drv%            // -raw 返回驱动器类型常量
+            IFEX $%&type%=2,                  // 2 = DRIVE_REMOVABLE
             {
                 IFEX %&drv%\PETOOLS\LOAD.INI, TEAM LOAD %&drv%\PETOOLS\LOAD.INI| EXIT _SUB
             }
@@ -166,7 +178,6 @@ PAGE C:\pagefile.sys 256 512         // C: 上最小 256MB，最大 512MB
 ### 模式：设置临时目录
 
 ```wcs
-PATH %SystemDrive%\TEMP
 ENVI $TEMP=%SystemDrive%\TEMP
 ENVI $TMP=%SystemDrive%\TEMP
 ```

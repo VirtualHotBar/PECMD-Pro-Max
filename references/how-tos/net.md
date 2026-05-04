@@ -1,5 +1,8 @@
 # 网络/SOCK/COM/WMI — 写法示例
 
+> **版本兼容性：** 部分示例使用 DLL 调用（`CALL $--qd`）。DLL 调用需要 PECMD2012 v1.88+ 完整版支持（32-bit 和 64-bit 行为一致）。
+> 如果 DLL 调用不工作，可使用 `EXEC*`（外部命令）、`REGI`（注册表）等内置命令替代。
+
 ## 16. 网络操作
 
 ### 获取网卡 IP
@@ -69,7 +72,7 @@ THREAD* CALL Server
 _SUB Server
     SOCK sr                                // accept socket
     ENVI @sk.fd=&&fd                       // get listen fd
-    ENVI @sr.accept=&&err;%&&fd%           // accept connection
+    ENVI @sr.accept=&&err;%&fd%            // accept connection
     ENVI @sr.getname=;1;&&remoteIP         // get remote IP
 
     // Read loop
@@ -137,28 +140,28 @@ LOCK .com**
 SOCK --unknown &&pLoc                       // IWbemLocator
 SOCK --unknown &&pSvc                       // IWbemServices
 
-CALL $--qd --16 OLE32.DLL,CoCreateInstance,*&CLSID_WbemLocator,#0,#1,*&IID_IWbemLocator,*&&pLoc
+CALL $--qd --16 OLE32.DLL,CoCreateInstance,*&CLSID_WbemLocator,#0,#1,*&IID_IWbemLocator,*&pLoc
 
-CALL $--16 --qd #,*&&pLoc.%&iConnectServer%,$ROOT\CIMV2,#0,#0,#0,#0,#0,#0,*&&pSvc
+CALL $--16 --qd #,*&pLoc.%&iConnectServer%,$ROOT\CIMV2,#0,#0,#0,#0,#0,#0,*&pSvc
 
-CALL $--16 --ret:&&hr --qd #,*&&pSvc.%&iExecQuery%,$WQL,*&wqlCmd,#0x30,#0,*&&pEnum
+CALL $--16 --ret:&&hr --qd #,*&pSvc.%&iExecQuery%,$WQL,*&wqlCmd,#0x30,#0,*&pEnum
 
 SOCK --BSTR &&bstrProp,,PropertyName
 SOCK --unknown &&pRow
-CALL $--16 --qd #,*&&pEnum.%&iNext%,#0xFFFFFFFF,#1,*&&pRow,*&count
+CALL $--16 --qd #,*&pEnum.%&iNext%,#0xFFFFFFFF,#1,*&pRow,*&count
 SET$# &vProp=*24 0
-CALL $--16 --ret:&&hr --qd #,*&&pRow.%&iGet%,#%&&bstrProp?ptr%,#0,*&vProp,#0,#0
-SET &value=%&&vProp?ptr:8
+CALL $--16 --ret:&&hr --qd #,*&pRow.%&iGet%,#%&bstrProp?ptr%,#0,*&vProp,#0,#0
+SET &value=%&vProp?ptr:8
 ```
 
 ### ITaskbarList3（任务栏进度条）
 
 ```wcs
 SOCK --unknown &&pTaskbar
-CALL $--qd --16 --ret:&&hr OLE32.DLL,CoCreateInstance,*&CLSID_TaskbarList,#0,#1,*&IID_ITaskbarList3,*&&pTaskbar
-CALL $--ret:&&r #,*&&pTaskbar.%&iHrInit%
-CALL $--ret:&&r --qd# #,*&&pTaskbar.%&iSetValue%,%&hwnd%,0,%&total%
-CALL $--ret:&&r #,*&&pTaskbar.%&iRelease%
+CALL $--qd --16 --ret:&&hr OLE32.DLL,CoCreateInstance,*&CLSID_TaskbarList,#0,#1,*&IID_ITaskbarList3,*&pTaskbar
+CALL $--ret:&&r #,*&pTaskbar.%&iHrInit%
+CALL $--ret:&&r --qd# #,*&pTaskbar.%&iSetValue%,%&hwnd%,0,%&total%
+CALL $--ret:&&r #,*&pTaskbar.%&iRelease%
 ```
 
 ---
@@ -168,7 +171,7 @@ CALL $--ret:&&r #,*&&pTaskbar.%&iRelease%
 ```wcs
 ENVI$ &&buf=*0x1000 0
 ENVI$# &&dwSize=*4 0
-CALL $--qd --ret:&&bret Iphlpapi.dll,GetIfTable,*&&buf,*&&dwSize,#0
+CALL $--qd --ret:&&bret Iphlpapi.dll,GetIfTable,*&buf,*&dwSize,#0
 // If GetLastError==122 (ERROR_INSUFFICIENT_BUFFER), re-allocate with returned size
 ENVI-addr ;&&bufsize=&&buf
 // MIB_IFENTRY: 860 bytes per entry, name at offset 0, dwInOctets at offset 344, dwOutOctets at offset 356
@@ -188,10 +191,10 @@ Combined ADSL-wlan + TABL + minimize-to-tray typical pattern:
 ADSL-wlan ,,scan,&&result
 // result format: one per line, TAB-delimited fields
 // Parse into TABL for display
-TABL &TABL1,L10T10W400H200,...
+TABL TABL1,L10T10W400H200,SSID:150 Signal:60 Flags:80 Type:60
 FORX *NL &result,&&line,
-{   MSTR &&ssid,&&signal,&&flags,&&type...=<1><2><3><4>%&line%
-    ENVI @&TABL1.ADD=%&ssid%;%&signal%
+{   MSTR &&ssid,&&signal,&&flags,&&type=<1><2><3><4>%&line%
+    ENVI @TABL1.ADD=%&ssid%;%&signal%;%&flags%;%&type%
 }
 
 // Connect to selected SSID

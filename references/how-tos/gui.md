@@ -1,5 +1,8 @@
 # GUI 控件/窗口/绘制 — 写法示例
 
+> **版本兼容性：** 部分示例使用 DLL 调用（`CALL $--qd`）。DLL 调用需要 PECMD2012 v1.88+ 完整版支持（32-bit 和 64-bit 行为一致）。
+> 如果 DLL 调用不工作，可使用 `FIND --wid*@`、`EXEC*` 等内置命令替代。
+
 ## 7. GUI 模式
 
 ### 完整窗口模板
@@ -129,7 +132,8 @@ _END
 
 ```wcs
 SWIN :Page1,L10T40W380H200
-SWIN :Page2,L10T40W380H200,,0x100       // 0x100 = initially hidden
+SWIN :Page2,L10T40W380H200
+ENVI @Page2.Visible=0                    // hidden initially
 
 _SUB Page1
     ENVI @this.bkcolor=0xFFFFFF
@@ -211,12 +215,12 @@ _SUB 主窗口,W500H380,Tabbed Settings,,#1,,
     TEAM ENVI &&nTab=0| ENVI &&TabSel=1
 
     // --- TABS control (page buttons) ---
-    TABS TabMain,L10T10W480H40,CALL OnTabSel
+    TABS TabMain,L10T10W480H40
 
     // --- SWIN containers for each page ---
     SWIN :PageGeneral,L10T55W480H290
-    SWIN :PageNetwork,L10T55W480H290,,0x100        // hidden initially
-    SWIN :PageAdvanced,L10T55W480H290,,0x100       // hidden initially
+    SWIN :PageNetwork,L10T55W480H290,,0x10         // hidden initially
+    SWIN :PageAdvanced,L10T55W480H290,,0x10        // hidden initially
 
     // --- Populate tabs ---
     LOOP #%&nTab%<3,
@@ -263,9 +267,6 @@ _SUB PageAdvanced
 _END
 
 _SUB OnOK
-    ENVI @PageGeneral.Visible=?
-    ENVI @PageNetwork.Visible=?
-    ENVI @PageAdvanced.Visible=?
     IFEX $%ChkAutoRun.Check%=1, MESS AutoRun: ON
     MESS IP=%&EdtIP%:%&EdtPort%@Info#OK
     KILL \
@@ -274,7 +275,7 @@ _END
 
 关键点：
 - `SWIN` 容器必须放在其 `_SUB` 定义**之前**。
-- 使用 `0x100` 标志初始隐藏页面。
+- 使用 `0x10` 标志初始隐藏页面。
 - `TABS.SEL=<n>` 选择选项卡；`TABS.SEL=?` 查询当前选择。
 - 通过 `ENVI @PageName.Visible=0` / `=1` 切换可见性。
 
@@ -499,17 +500,17 @@ _SUB CustomWin,W500H350,My Custom Tool,-trap -nocap,#1,,
     LABE -center TitleBar,L0T0W500H32,,,0xFFFFFF#0x2D2D30
 
     // --- Fake icon ---
-    LABE -center -vcenter LblIcon,L8T4W24H24,&#x1f4bb;,,0xFFFFFF#0x2D2D30#0xFFFFFF#0x3D3D40
+    LABE -center -vcenter LblIcon,L8T4W24H24, ,0xFFFFFF#0x2D2D30#0xFFFFFF#0x3D3D40
     ENVI @LblIcon.MSG=%&::WM_LBUTTONDOWN%: CALL @--popmenu SysMenu
 
     // --- Title text ---
     LABE -center -vcenter LblTitle,L36T4W360H24,My Custom Tool,,0xFFFFFF#0x2D2D30
 
     // --- Minimize button ---
-    LABE -center -vcenter BtnMin,L412T4W36H24,&#x2500;,CALL OnMin,0xCCCCCC#0x2D2D30#0xFFFFFF#0x3D3D40
+    LABE -center -vcenter BtnMin,L412T4W36H24,_,CALL OnMin,0xCCCCCC#0x2D2D30#0xFFFFFF#0x3D3D40
 
     // --- Close button ---
-    LABE -center -vcenter BtnClose,L452T4W40H24,&#x2715;,CALL OnClose,0xCCCCCC#0x2D2D30#0xFFFFFF#0xE81123
+    LABE -center -vcenter BtnClose,L452T4W40H24,X,CALL OnClose,0xCCCCCC#0x2D2D30#0xFFFFFF#0xE81123
 
     // --- Drag support: whole title bar reports as HTCAPTION ---
     ENVI @TitleBar.MSG=%&::WM_NCHITTEST%: ENVI @TitleBar.POSTMSG=%&::HTCAPTION%
@@ -529,7 +530,7 @@ _SUB SysMenu
 _END
 
 _SUB OnMin
-    ENVI @@POS=%__WinID%:::::::6                    // SW_MINIMIZE via window ID
+    ENVI @@Visible=%&__WinID%:4                      // SW_MINIMIZE (1=SHOW, 2=NORMAL, 3=MAXIMIZE, 4=MINIMIZE, 5=RESTORE)
 _END
 
 _SUB OnClose
@@ -545,7 +546,7 @@ _END
 - `-nocap` 移除系统标题栏；`-trap` 防止关闭按钮自动退出。
 - 在 LABE 控件上通过 `WM_NCHITTEST` 返回 `HTCAPTION` 使其可拖动。
 - 4段颜色格式 `文本色#背景色#悬停文本色#悬停背景色` 启用悬停效果。
-- Unicode 符号（`&#x2500;` = ─、`&#x2715;` = ✕）通过 HTML 实体提供按钮字形。
+- 按钮字形使用 ASCII 字符（`_` = 最小化、`X` = 关闭），或直接写入 Unicode 字符（UTF-8 编码）。
 
 ---
 
@@ -554,11 +555,20 @@ _END
 ### 创建带图标和节点层级的树形控件
 
 ```wcs
-// Node data format: \parent_index:icon_index:label text
-// Child delimiters: 0x0B = start children, 0x0C = end children, 0x09 = separator
-TREE Tree1,L10T10W300H300,%&DATA%,0x10000127
+// TREE 格式: TREE [名称],<形状>,[图片数据],[节点数据],[状态]
+// 节点数据格式: <图标索引:选择图标索引>文本，0x09分隔节点，0x0B开始子节点，0x0C结束子节点
+// 图片数据格式: 表头.[:图标宽:图标高]图标1%TAB%图标2...
 
-SET &MUI_NODE_DATA=\0:0:Root1\x0B\0:0:Child1.1\x09\0:0:Child1.2\x0C\1:1:Root2\x0B\1:1:Child2.1\x0C
+// 用 SET$ 构建含控制字符的节点数据
+SET$ &TAB=09
+SET$ &CHILDBEGIN=0b
+SET$ &CHILDEND=0c
+SET &MUI_NODE_DATA=<0:0>Root1%&CHILDBEGIN%<0:0>Child1.1%&TAB%<0:0>Child1.2%&CHILDEND%<1:1>Root2%&CHILDBEGIN%<1:1>Child2.1%&CHILDEND%
+
+// 图片数据（可选，不需要图片时留空）
+SET &IMAGELIST=icons.16:16%&TAB%icon1.ico%&TAB%icon2.ico
+
+TREE Tree1,L10T10W300H300,%&IMAGELIST%,%&MUI_NODE_DATA%,0x10000127
 
 // Expand / Collapse nodes
 ENVI @Tree1.Expand=1                 // expand node 1
@@ -613,7 +623,7 @@ _SUB OnPaint                               // %1 = HDC handle
     CALC #T=%y0% - %h%
     CALC #R=%x0% + %w% - %L0%
     CALC #B=%y0% + %h%
-    Rectangle %1,%T%,%L%,%B%,%R%
+    Rectangle %1,%L%,%T%,%R%,%B%
     Ellipse %1,%L%,%T%,%R%,%B%
     CALC #w=%&w% + %&aw%
     IFEX $%&w%>100, TEAM SET aw=-2|CALC #w=%&w% + %&aw%!
@@ -673,8 +683,8 @@ ENVI @SPIN1.VAL=%&POS%:-20:5               // current, min=-20, max=5
 ```wcs
 SET &WM_DROPFILES=0x0233
 
-// Register drop handler on EDIT control (style 0x4 = accept files)
-EDIT|- EDIT1,L10T10W400H200,,0x004
+// Register drop handler on EDIT control (type 0x100 = accept dropped file)
+EDIT|- EDIT1,L10T10W400H200,,0x100
 ENVI @EDIT1.MSG=%&WM_DROPFILES%::&&wp,&&lp, CALL OnDrop %&wp% %&lp%
 
 // Register drop handler on window
@@ -768,9 +778,9 @@ SET &SIF_ALL=0x0017
 SET &SCROLLINFO.SIZE=28  // cbSize(4)+fMask(4)+nMin(4)+nMax(4)+nPage(4)+nPos(4)+nTrackPos(4)
 ENVI$ &&si=*28 0
 SET-long &&si=28:0           // cbSize=28
-SET-long &&si=%SIF_ALL%:4    // fMask
+SET-long &&si=%&SIF_ALL%:4    // fMask
 
-CALL $--qd --ret:&bret user32.dll,GetScrollInfo,#%&TBID%,#0,*&&si  // SB_HORZ=0
+CALL $--qd --ret:&bret user32.dll,GetScrollInfo,#%&TBID%,#0,*&si  // SB_HORZ=0
 SET?int &&si=&&nPos:20        // current scroll position
 
 // Horizontal column position:

@@ -4,7 +4,7 @@
 
 [简体中文](./README.md) | English
 
-[![Version](https://img.shields.io/badge/version-1.2-blue)](./SKILL.md)
+[![Version](https://img.shields.io/badge/version-1.5-blue)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-NonCopyRight-yellow)](./LICENSE)
 [![PECMD](https://img.shields.io/badge/PECMD-v1.88+-green)](https://pecmd.net)
 
@@ -18,10 +18,10 @@ PECMD Pro Max is a **Claude Code skill** that teaches AI coding assistants to wr
 pecmd-pro-max/
 ├── README.md                        ← Simplified Chinese
 ├── README.en.md                     ← You're reading it
-├── SKILL.md                         ← Main skill file — mental model, variable system, critical rules, traps (352 lines)
+├── SKILL.md                         ← Main skill file — mental model, variable system, critical rules, traps (561 lines)
 └── references/
-    ├── commands-full.md             ← Complete 110+ command reference (1576 lines)
-    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (1994 lines)
+    ├── commands-full.md             ← Complete 110+ command reference (1943 lines)
+    ├── pecmd-gui.md                 ← Comprehensive GUI controls & window system reference (2178 lines)
     ├── pe-startup.md                ← WinPE boot flow, environment limitations, PE version differences
     └── how-tos/
         ├── storage.md               ← Disk/partition/file/registry/device how-tos
@@ -35,10 +35,10 @@ pecmd-pro-max/
 - **Three-tier variable system explained** — environment vs PE-local vs PE-global, indirect dereference, deferral, return-by-reference, hex/raw-buffer allocation, binary compare/convert
 - **110+ command reference** — every PECMD command with full syntax, return values, gotchas (incl. BROW, TREE, LAMBDA, SBAR, IPAD, BLOCK, DTIM, SLID, SPIN)
 - **Domain-organized code how-tos** — disk/partition, process/thread, GUI controls/drawing, network/COM, in separate files for on-demand loading
-- **Complete GUI reference** — all 22 controls & sub-windows (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `TREE`...), ENVI @ properties full reference, message system, window management
+- **Complete GUI reference** — all 25 controls & sub-windows (`LABE`, `EDIT`, `CHEK`, `RADI`, `IMAG`, `TABL`, `LIST`, `MEMO`, `TREE`...), ENVI @ properties full reference, message system, window management
 - **WinPE boot flow** — from `winpeshl.exe` → `PECMD MAIN PECMD.INI` through to `EXPLORER.EXE`, with `WinXShell` integration
 - **50 built-in variables table** — path/shell vars, process/thread vars, window/GUI vars, script/runtime vars, command-result vars
-- **17 ENVI^ runtime control commands** — EnviMode, ForceLocal, Alias, WndProc, memvar, LoadPlugin, DisX64, zero, Arg, Clipboard, EnviBroad, __arg, LoadEnvi, HelpColor, DeskTopFresh, TaskIcoMenu, EXPORTLOCAL
+- **17 ENVI runtime control commands** — EnviMode, ForceLocal, Alias, WndProc, memvar, LoadPlugin, DisX64, zero, Arg, Clipboard, EnviBroad, __arg, LoadEnvi, HelpColor, DeskTopFresh(@@), TaskIcoMenu(@@), EXPORTLOCAL
 - **ForceLocal + EnviMode defaults** — ensures every generated script uses the safest variable scoping by default
 - **Code organization rules** — `_SUB` declaration at parse time vs runtime, `SET^` Win32 callback binding, `CALL @` variants cheat sheet
 - **ENVI @ control properties reference** — universal, EDIT/ITEM/window-specific, TABL 30+ operations, TREE 10+ operations, cross-process control

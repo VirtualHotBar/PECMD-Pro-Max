@@ -55,7 +55,7 @@ CALL @--popmenu WinName [x.y[:align]] // 弹出菜单
 CALL @--WinName                      // 销毁 Win 环境
 CALL @WinName                        // 初始化 Win 环境
 
-// DLL 调用
+// DLL 调用（⚠ 缓冲区输出参数受限，见下方说明；需要 PECMD2012 v1.88+ 完整版）
 CALL $[? --cd --nrcd --c --[[i]v]ret:[~@]retVar] DLL|*hDll,Func,[#]p1,[#]p2...
 CALL $--ret:retVar [--cd],[--nrcd],-LoadLibrary,[^]DLLpath     // 加载 DLL（^=自动释放）
 CALL $--ret:retVar [&&memVar],-LoadLibrary,*[file]#resID[|type] // 从内存加载
@@ -68,6 +68,7 @@ CALL $--ret:var ,-LoadLibrary,^<DLLpath                         // COM DLL 加�
 DLL 标志：`--cd`=切换目录，`--nrcd`=不恢复目录，`--c`=C 调用约定（默认 PASCAL/stdcall），
 `--bool`=BOOL 返回，`--ret:*`=通过指针返回，`--m`=内存中，
 `--1`=剩余全部作为一个参数，`--co`=注册 DLL（默认），`--nco`=不注册 DLL。
+`--qd`=启用类型前缀系统（qualified mode），允许用 `#`/`$`/`*` 等前缀为每个参数指定类型。
 
 **类型前缀系统（--qd）：** 每个参数的类型覆盖，使用 `--qd:类型1,类型2,...`
 | 前缀 | 类型 | 描述 |
@@ -96,6 +97,14 @@ DLL 标志：`--cd`=切换目录，`--nrcd`=不恢复目录，`--c`=C 调用约�
 ^                // 变量超出作用域时自动释放
 ```
 
+**实测验证的调用格式（PECMD2012 v1.88+, 32-bit / 64-bit 行为一致）：**
+- 正确格式：`CALL $ --qd --ret:&&r DLL,Func,#intParam,$strParam`（逗号分隔，`#` 整数，`$` 字符串）
+- `--qd` 影响字符串传递方式（无 --qd 时字符串多含 null 终止符，建议始终加 `--qd`）
+- 点语法（`Func.#param`）不工作，整数无 `#` 前缀返回 0
+- **缓冲区输出限制**：`*` 前缀传缓冲区时 DLL 写入不回传到 PE 变量；`SET$#` 原始缓冲区 + `*` 可能崩溃
+- `GetProcAddress` 始终返回 0x0（实现问题），建议直接用函数名调用
+- 整数返回和字符串输入参数正常工作，32-bit 和 64-bit 行为完全一致
+
 地址调用：DLL 路径=`#`，函数=原始地址。函数名加 `*` 前缀 = 取地址。参数加 `&` 前缀 = 组合变量地址。
 内置：`-DllRegisterServer` / `-DllUnregisterServer`。
 DLL 架构必须与 PECMD 进程（x86/x64）匹配。
@@ -103,11 +112,14 @@ DLL 架构必须与 PECMD 进程（x86/x64）匹配。
 ### EXIT — 终止
 ```
 EXIT FILE      // 终止整个脚本
+EXIT WIN       // 退出当前窗口（销毁窗口环境）
 EXIT _SUB      // 退出当前函数
-EXIT LOOP      // 跳出循环
-EXIT FORX      // 跳出 FORX 循环
-EXIT BLOCK     // 退出当前 {} 代码块
-EXIT -         // continue（跳到下一次迭代）
+EXIT LOOP      // 跳出循环（同 EXIT BREAK）
+EXIT FORX      // 跳出 FORX 循环（同 EXIT BREAK）
+EXIT CONTINUE  // 继续下一次迭代（LOOP/FORX）
+EXIT BLOCK     // 跳到当前 {} 块尾部
+EXIT -         // 同 EXIT BLOCK
+EXIT ToWin     // 中止函数执行，立即返回窗口消息循环（推荐使用）
 ```
 
 ### IMPORT — 包含库文件
@@ -115,6 +127,24 @@ EXIT -         // continue（跳到下一次迭代）
 IMPORT path\to\library.wcs
 ```
 从另一个文件导入函数。被导入文件中 `_ENDFILE-IMPORT` 会排除尾部内容。
+
+### LAMBDA — 匿名代码块
+```
+[]参数列表{ 函数体 }
+```
+`[]` 分隔参数列表，`{}` 分隔函数体。在文件级立即执行（非可调用函数）。
+LAMBDA 拥有独立栈，退出时 PE 变量、锁、控件、HKEY 自动销毁。
+`_SUB` 本质上是 LAMBDA；LAMBDA 的独特之处在于可访问调用者栈。
+在命令群组（TEAM）内的 LAMBDA 函数体被解释为变量字符串，`%` 必须写为 `%%`。
+```
+// 示例：文件级内联块
+[]P1 P2{ WRIT -,$+0,%P1% %P2% }
+
+// 在 _SUB 内使用
+_SUB MyFunc
+    []%~1%{ MESS Hello %1! }
+_END
+```
 
 ### LOAD — 执行脚本文件
 ```
@@ -129,6 +159,7 @@ LOAD --Local --EnviMode path.ini           // 以 ForceLocal=1 + EnviMode=1 模�
 THREAD[*][&][+][$][#] [-exp] [-wait[x][-here]] [-tid:var] [--st:stackSize] command
 ```
 `*` = 立即执行，`&` = 强制 PE 变量模式，`$` = 预解释，`+` = 抛弃式线程，
+`#` = 代理/线程模式（线程结束后代理退出），前缀 `&*+$` 无固定顺序。
 `-wait` = 等待完成，`-tid:var` = 获取线程 ID
 
 附加标志：
@@ -178,10 +209,10 @@ ENVI @@POS=wid:l:t:w:h:layer:trans:front:activate
 ENVI @@Visible=wid:0|1|*4        // 跨进程可见性
 ENVI^ Clipboard=text             // 写入剪贴板
 ENVI^ Clipboard?=var             // 读取剪贴板到变量
-ENVI^ EXPORTLOCAL=1|0|&1         // PE 变量继承：1=传播，0=隔离，&=递归
+ENVI^ EXPORTLOCAL=1|0|&1|&0      // PE 变量继承：1=继承，0=隔离（默认），&1=仅本级及以下继承，&0=仅本级及以下隔离
 ENVI^ DisX64=1                   // 禁用 WOW64 文件系统重定向
 ENVI^ Arg=*                      // 将单词拆分为参数
-ENVI^ DeskTopFresh=[clearicon][;][1|2|4|8|16][;[-+]path]  // 桌面刷新
+ENVI @@DeskTopFresh=[clearicon][;][1|2|4|8|16][;[-+]path]  // 桌面刷新
 ENVI @@TaskIcoMenu=0|1|2         // 托盘菜单切换
 ENVI^ HelpColor=[*cmdHeight] [fgColor][#bgColor]  // HELP 显示颜色
 ENVI^ Alias name=cmd              // 命令别名：替代命令前半部
@@ -195,22 +226,40 @@ ENVI^ __arg=0|1                   // 兼容模式：启用 &&__arg 参数表
 ENVI^ LoadEnvi [路径|-] [变量名]  // 从注册表刷新环境变量
 ```
 
+### ENVI ? — 系统查询
+```
+ENVI ?返回名=PPID,进程号           // 查询父进程 ID
+ENVI ?返回名=ISADMIN               // 是否管理员（1/0）
+ENVI ?返回名=ispe                  // 是否 PE 环境
+ENVI ?字符串名,数字名=PEBIT,[path] // 查询位数（32/64）
+ENVI ?返回名=WinVer[+][;...]       // Windows 版本信息
+ENVI ?[$.]返名[,属性名]=FVAR,varName[;GUID]  // EFI 固件变量
+ENVI ?[单个名],[全部名]=DROPFILE,wParam  // 拖放文件信息
+ENVI @@Cur=?[X名][;Y名]           // 鼠标位置查询
+ENVI @@EATEKEYS=组合键1 ...        // 按键拦截
+ENVI @@RMENU=变量名;文件名         // 获取文件右键菜单（多行，空行为分隔符）
+```
+
 ### CALC — 计算/求值
 ```
-CALC [#][变量=]表达式[#[#][小数位][E|F|G]]
+CALC[-u|-txt|-cb] [-gui] [-base=[u]2|8|10|16|N] [-err=defaultValue] [#][变量=]表达式[#[#][小数位][E|F|G]]
 ```
 `#` 前缀 = 整数模式。支持：`+ - * / % ^`，位运算 `& | @`，比较 `= <> > >= < <=`，
 逻辑 `&& ||`。函数（共34个）：`abs sin cos tan ctg sqrt ln lg log pow exp pow10`，
 `floor ceil round int frac div mod rand shl shr xor not lnot`，
 `arcsin arccos arctan arcctg deg rad hypot max min`。
 `lnot` = 逻辑非（`!a`），`not` = 按位非（`~a`）。常量：`e`，`pi`。
+⚠ `log()` 需两参数 `log(底数,值)`，单参数返回 0；用 `lg()` 代替 log₁₀，`ln()` 为自然对数。
 尺寸后缀：`K`=1024，`M`=1024^2，`G`=1024^3，`T`=1024^4，`S`=512。
 结果加 `#` = 整数，结果加 `$` = 双精度（INT64/float）。
 `-base=[u]2|8|10|16|N` — 输出进制（`u` = 无符号）。`-gui` — 图形界面计算器。
 `-err=defaultValue` — 出错时返回默认值。
+`-u` — 无符号输出修饰符（直接跟在 CALC 后面，无空格）。
+`-txt` — 文本模式（直接跟在 CALC 后面）。
+`-cb` — 剪贴板模式（直接跟在 CALC 后面）。
 `CALC -base=16 #&hex=shl(0x07,16)|0x20` — 十六进制位运算。
 `CALC &sz=%&bytes%/1G#3` — 字节转 GB，3 位小数。
-多个表达式：用 `;` 分隔，子变量：`$subName=expr`。
+多个表达式：用 `;` 或换行分隔。子变量：`#subName` = 整数子变量，`$subName` = 浮点子变量。
 
 ### CODE — 编码转换
 ```
@@ -248,7 +297,34 @@ SET-ptr &buf=value:offset           // 指针大小
 SET?int &buf=&&Var:offset
 SET?longlong &buf=&&Var:offset
 SET?char &buf=&&Var:offset
+SET?short &buf=&&Var:offset              // 读取 SHORT
+SET?ptr &buf=&&Var:offset                // 读取指针大小值
 ```
+
+### ENVI-* — 内存基元（二进制数据操作）
+```
+ENVI-mkfixdummy &&var=源变量@偏移       // 创建固定虚拟变量（内存不可变）
+ENVI-mkdummy &var=地址;字节数            // 从地址创建虚拟变量
+ENVI-addr &&ptr=源变量                   // 获取变量内存地址和长度
+ENVI-long &buf=value:offset              // 写入 LONG (32位)
+ENVI?long &var=源变量:offset             // 读取 LONG
+ENVI?short &var=源变量:offset            // 读取 SHORT
+ENVI?char &var=源变量:offset             // 读取 CHAR
+ENVI?int640 &var=源变量:offset           // 读取 INT64
+ENVI?ptr &var=源变量:offset              // 读取指针
+```
+
+### struct — C 风格结构体定义
+```
+struct 结构体名
+{
+    __virtual 返回类型 STDMETHODCALLTYPE 方法名(参数列表);
+    成员类型 成员名;
+    ...
+};
+typedef 类型别名 原类型;
+```
+配合 `SET-*结构体 变量.成员=值` 和 `SET?*结构体 变量.成员=&目标` 读写。
 
 ### SET-make / ENVI-make — 从缓冲区取子串
 ```
@@ -303,6 +379,38 @@ ENVI-ex retVar=varName
 ENVI-tom &&dst=&src    // 将字符串转换为内存指针
 ```
 
+### SET-mkfixdummy — 固定虚拟变量（内存不可变）
+```
+SET-mkfixdummy PE变量名=[地址][;[*][字节数]]
+```
+同 `SET-mkdummy`，但所引用的内存不会变动（fixed dummy）。
+
+### SET-addr — 获取地址和长度
+```
+SET-addr [地址名][;长度名]=源PE变量名
+```
+返回源 PE 变量的内存地址和字节长度到指定变量。
+
+### SET-*结构体 / SET?*结构体 — 结构体读写
+```
+SET-*结构体 PE变量名.成员=数值[:[~]附加总偏移字节数]         // 写入结构体成员
+SET?*结构体[:0[@]s] 源PE变量名.成员=变量名[:[~]附加总偏移字节数]  // 读取结构体成员
+```
+`0`=补零，`@`=去掉 0x 前缀，`s`=带符号。`~`=偏移以类型大小为单位。
+配合 `struct` 块定义的 C 风格结构体使用。
+
+### ENVI 后缀变体 — 临时模式切换
+```
+ENVI -env ...                     // 临时取消 forceLocal（必须为第一个后缀）
+ENVI -std ...                     // 临时设置 EnviMode=1（必须为第一个后缀）
+ENVI -raw ...                     // 等号右侧不解释
+ENVI -get[N] ...                  // 回溯 N 级（默认 1）获取 PE 变量
+ENVI -ret[N] ...                  // 回溯 N 级（默认 1）操作 PE 变量名
+SET-env ...                       // 等价于 ENVI -env &...（SET 也可用 -env 后缀）
+```
+`-env` 和 `-std` 便于操作环境变量；`-get` 用于函数传入 PE 变量名时获取；`-ret` 用于函数返回时操作。
+`SET-env` 临时取消 ForceLocal，用于 SET 命令需要读写环境变量的场景。
+
 ---
 
 ## 流程控制
@@ -324,16 +432,26 @@ FIND [$][A | B], command         // 复合 OR（条件之间用 |）
 FIND --pid &var,ProcessName            // 获取进程 PID
 FIND --pid &var                        // 获取进程 CPU 滴答数
 FIND --pid*@[.ext|#parentPID] &var,    // 进程列表（可选：扩展名过滤或父进程 PID）
-FIND --wid*@[parentWID] &var,[title]   // 窗口列表（* = 标题前缀匹配）
+FIND [--user] --pid*@[.ext|#parentPID] &var,prog[|用户名]  // 按用户名过滤进程
+FIND [--sub][--forpid:PID|--fortid:TID] --wid*@[parentWID] &var,[title]   // 窗口列表（* = 标题前缀匹配）
+                                         // --sub=递归子窗口，--forpid=按进程过滤，--fortid=按线程过滤
 FIND --wid#ParentWID &var,ControlID    // 查询控件的窗口 ID
 FIND --class:ClassName --wid*@ &var    // 按窗口类名过滤窗口列表
 FIND --menu &var,WindowID              // 查询窗口的 MENU 句柄
 FIND --menu#Index &var,MenuID          // 按索引查询子 MENU
 FIND $!=%var%,                         // 与字面量 "!" 比较（特殊：$ 后跟比较操作符）
 FIND C:\=?,&var                        // 查询磁盘总空间（字节）
+FIND MEMB<比较符>数值, command            // 字节级内存比较（单位：字节）
+FIND R:\<比较符>数值, command             // 磁盘空间比较（R: 为盘符，单位 MB）
+FIND R:\<比较符>*数值, command            // 磁盘空间比较（* = 字节单位）
 ```
 
+**FIND --pid 输出字段（@=列表模式）：**
+`进程ID  父进程ID  内存K  CPU使用时间(100ns)  总时间  [用户]  文件名  命令行`
+一行一条，以 TAB 间隔。0 进程的 "CPU 使用时间" 为系统 "空闲时间"。
+
 ### IFEX — 文件测试 / 数值比较 / 系统查询
+> **注意**：IFEX 的 `$`/`|` 前缀与 FIND **相反**。IFEX: `$`=数值比较，`|`=字符串比较。
 ```
 IFEX path\|file, command         // 文件存在
 IFEX path\|file,! command        // 不存在
@@ -343,11 +461,15 @@ IFEX #num1=#num2, command        // 强制整数
 IFEX [ cond1 & cond2 ], command  // AND 复合（条件间用 &、| 或 @）
 IFEX [ cond1 | cond2 ], command  // OR 复合
 IFEX [ cond1 @ cond2 ], command  // XOR 复合
-IFEX MEMU=?,&var                 // 查询可用内存
-IFEX MEMA=?,&var                 // 查询总内存
+IFEX MEMU=?,&var                 // 查询可用内存（单位 MB）
+IFEX MEMA=?,&var                 // 查询总内存（单位 MB）
+IFEX MEMBU=?,&var                // 查询可用内存（单位字节）
+IFEX MEMBA=?,&var                // 查询总内存（单位字节）
 IFEX drv:\=?,&var               // 查询磁盘可用空间
 IFEX KEY=?                       // 等待按键
 ```
+
+> **复合条件类型前缀：** `[前的$` 或 `[前的|` 表示后续所有条件默认为 `$`（数值）或 `|`（字符串）比较，可省略逐个标注。
 
 ### LOOP — While 循环
 ```
@@ -355,19 +477,21 @@ LOOP [#]condition,
 {
     // 循环体
 }
-// BREAK：EXIT LOOP 或 EXIT -
-// CONTINUE：EXIT -
+// BREAK：EXIT LOOP 或 EXIT BREAK
+// CONTINUE：EXIT CONTINUE
 ```
 
 ### FORX — 迭代
 ```
 FORX * list,&&item,                              // 空格分隔迭代
 FORX *NL &multiLine,&&line,                      // 换行分隔
+FORX *NL:| &data,&&item,                         // 自定义分隔符（|为分隔符）
 FORX *v &a &b &c,&&name,                          // 迭代变量名
 FORX /S[:depth] path\*.ext,&&name,0               // 文件枚举（0=文件，1=目录）
 FORX /S:3 /O:N path\*.ext,&&f,0                  // 最大深度 3，按名称排序
 FORX /S /O:-N path\*.ext,&&f,0                   // 深度不限，反向排序
-FORX /S /size:0:1048576:512 path\*.ext,&&f,0     // 大小 0-1MB，512 对齐
+FORX /S /size:0:1048576:512 path\*.ext,&&f,0     // 大小 0-1MB，512 对齐（已分配大小）
+FORX /S /size*:0:1048576:512 path\*.ext,&&f,0    // 同上（* = 实际文件大小，非已分配大小）
 FORX @\Windows,&&dir,1                            // 搜索目录根
 FORX !\*.ext,&&f,0                                // 反向目录顺序
 FORX @\*.ext,&&d,1                                // 仅目录（@ 前缀）
@@ -400,13 +524,16 @@ LOCK --exist #lockName,&retVar   // 检查锁是否存在（1=是，0=否）
 
 ### READ — 读取文件
 ```
-READ path,*r,&var     // 原始（不转换行尾符）
+READ[-UNICODE|-UNICODEB|-UTF8|-GBK|-BIG5|-ANSI|-<codepage>] [*fix] path,*r,&var     // 原始（不转换行尾符）
 READ path,*,&var      // UNIX LF -> 本地
 READ path,**,&var     // DOS CRLF -> 本地
 READ -,-1,&count,&var // 获取行数
 READ -,lineNo,&line,&var  // 读取指定行（lineNo=-1 获取行数）
 READ -,10,&line,&var  // 从 stdin 读取一行
+READ -*[?],lineNo,&line,&var  // 从变量读取（? = 测试/查询编码）
 ```
+编码缩写：`-UNI` = `-UNICODE`，`-UNIBE` = `-UNICODEB`。
+`*[?]` 变量名后缀：用于测试编码（`?` 探测变量内容的编码格式）。
 
 ### WRIT — 写入文件
 ```
@@ -414,6 +541,7 @@ WRIT[-UNICODE|-UNICODEB|-UTF8|-GBK|-BIG5|-ANSI|-<codepage>] [*fix] [*-nl] [*v] [
     path,[$][+|-]lineID,text
 ```
 编码标志（在文件名之前）：`-UNICODE`=带 BOM 的 UTF-16LE，`-UNICODEB`=UTF-16BE，`-UTF8`=带 BOM 的 UTF-8，`-GBK`，`-BIG5`，`-ANSI`，`-<code_number>`=指定代码页。当现有文件有 BOM 时，BOM 优先。
+缩写：`-UNI` = `-UNICODE`，`-UNIBE` = `-UNICODEB`。
 
 星号前缀修饰符：`*fix`=单独的 CR 视为换行，`*-nl`=不添加尾部换行，`*v`=写入变量，`*fv`=FileData 是变量名，`*c`=先清空文件，`*nobom`=写入时不添加 BOM。
 
@@ -491,8 +619,10 @@ MDIR dirPath
 
 ### FLNK — 符号链接/硬链接
 ```
-FLNK linkPath,targetPath
-FLNK -h linkPath,targetPath     // 硬链接
+FLNK targetPath,sourcePath             // 硬链接（默认，类型=0）
+FLNK targetPath,sourcePath,1           // 符号链接（类型=1）
+FLNK -j targetPath,sourcePath          // 目录联接
+FLNK targetPath,                       // 删除链接（源为空）
 ```
 
 ---
@@ -520,6 +650,9 @@ PART list volume volumeName,&var            // 卷信息
 PART -drv list volume N,&var                // 按驱动器号列出卷
 PART -report[:retvar][diskNum]              // 显示/列出报告（忽略其他参数）
 PART -floppy list disk N,&var               // 列出软盘设备
+PART [-cdrom|-floppy] list parent <devOrDrv>,&var  // 列出父设备
+PART [-cdrom] list dep <devOrDrv>,&var      // 列出依赖/源文件名
+PART [-devid[x|n|a]] list cdrom [N],&var    // 列出 CDROM 设备
 
 // 修改操作
 PART -super -up -xup N#M type [attr]        // 设置分区类型+属性（-super 和 -up 均需指定）
@@ -546,6 +679,15 @@ PART -super -up -gpt -fs0 -mbr init N       // 初始化 GPT+MBR 混合，原始
 PART -gpt -cmp N                            // 压缩 GPT 表（从1开始编号，连续排列）
 PART fix N                                  // 修复 GPT：纠正校验和、标志、分区计数
 
+GPT 属性：
+| 值 | 含义 |
+|---|---|
+| `0x1000000000000000` | 只读 |
+| `0x2000000000000000` | 影子 |
+| `0x4000000000000000` | 隐藏 |
+| `0x8000000000000000` | 无盘符 |
+| `0x0000000000000001` | 计算机必须的分区 |
+
 // 智能盘符控制
 PART -lock[:\\\\.\D:] N                     // 锁定盘符（阻止自动分配）
 PART -locku[:\\\\.\D:] N                    // 解锁
@@ -560,6 +702,7 @@ PART -usb                                   // 仅 USB 模式
 PART -admin                                 // 高级模式（危险）
 PART -align[=size]                          // 对齐（默认或指定值）
 PART -CHS=C:H:S                             // 覆盖柱面/磁头/扇区几何参数
+PART -clear                                 // 强制清除分区内有效信息（不可恢复）
 ```
 
 PART MBR 输出字段：`分区号 类型(hex) 激活 起始(字节) 长度(字节) 隐藏扇区 结束(字节) 物理# 盘符`
@@ -581,6 +724,8 @@ SHOW * hd:part,ChineseChar                  // 分配中文字符盘符
 SHOW * hd:part,letter,WaitMs               // 分配并等待设备就绪（等待毫秒数）
 ```
 
+> **help.txt 标准语法**: `SHOW [=1] [-SKIP=类型] [-check] [-skiptp:tp1;tp2] [-skippt:hd1:lpt1;hd1:lpt2] [-from:盘符[表]] [*&-] [磁盘分区],[盘符[表]],[等待时间],[起始盘符[表]]`
+
 ### SUBJ — 挂载/卸载
 ```
 SUBJ D:,\Device\Harddisk0\Partition1       // 挂载
@@ -593,6 +738,21 @@ FDRV &var=*:                               // 所有有卷的盘符
 FDRV *idle &var=*:                         // 空闲（未分配）盘符
 FDRV *vol &label,&fs=D:                   // 获取卷标和文件系统
 FDRV *rsort &var=*:                        // 反向排序
+
+// 返回格式变体
+FDRV &var=                                 // 返回 C:|D:|E:|F:...（管道分隔）
+FDRV &var=*                                // 返回 C D E F...（空格分隔，无冒号）
+FDRV &var=*:                               // 返回 C: D: E: F:...（空格分隔，带冒号）
+FDRV &var=?                                // 返回所有 DOS 设备名
+
+// 卷标操作
+FDRV -vol [卷标名],[文件系统名],[序列号名],[最大文件名长度名],[标志名],[UUID名]=驱动器名
+FDRV -setvol 驱动器名=卷标                 // 设置卷标
+
+// 排序与过滤
+FDRV -ab &var=*:                           // 排除 A/B 软盘驱动器
+FDRV -idle[c][:盘符集] &var               // 空闲盘符（-idlec 排除 A/B）
+FDRV -link? 返名,所有名,终极名=符号名      // 返回链接对象
 ```
 
 ### FORM — 驱动器类型（全面）
@@ -769,10 +929,10 @@ MAIN path\to\PECMD.INI
 
 ### INIT — 初始化
 ```
-INIT [options],[timeout]
+INIT [options],[timeout],[USB起始盘符]
 ```
-选项：`I`=键盘，`U`=USB，`C`=禁用 Ctrl+Alt+Del，`K`=结束 explorer，`P`=页面文件
-常用：`INIT IU,3000`
+选项：`C`=将光驱盘符写入环境变量，`I`=安装托盘图标菜单，`K`=立即安装低级键盘钩子，`U`=USB 移动硬盘即插即用
+常用：`INIT IU,3000`（USB 起始盘符默认为 U）
 
 ### SHEL — 设置 Windows 外壳
 ```
@@ -919,10 +1079,12 @@ PATH C:\Tools;%PATH%                 // 设置 PATH 环境变量
 PATH %CurDir%\Tools                  // 追加到现有值
 ```
 
-### RECY — 清空回收站
+### RECY — 设置回收站容量
 ```
-RECY *                               // 清空所有回收站
-RECY C:                              // 清空 C: 盘回收站
+RECY D:,10                           // NT5.x: D: 盘回收站最大 10%
+RECY C:,2048                         // NT6.x: C: 盘回收站最大 2048MB
+RECY D:,0                            // 禁用 D: 盘回收站
+RECY *:,0                            // 禁用所有分区回收站
 ```
 
 ### USER — 设置所有者信息
@@ -930,9 +1092,11 @@ RECY C:                              // 清空 C: 盘回收站
 USER 用户名,公司名                    // 设置"我的电脑"属性值
 ```
 
-### HOME — 设置主目录
+### HOME — 设置 IE 主页 / 锁定主页 / 禁用注册表编辑器
 ```
-HOME C:\Users\name                   // 设置主目录（修改 HKCU 注册表）
+HOME http://example.com              // 设置 IE 主页
+HOME http://example.com,1            // 锁定主页（禁止修改）
+HOME http://example.com,1,1          // 锁定主页 + 禁用注册表编辑器
 ```
 
 ---
@@ -960,15 +1124,12 @@ SCRN -cap file.bmp,<x:y:R:B>           // 捕获矩形区域
 捕获目标：`0`=全屏，`#WindowID`=指定窗口，`<x:y:R:B>`=矩形区域。
 扩展尺寸参数：`SCRN -taskbar W,H,X,Y,TaskBarPos,DpiX,DpiY,ScaleX,ScaleY` 用于 DPI 感知信息。
 
-### FONT — 加载/注册字体
+### FONT — 注册/注销字体
 ```
-FONT fontPath                           // 注册单个字体文件
-FONT fontPath,fontName                  // 以指定名称注册
-FONT -reg fontPath                      // 永久注册（重启后仍有效）
-FONT -unreg fontPath                    // 取消注册字体
-FONT fontDir\*                          // 注册目录中的所有字体
-FONT -list &var                         // 列出已注册字体名称
-FONT ?fontName,&var                     // 查询字体信息
+FONT fontPath                           // 注册字体文件
+FONT \Windows                           // 从所有分区的 Windows\Fonts 注册字体
+FONT - fontPath                         // 注销字体（- 前缀）
+FONT -p:retName:fontName:lang fontRes   // 私有字体（不注册系统）
 ```
 
 ### WALL — 设置桌面壁纸
@@ -1080,7 +1241,7 @@ REGI *HKLM\SOFTWARE\Key\Val,&var          // REG_MULTI_SZ
 REGI **HKLM\SOFTWARE\Key\Val,&var         // REG_MULTI_SZ（特殊）
 REGI *$HKLM\SOFTWARE\Key\Val,&var         // 多行 REG_MULTI_SZ
 REGI ~HKLM\SOFTWARE\Key\Val,&var          // REG_EXPAND_SZ
-REGI ~~HKLM\SOFTWARE\Key\Val,&var         // REG_EXPAND_SZ（变体）
+REGI ~~HKLM\SOFTWARE\Key\Val,&var         // REG_EXPAND_SZ（~~ 读取并重新解释注册表数据中的环境变量）
 REGI +HKLM\SOFTWARE\Key\Val,&var          // REG_QWORD
 REGI ^HKLM\SOFTWARE\Key\Val,&var          // REG_LINK
 REGI bHKLM\SOFTWARE\Key\Val,&var          // REG_QWORD_BIG_ENDIAN
@@ -1093,6 +1254,7 @@ REGI HKCU\Software\Key\,&&keys            // 枚举子键（换行分隔）
 REGI $HKLM\SOFTWARE\Key\Val=string         // 写入 REG_SZ
 REGI #HKLM\SOFTWARE\Key\Val=#0x100        // 写入 REG_DWORD（十六进制）
 REGI $HKLM\SOFTWARE\Key\Val=               // 删除值
+REGI HKCU\abc=""                           // 写入空字符串（"" 表示空值写入）
 
 // 高级操作
 REGI --ak HKCU\Software\Key\,&all             // 枚举键的所有值
@@ -1119,6 +1281,8 @@ FIND $%&VT%=NI, MESS Data not set!          // NI = 键存在但无数据
 ```
 
 ### HIVE — 加载/卸载离线注册表配置单元（全面）
+> help.txt 文档化标志：`-u`（加载到 HKU）、`-super`/`-super_r`（强制权限）、`-quick`（不添加权限）、`*`（导出到文件）。
+> 以下 `-tmp`、`-restore`、`ACL` 为未文档化扩展，实测可用但可能因版本而异。
 ```
 // 将离线配置单元挂载到 HKLM（或 HKU）下的挂载点
 HIVE E:\Windows\System32\config\SOFTWARE,HKLM\PE-SYS     // 加载离线 SOFTWARE 配置单元
@@ -1126,13 +1290,13 @@ HIVE E:\Windows\System32\config\SYSTEM,HKLM\PE-SYS       // 加载离线 SYSTEM 
 HIVE E:\Users\Default\NTUSER.DAT,HKU\PE-DEF             // 加载离线用户配置单元
 HIVE HKLM\PE-SYS,                                        // 卸载（路径为空，相同挂载点）
 
-// 加载时保留安全描述符（保留 ACL）
+// [未文档化] 加载时保留安全描述符（保留 ACL）
 HIVE E:\...\SOFTWARE,HKLM\PE-SYS,ACL                    // 带安全/ACL 加载
 
-// 作为临时配置单元加载（卸载时丢弃更改）
+// [未文档化] 作为临时配置单元加载（卸载时丢弃更改）
 HIVE -tmp E:\...\SOFTWARE,HKLM\PE-TMP                   // 使用临时配置单元（只读意图）
 
-// 加载并在卸载时还原（将更改保存回配置单元文件）
+// [未文档化] 加载并在卸载时还原（将更改保存回配置单元文件）
 HIVE -restore E:\...\SOFTWARE,HKLM\PE-SYS               // 卸载时还原（写回）
 HIVE -restore HKLM\PE-SYS,                               // 卸载并还原（保存更改）
 ```
@@ -1209,6 +1373,11 @@ EXEC [=][!][@][^][&][*] [flags] program [args]
 -raw                   // 捕获原始数据（不重新编码）
 -nowin                 // CREATE_NO_WINDOW
 -incmd                  // 在新的 PECMD 实例中运行命令（无消息循环）
+-hook                   // 修改进程关机代码
+-no64                   // PECMD32：不释放 X64 文件系统限制
+-ex1                    // 继承父进程 PE 变量为环境变量
+-nfb                    // 禁用等待光标
+-hpid:var               // 获取进程句柄（非 PID）
 
 // 附加 EXEC 标志：
 -clone:var            // 克隆 PECMD 运行脚本变量
@@ -1221,13 +1390,16 @@ EXEC [=][!][@][^][&][*] [flags] program [args]
 /InstallService /name // 安装为 Windows 服务
 /RemoveService name   // 卸载服务
 -poprmenu|-runrmenu   // 弹出/执行文件右键菜单
+-runs                 // 写入注册表自动运行（= 前导: HKLM\...\Run, 否则 HKCR\...\Run）
 ```
 
 ### EXEC* — 捕获输出
 ```
 EXEC* [*1|*N|*-] [-catch] [-cmd:::Callback] [-err+] [&]outputVar=program [args]
 ```
-`*1`=仅第一行，`*N`=合并行，`*-`=去除尾部换行
+`*1`=仅第一行，`*N`=合并行，`*-`=去除尾部换行，`*$`=首行+变量展开，`*^`=首行+推迟展开
+`NAME+=` — 追加模式（在 EXEC* 中，NAME+= 将输出追加到变量而非覆盖）
+EXEC| [flags] program [args]                        // 管道模式（支持 > >> < 2> >& 重定向）
 
 ### SOCK — Windows 套接字 / IPC
 ```
@@ -1238,6 +1410,10 @@ SOCK --event [*] Name;ShareName[;Init;ManualReset] // 事件对象
 SOCK --sem [*] Name;ShareName[;InitCount;MaxCount] // 信号量
 SOCK --mutex [*] Name;ShareName[;InitLocked]       // 互斥锁
 SOCK --pipe [*] Name;ShareName[;Timeout;BufSz;Mode] // 命名管道（0x1=立即，0x2=客户端，0x4=服务端）
+SOCK --unknown &&var                               // COM IUnknown 指针
+SOCK --BSTR &&var,,StringContent                   // COM BSTR 字符串
+SOCK --gethostbyname &&IP,HostName                 // DNS 解析
+SOCK --BST                                         // 加载 BSTR DLL
 SOCK --mailslot [*] Name;ShareName[;IsServer;Timeout] // 邮件槽
 SOCK --gethostbyname[*|#] IPName;HostName          // DNS 查询
 SOCK --unknown Name[,InitialValue]                 // COM IUnknown 指针（自动释放）
@@ -1291,31 +1467,84 @@ LINK [?]Name.lnk                          // 查询快捷方式信息
 ### MSTR — 多字符串提取
 ```
 MSTR &a,&b=<1><3>%&data%              // 提取字段 1 和 3
-MSTR &rest=<5*>%&data%                 // 字段 5 到末尾（使用 <N*> 或 <N->）
+MSTR &rest=<5->%&data%                 // 字段 5 到末尾（`-` = 到末尾）
+MSTR &single=<5*>%&data%               // 仅字段 5（`*` = 单字段）
 MSTR &restq=<~5>%&data%                 // 字段 5 并剥离外层引号（~ = 去除引号）
 MSTR &s=pos,len,%&str%                 // 指定位置的子串
 MSTR &last=<-1>%&data%                 // 最后一个字段（负索引）
-MSTR -delims:. &a,&b,&c=<1*>%&ip%     // 按自定义分隔符拆分
+MSTR -delims:. &a,&b,&c=<1><2><3>%&ip% // 按自定义分隔符拆分
 MSTR* &a,&b=<1><2>%&data%               // TAB 分隔（命令前缀 *）
 MSTR$ &a,&b=<1><2>%&data%               // 空格分隔，连续空格视为单个
+MSTR -xq &a=<1>%&data%                  // 字符串内可含转义引号 (\")
+MSTR -rq &a=<1>%&data%                  // 剥离双引号
+MSTR -rq1 &a=<1>%&data%                 // 剥离单个双引号（含不配对的）
+MSTR -term &a,<1>%&data%               // 保留后置分隔符
+MSTR -term2 &a,<1>%&data%              // 保留前置和后置分隔符
+MSTR -trim &a=  hello  %&data%         // 去除前后空白
+MSTR -trimp &a=  hello  %&data%        // 预先处理后去除空白
+MSTR -trimleft &a=  hello  %&data%     // 仅去除左侧空白
+MSTR -trimright &a=  hello  %&data%    // 仅去除右侧空白
+MSTR &count=<#>%&data%                  // `串号#` 返回总字段数（# 替代数字）
 ```
+`-xq`：字段内可含 `\"` 转义引号。`-rq`/`-rq1`：剥除外层引号。`-term[2]`：保留分隔符。
+`-trim[p][left|right]`：`$` 前缀时仅匹配空格，不含 TAB。`-trimp`：预先处理模式。
+`-left`：保留字符串最开头的空白（TAB 方式默认开启）。
+`<#>`：用 `#` 替代数字索引，返回总字段数。
 
-### SED — 正则替换
+### SED — 字符串/正则替换
 ```
-SED &r=count,pattern,replacement,%&source%
-SED &r=0,pat,rep,%&s%                  // 替换全部
+SED [flags] &r=count,pattern,replacement,%&source%
+SED &r=0,pat,rep,%&s%                  // 替换全部（count=0 全部替换）
 SED &r=1,pat,rep,%&s%                  // 替换第一个
-SED &ext=-1,.*\.,,%&filename%          // 获取扩展名（负数=从末尾算起）
-SED &r=0:0,pat,rep,%&s%                // 正则模式
+SED &r=-1,pat,rep,%&s%                 // 替换最后一个匹配（负数=从末尾）
+SED &r=0:0,pat,rep,%&s%                // 正则模式（等同 count=0）
+SED -t &r=0,Hel,Wor,%&s%              // -t = 字符集翻译（H→W, e→o, l→r，逐字符映射）
+SED -ts &r=0,[old],[new],%&s%          // -ts = 字符串集翻译（0x0A 分隔）
+SED -ni &r=0,pat,rep,%&s%              // -ni = 不区分大小写
 ```
+⚠ **SED 默认使用正则模式。** `.` 匹配任意字符，非字面量句号。匹配字面量句号用 `\.`。使用标志字符 `*` 可切换为字面量模式（不解释正则）：`SED &r=*0,.,X,%&s%` 中 `.` 匹配字面量句号。
+count：`0`=替换全部匹配，`N`=替换前N个匹配，`-N`=替换后N个匹配。
+`0:0` 与 `0` 等价（均替换全部）。`.*\.` 匹配到最后一个句号及之前内容。
+
+标志（flags）：
+- `-t` — 字符集翻译模式（一对一字符映射，如 Unix `tr`，无方括号）
+- `-ts[1]` — 字符串集翻译（0x0A 分隔各子串）
+- `-ni` — 不区分大小写
+- `\u:` — 转换为大写，`\l:` — 转换为小写
+- `-x[:group]` — 二进制对象十六进制模式
+- `-ex` — 扩展模式
+- 查找模式（`count=?`）：`SED -ni &r=?:1,pattern,,%&s%` 查找位置
+- `-Lf:Lt:Rf:Stp` — 向量操作模式（`Lf:Lt` 为从/到向量，`Rf` 为替换源，`Stp` 为步长）
+- `-h[~]?` — 非起始匹配时的前导串（`~` = 不含前导串本身）
+- `-e[~]?` — 非结尾匹配时的后缀串（`~` = 不含后缀串本身）
+- `-f` — 严格模式：不匹配则丢弃
+- `-many` 或变量名前缀 `*` — 返回多个匹配位置
+- 标志字符：`*` = 字面量模式（不解释正则），`_` = 占位
+
+### LPOS — 左起查找位置（全面）
+```
+LPOS[*] [-case] &pos=needle,[count],%&haystack%       // 查找字符位置（默认不区分大小写）
+LPOS* [-case] &pos=substring,[count],%&haystack%      // 查找子串位置（* = 子串模式）
+LPOS** [&pos] [-qu] [-delims:C] [-case] =substring,[count],%&haystack%  // 返回子串编号
+LPOS*** [-qu] [-delims:C] [-case] &count,&pos=substring,,%&haystack%    // 返回计数+位置
+LPOS**# [-delims:C] =substring,[count],%&haystack%    // TAB 分隔模式（# = TAB 分隔）
+LPOS**$ [-delims:C] =substring,[count],%&haystack%    // 空格分隔模式（$ = 空格分隔）
+```
+`LPOS` — 查找字符位置（默认不区分大小写）。
+`LPOS*` — 返回所有匹配位置。
+`LPOS**` — 返回匹配计数（第几个匹配）。
+`LPOS***` — 返回计数和位置。
+`-case` — 区分大小写（默认不区分）。
+`-qu` — 去除引号。
+`-delims:C` — 自定义分隔符（支持 `\n\r\t\v\f\b`）。
+count < 1 时返回最右边位置。返回 0 表示未找到。
 
 ### 其他字符串操作
 ```
 LSTR &left=N,%&str%                     // 前 N 个字符
 RSTR &right=N,%&str%                    // 后 N 个字符
-SSTR &mid=M,N,%&str%                    // 从位置 M 取 N 个字符
-LPOS &pos=needle,[1],%&haystack%        // 查找第一个（不区分大小写；加 ,1, 区分大小写）
-RPOS &pos=needle,[1],%&haystack%        // 查找最后一个
+SSTR &mid=M,N,%&str%                    // 从位置 M 取 N 个字符（⚠语法待确认）
+RPOS &pos=needle,[1],%&haystack%        // 查找最后一个（行为与 LPOS 类似，从右起）
 STRL &len=%&str%                        // 字符串长度
 RAND &var                               // 随机 63 位整数
 ```
@@ -1324,13 +1553,18 @@ RAND &var                               // 随机 63 位整数
 
 ## 其他命令
 
-### TIME / DTIM
+### TIME — 获取当前时间
 ```
-TIME &var                               // 获取当前时间
-DTIM &ts,&date,&time                    // 合并为时间戳
-DTIM &dateStr,&ts                       // 时间戳转字符串
+TIME &var                               // 获取当前时间（HH:MM:SS 格式）
 ```
-> 注意：完整的 DATE 命令请参见系统部分。
+> 注意：完整的 DATE/TIME 命令请参见系统部分。
+
+### DTIM — 日期/时间选择器（GUI 控件）
+```
+DTIM [-right] [*] Name,LxTyWwHh,[初始值],[事件],[类型]
+// 类型：0x20=长日期，0x40=时间，0x80=短世纪，0x100=上下键，0x200=带勾选器
+```
+> 日期/时间选择器控件，必须位于 `_SUB` 窗口内。非时间戳工具。
 
 ### BASE — Base64
 ```
@@ -1420,7 +1654,118 @@ COME 1 / NOTE ON                        // 启用注释
 ```
 HELP                                    // 显示完整帮助
 HELP commandName                        // 显示指定命令帮助
+HELP -hlpdoc=page                       // 指定帮助页
+HELP ~bookmark                          // 跳转到指定主题
+HELP *Height                            // 命令行模式（Height<=-100000 无命令栏）
+HELP 0xFG#0xBG                          // 设置前景色和背景色
 ```
+
+### SEND — 键盘/鼠标模拟
+```
+SEND [--ext] [--s] [-gui [-m] [-nfocus] [-right|-left|-top]] <key[_|^]>[;key2;...]
+SEND -m flag;dx;dy[;dat;extdat]         // 鼠标事件模拟
+```
+按键后缀：`_` = 仅按下，`^` = 仅释放，无后缀 = 按下+释放。
+支持 VK_ 常量名字符串（VK_ 可省略）、直接字母（A-Z, 0-9）、十六进制键码（`#0x0D` = Enter）。
+支持 `,` `;` `:` `/` 和空格作为分隔符。
+
+附加标志：
+`--ext` — 扩展键模式。
+`--s` — 静默模式（不产生蜂鸣等声音）。
+`-nfocus` — 不改变焦点（仅在 `-gui` 模式下有效）。
+`-right|-left|-top` — 方向标志（仅在 `-gui` 模式下有效）。
+
+鼠标标志（`-m flag`）：
+| 标志 | 描述 |
+|---|---|
+| `0x0001` | 鼠标移动 |
+| `0x0002` / `0x0004` | 左键 按下/释放 |
+| `0x0008` / `0x0010` | 右键 按下/释放 |
+| `0x0020` / `0x0040` | 中键 按下/释放 |
+| `0x0080` / `0x0100` | X 按钮 按下/释放 |
+| `0x0800` | 滚轮滚动（dat=120 向上一格） |
+| `0x8000` | 绝对坐标（否则为相对坐标） |
+| `0x4000` | 映射到整个虚拟桌面 |
+| `0x100000` | 触摸屏 |
+
+```
+SEND #0x0D                              // 发送 Enter
+SEND A;B;C                              // 依次发送 A B C
+SEND -gui #0x1B                         // GUI 模式发送 Escape
+SEND VK_NUMLOCK                         // 发送 NumLock（VK_ 名称直接使用）
+SEND -m 0x0001;100;200                  // 鼠标移动到 (100,200)
+SEND -m 0x0002;0;0                      // 左键按下
+SEND -m 0x0004;0;0                      // 左键释放
+SEND -m 0x0800;0;0;120                  // 鼠标滚轮（120=向上一格）
+SEND -m 0x8080;0;0                      // X 按钮按下（绝对坐标）
+SEND -m 0x100000;0;0                    // 触摸屏事件
+```
+
+### BROW — 浏览文件/目录对话框
+```
+BROW [-fix] <变量名[;flgnm]>,[[*|&]初始路径],[提示文字],[扩展名],[标志][,hookfun[,参数]]
+```
+`-fix` — 破解系统目录屏蔽（不一定成功）。
+前导符：无 = 打开文件对话框，`*` = 浏览目录对话框，`&` = 保存文件对话框。
+扩展名支持多选串：`说明1|*.后缀1|说明2|*.后缀2|`。
+标志：`0x10`=有编辑框，`0x200`=无新建文件夹按钮/多选，`0x4000`=混合选择文件和目录，
+`0x1000`=文件必须存在，`0x80000`=浏览器风格，`0x2`=覆盖警告，`0x1`=勾选只读。
+
+### MESS — 消息框
+```
+MESS [flags] [文字内容][@标题][#类型[*自动关闭ms][$默认选择]]
+```
+消息类型：`OK`（默认）、`YN`、`YNC`、`OKC`、`RETRY`、`ABORT`。
+默认选择：`$Y`、`$N`、`$C`、`$O`、`$R` 等。负数不显示计时。
+
+调用模式：
+`MESS` — 标准阻塞模式。
+`MESS*` 或 `MESS-bin` — 并行调用（父窗口可同时操作）。
+`MESS-` 或 `MESS-bg` — 后台调用（继续执行后续命令）。
+`MESS~` — 快速后台调用（费时操作也不阻塞）。
+`MESS.` 或 `-raw` — 不转换 `\n`（原始模式）。
+
+图标（`+icon` 后数字）：0=惊叹，1=警告，2=信息/3=星号，4=问题，5=停止/6=错误，7=招手停。
+`>=32` 或前带 `*` 为自定义 IconGroup 号。
+`-svr` / `-svr2` — 登录前可显示窗口。`-min` / `-max` — 最小化/最大化。
+`-size` — 可调大小。`-close` — 无关闭按钮。`-top` — 最顶端。
+`-txt` — 静态文本。`-cb` — 复制到剪贴板。
+
+返回值保存在 `%YESNO%` / `%&YESNO%` 中：YES/NO/OK/CANCEL/RETRY/IGNORE/ABORT。
+
+### HIDE — 隐藏 PECMD 进程
+```
+HIDE
+```
+隐藏 PECMD.EXE 进程，防止被其它程序或人为误杀。
+不能在命令行中使用，只能在配置文件中使用。
+`SHEL` 命令必须在 `HOTK` 和 `HIDE` 命令之后。只有通过 `SHEL` 加载 Shell 时，`HIDE` 才能生效。
+
+### UPNP — 端口转发 / BartPE 功能
+```
+UPNP [$]<参数>
+```
+执行 BartPE.EXE 的功能（内嵌，无需单独文件）。
+前导 `$` — 显示 BartPE.EXE 的执行界面。
+参数为 BartPE.EXE 的命令行参数。
+仅支持 NT5.x 系列 PE，阻塞模式执行。
+
+### TEXT — 显示文字
+```
+TEXT[.] [文字][#颜色][L左][T上][R右][B下][=+-][$字体大小[:字体名]][*]
+```
+在登录画面或桌面窗口显示文字。`\n` 换行，后缀 `.` 为原始模式（不转换换行）。
+文字为空则清除最近定义的矩形区内的文字。默认颜色为白色。
+`#LTRB=+-` 必须大写，顺序不能变。`=右对齐` `+水平居中` `-垂直居中`。
+`$字体大小[:字体名]` 设置字体。结尾 `*` 表示显示新文字前不清除原来已显示的文字。
+默认字体大小为 16（相当于宋体小 5 号）。
+
+### NUMK — 小键盘数字锁定
+```
+NUMK <数值>
+```
+控制小数字键盘的 NumLock 开关状态。`0` = 关闭，`1` = 开启。
+比 `SEND VK_NUMLOCK` 更准确：当 NumLock 已开时，SEND 再发一次反而会关掉。
 
 ### TIME — 定时器控制
 ```
@@ -1449,9 +1794,9 @@ ENVI ?ReturnValue=FVAR,varName;{GUID}     // 查询固件变量（UEFI）
 | VK_LBUTTON | 1 | 0x01 | Left mouse button |
 | VK_RBUTTON | 2 | 0x02 | Right mouse button |
 | VK_CANCEL | 3 | 0x03 | Ctrl+Break |
+| VK_MBUTTON | 4 | 0x04 | Middle mouse button |
 | VK_XBUTTON1 | 5 | 0x05 | Mouse X button 1 |
 | VK_XBUTTON2 | 6 | 0x06 | Mouse X button 2 |
-| VK_MBUTTON | 4 | 0x04 | Middle mouse button |
 | VK_CLEAR | 12 | 0x0C | Numpad 5 (Num Lock off) |
 | VK_BACK | 8 | 0x08 | Backspace |
 | VK_TAB | 9 | 0x09 | Tab |
