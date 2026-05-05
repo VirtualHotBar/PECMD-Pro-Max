@@ -351,7 +351,8 @@ typedef 类型别名 原类型;
 
 ### SET-make / ENVI-make — 从缓冲区取子串
 ```
-SET-make &&Str=&buf@offset;$length
+SET-make &&Str=&buf@offset;$length           // $ 固定长度
+SET-make &&Str=&buf@offset;(%expr%*2)        // ;(...) 计算表达式作为长度
 ```
 
 ### SET< / ENVI< — 追加到变量
@@ -361,7 +362,8 @@ SET< Var=text to append
 
 ### ENVI-addr — 获取缓冲区地址
 ```
-ENVI-addr &&ptr=&buf
+ENVI-addr &&ptr=&buf                // 获取地址（单返回值）
+ENVI-addr ;&len=&buf                // 获取地址和字节长度（双返回值，分号分隔）
 ```
 
 ### ENVI-mkdummy — 虚拟指针/长度描述符
@@ -598,6 +600,7 @@ WRIT path,$-3,                        // 删除第 3 行
 ```
 GETF# path,offset#size,&var       // 从偏移读取原始字节，共 size 字节
 GETF# path,0#*,&var               // 读取整个文件
+GETF -bin &src,offset#size,&hexOut // 读取为十六进制字符串输出
 ```
 
 ### PUTF — 二进制文件写入
@@ -1567,6 +1570,7 @@ SED &r=0:0,pat,rep,%&s%                // 正则模式（等同 count=0）
 SED -t &r=0,Hel,Wor,%&s%              // -t = 字符集翻译（H→W, e→o, l→r，逐字符映射）
 SED -ts &r=0,[old],[new],%&s%          // -ts = 字符串集翻译（0x0A 分隔）
 SED -ni &r=0,pat,rep,%&s%              // -ni = 不区分大小写
+SED -ex &r=0,0x00 0x00,0x0D 0x0A,%&hex%  // -ex = 二进制十六进制模式（hex byte pattern）
 ```
 ⚠ **SED 默认使用正则模式。** `.` 匹配任意字符，非字面量句号。匹配字面量句号用 `\.`。使用标志字符 `*` 可切换为字面量模式（不解释正则）：`SED &r=*0,.,X,%&s%` 中 `.` 匹配字面量句号。
 count：`0`=替换全部匹配，`N`=替换前N个匹配，`-N`=替换后N个匹配。
