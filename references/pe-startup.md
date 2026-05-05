@@ -111,9 +111,12 @@ SHEL %SystemRoot%\explorer.exe
 
 ### LOGO — 显示/隐藏启动画面
 
+支持 BMP/JPG/PNG/GIF 格式（需 GDI+ 支持）。标志：`-`（快速退出，无渐变）、`-top`（置顶）、`-enable`（ESC 退出）、`-wait`（等待动画结束）、`-trans:N`（透明度 0-255）。
+
 ```wcs
 LOGO %CurDir%\logo.jpg           // 显示启动画面
-LOGO                             // 隐藏启动画面
+LOGO %CurDir%\splash.jpg,0xFF00FF // 显示并设透明色
+LOGO                             // 隐藏启动画面（渐隐淡出）
 ```
 
 ### TEXT — 显示状态文本

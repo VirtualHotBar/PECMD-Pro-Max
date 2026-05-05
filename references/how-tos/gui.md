@@ -530,7 +530,7 @@ _SUB SysMenu
 _END
 
 _SUB OnMin
-    ENVI @@Visible=%&__WinID%:4                      // PECMD 枚举: 1=SHOW, 2=NORMAL, 3=MAXIMIZE, 4=MINIMIZE, 5=RESTORE（非 WinAPI 常量）
+    ENVI @@Visible=%&__WinID%:4                      // WinAPI ShowWindow 常量: 0=SW_HIDE, 1=SW_SHOW, 2=SW_SHOWNORMAL, 3=SW_MAXIMIZE, 4=SW_MINIMIZE, 5=SW_RESTORE
 _END
 
 _SUB OnClose

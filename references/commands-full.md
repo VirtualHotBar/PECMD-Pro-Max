@@ -609,6 +609,7 @@ SIZE &var=filePath
 ```
 HASH filePath,&var,MD5|SHA1|SHA256|CRC32
 HASH $string,&var,SHA1          // 对字符串内容计算哈希
+HASH *PEvarName,&var,SHA256     // 对 PE 变量内容直接计算哈希（`*` 可省略如果变量有 `&` 前缀）
 ```
 默认算法：MD5。不指定变量时，在消息框中显示结果并复制到剪贴板。
 
@@ -1053,7 +1054,7 @@ DATE -us &var                              // 微秒（4 位小数）
 | `ds` / `daysofyear` | 年内第几天（1-366） |
 | `Freq` / `frequency` | 计数器频率 |
 | `Counter` / `counter` | 硬件计时器计数器值 |
-| `gmt` | 自 1970-01-01 至今的秒数 |
+| `gmt` | GMT 秒数（自 1970-01-01 起） |
 | `uptime` / `uptime_ms` | 自开机以来的毫秒数 |
 | `utc` | 自 1601-01-01 至今的 100ns 单位数 |
 | `uptimens` | 自开机以来的纳秒数 |
@@ -1336,13 +1337,14 @@ ADSL-wlan index,,-list,&&result                             // 网络广播扫�
 
 ### PCIP — IP 配置
 ```
-PCIP 192.168.1.100,255.255.255.0,192.168.1.1,[DNS1],[DNS2]
-PCIP DHCP
+PCIP 192.168.1.100,255.255.255.0,192.168.1.1,[DNS1],[DNS2]  // 固定IP
+PCIP -,-,-,-,,                                                // DHCP（动态IP）
 ```
 
 ### 其他网络
 ```
-NTPC time.server.com                                // 时间同步
+NTPC time.server.com                                // 时间同步（默认仅同步）
+NTPC -q ,现在时间                                     // 同步并查询（-qo 仅查询）
 SITE ftp://user:pass@server/path,local,get|put        // FTP（下载/上传）
 UPNP add|del TCP|UDP,port,internalIP                  // 端口转发
 ```
@@ -1413,14 +1415,11 @@ SOCK --event [*] Name;ShareName[;Init;ManualReset] // 事件对象
 SOCK --sem [*] Name;ShareName[;InitCount;MaxCount] // 信号量
 SOCK --mutex [*] Name;ShareName[;InitLocked]       // 互斥锁
 SOCK --pipe [*] Name;ShareName[;Timeout;BufSz;Mode] // 命名管道（0x1=立即，0x2=客户端，0x4=服务端）
-SOCK --unknown &&var                               // COM IUnknown 指针
-SOCK --BSTR &&var,,StringContent                   // COM BSTR 字符串
-SOCK --gethostbyname &&IP,HostName                 // DNS 解析
+SOCK --unknown Name[,InitialValue]                 // COM IUnknown 指针（*=自动释放）
+SOCK --BSTR[vt] Name[,[*][InitialValue][,FromString]] // COM BSTR 字符串
+SOCK --gethostbyname[*|#] IPName;HostName          // DNS 解析
 SOCK --BST                                         // 加载 BSTR DLL
 SOCK --mailslot [*] Name;ShareName[;IsServer;Timeout] // 邮件槽
-SOCK --gethostbyname[*|#] IPName;HostName          // DNS 查询
-SOCK --unknown Name[,InitialValue]                 // COM IUnknown 指针（自动释放）
-SOCK --BSTR[vt] Name[,[*][InitialValue][,FromString]] // BSTR 字符串
 ```
 
 套接字操作（全部通过 `ENVI @Name.operation=`）：
@@ -1566,8 +1565,10 @@ TIME &var                               // 获取当前时间（HH:MM:SS 格式�
 ```
 DTIM [-right] [*] Name,LxTyWwHh,[初始值],[事件],[类型]
 // 类型：0x20=长日期，0x40=时间，0x80=短世纪，0x100=上下键，0x200=带勾选器
+// 初始值格式：年;月;日（如 2008;5;12）
 ```
-> 日期/时间选择器控件，必须位于 `_SUB` 窗口内。非时间戳工具。
+> 日期/时间选择器控件，必须位于 `_SUB` 窗口内。查询：`ENVI @Name.VAL=?&&Y;&&M;&&D;&&DOW;&&Extra`（5 个字段：年、月、日、星期、附加）。
+> 设置：`ENVI @Name.VAL=年;月;日`。
 
 ### BASE — Base64
 ```
