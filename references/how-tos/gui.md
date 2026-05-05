@@ -190,12 +190,12 @@ _SUB MyWin,W400H300,Title,,,,, -trap -nocap -ntab -nfocus
 //   -minb: enable minimize button
 
 // Cross-process window hide/show
-ENVI @@Visible=%&WID%:0                           // SW_HIDE (hide to tray)
-ENVI @@Visible=%&WID%:1                           // SW_SHOW (show)
-ENVI @@Visible=%&WID%:2                           // SW_SHOWNORMAL
-ENVI @@Visible=%&WID%:3                           // SW_MAXIMIZE
-ENVI @@Visible=%&WID%:*4                          // SW_MINIMIZE
-ENVI @@Visible=%&WID%:5                           // SW_RESTORE
+ENVI @@Visible=%&WID%:0                           // 不可见
+ENVI @@Visible=%&WID%:1                           // 可见
+ENVI @@Visible=%&WID%:2                           // 正常显示
+ENVI @@Visible=%&WID%:3                           // 最大化
+ENVI @@Visible=%&WID%:*4                          // 最小化（* = 第2种方案）
+ENVI @@Visible=%&WID%:5                           // 恢复
 ENVI @@Visible=?%&WID%:&&state                    // query visibility state
 ```
 
@@ -226,7 +226,7 @@ _SUB MyWin,W400H300,Test,
 
     // --- 动态命令 ---
     ENVI @this.cmd=CALL MyHandler                   // 设置窗口响应命令
-    ENVI @this.cmd?=&currentCmd                     // 查询当前命令
+    ENVI @this.cmd?=&currentCmd                     // 查询当前命令（需先 ENVI^ QueryCmd=1）
 
     // --- 跨进程查询 ---
     ENVI @@Pos=?%&WID%:&L:&T:&W:&H                 // 查询位置
@@ -239,7 +239,7 @@ _SUB MyWin,W400H300,Test,
     // front: 1=前台激活
     // activate: 0=不改变焦点
     // @前缀: 绝对屏幕坐标; 无@: 客户区坐标
-    ENVI @@POS=%&WID%:100:100:400:300:3:200        // 置顶+半透明
+    ENVI @@POS=%&WID%:100:100:400:300:3:$200       // 置顶+半透明（$=0-255格式透明度）
     ENVI @this.POS=100:100:400:300                  // 设置位置（相对）
     ENVI @this.POS=?;&L;&T;&W;&H                   // 查询位置（分号分隔）
     ENVI @@IsWindow=?%&WID%:&valid                  // 检查窗口是否有效
@@ -258,12 +258,12 @@ _SUB MyWin,W400H300,Test,
 ### DTIM — 日期时间选择器
 
 ```wcs
-DTIM DTIM1,L10T10W200H25,初始值,命令,状态
+DTIM DTIM1,L10T10W200H25,初始值,命令,类型
 // 初始值: "2008;5;12" 等年;月;日格式（分号分隔）
 // 查询值（最多5个：年月日周标志 或 时分秒标志）:
 ENVI @DTIM1.VAL=?&&year;&&month;&&day;&&weekday;&&flag
-// 设置值:
-ENVI @DTIM1.VAL=2024;1;15;14;30
+// 设置值（3字段：年;月;日 或 时;分;秒）:
+ENVI @DTIM1.VAL=2024;1;15
 // 鼠标悬停/离开消息:
 ENVI @DTIM1.MSG=0x1000: CALL OnMouseEnter   // WM_MOUSEENTER
 ENVI @DTIM1.MSG=0x1001: CALL OnMouseLeave   // WM_MOUSELEAVE
@@ -281,20 +281,18 @@ ENVI @IPAD1.VAL=192.168.1.100                    // 点分格式
 // 设置焦点:
 ENVI @IPAD1.VAL=#3                               // #前缀+段号，聚焦到第3段
 // 设置范围:
-ENVI @IPAD1.VAL=#0:255                           // #前缀+最小:最大
+ENVI @IPAD1.VAL=#3:0:255                         // #段号:最小:最大（段号1-4）
 ```
 
 ### SLID — 滑块控件
 
 ```wcs
-SLID [-left -right -color:杆色:块色:[*]绑定者] [*] SLID1,形状[,值信息,命令,状态]
+SLID [-right] [-left] [*] SLID1,形状[,值信息,命令,状态]
 // 值信息: [起始值][:终到值][:初值][:页大小]，默认 0:100:0
 SLID SLID1,L10T10W200H30,0:100:50:1,CALL OnSlide,0
 // 查询/设置值:
 ENVI @SLID1.VAL=?&&val                           // 查询当前值
 ENVI @SLID1.VAL=75                               // 设置值
-// 绑定到 EDIT 控件（自动同步）:
-SLID -color:0x808080:0xFF0000:EDIT1 SLID1,L10T10W200H30,0:100:50
 ```
 
 ### SBAR — 滚动条控件
@@ -302,7 +300,7 @@ SLID -color:0x808080:0xFF0000:EDIT1 SLID1,L10T10W200H30,0:100:50
 ```wcs
 SBAR SBAR1,L10T10W200H20,,命令,状态
 // 查询/设置值:
-ENVI @SBAR1.VAL=?&&pos;&&min;&&max;&&page         // 查询位置、范围和页大小
+ENVI @SBAR1.VAL=?&&pos:&&min:&&max:&&page         // 查询位置、范围和页大小
 ENVI @SBAR1.VAL=50:0:100:20                      // 当前值:起始值:终到值:页大小
 // 启用/禁用和可见性:
 ENVI @SBAR1.Enable=0                             // 禁用
@@ -693,10 +691,10 @@ SET &IMAGELIST=icons.16:16%&TAB%icon1.ico%&TAB%icon2.ico
 
 TREE Tree1,L10T10W300H300,%&IMAGELIST%,%&MUI_NODE_DATA%,0x10000127
 
-// Expand / Collapse nodes
-ENVI @Tree1.Expand=2                 // expand node 1 (2=expand)
-ENVI @Tree1.Expand=2.1;1             // collapse node 2.1 (1=collapse)
-ENVI @Tree1.Expand=4;3               // toggle node 4 (3=toggle)
+// Expand / Collapse nodes（格式: 节点;值，值: 1=折叠 2=展开 3=切换）
+ENVI @Tree1.Expand=1;2               // expand node 1
+ENVI @Tree1.Expand=2.1;1             // collapse node 2.1
+ENVI @Tree1.Expand=4;3               // toggle node 4
 
 // Select a node
 ENVI @Tree1.Sel=2.2                 // select node 2.2
@@ -704,7 +702,7 @@ ENVI @Tree1.Sel=?*2;&&node1         // query selected node path
 ENVI @Tree1.Sel=?@&&hnode           // query selected node handle
 
 // Checkbox state
-ENVI @Tree1.Check=3.1;2             // set indeterminate (0=unchecked, 1=checked, 2=indeterminate)
+ENVI @Tree1.Check=3.1;2             // toggle (0=unchecked, 1=checked, 2=toggle/乒乓)
 ENVI @Tree1.Check=?*;&&state        // query checkbox state
 ```
 
@@ -733,7 +731,6 @@ TIPS* 托盘名,提示文本,图标路径,命令           // * = 窗口私有�
 
 // 在窗口 _SUB 中使用
 _SUB MyWin,W400H300,Tray App,,#1,,
-    ENVI @this.MSG=_%&WM_TRAYNOTIFY%::wp,lp, CALL DoMenu %&wp% %&lp%
     TIPS* MyTray,My App,shell32.dll#43,        // 创建私有托盘图标
 _END
 
@@ -844,7 +841,7 @@ PBAR PBAR1,L22T13W200H16,20               // initial value = 20%
 ENVI @PBAR1.color=0xFF                     // text color (BGR red)
 
 // Update progress with text overlay (help.txt: 进度[;[#颜色:]文本])
-ENVI @PBAR1=50;#00FF00Processing...        // 50%, green text
+ENVI @PBAR1=50;#00FF00:Processing...       // 50%, green text
 ENVI @PBAR1=%&p%;%&K%s  %&p%%%            // value;text
 ```
 

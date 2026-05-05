@@ -450,7 +450,7 @@ _SUB 函数名,*,,析构命令            // _SUB 也支持析构命令（返回
 
 ### FIND — 字符串比较
 ```
-FIND $str1=str2, command        // 等于（区分大小写）
+FIND $str1=str2, command        // 等于（不区分大小写，*c 后缀区分）
 FIND $str1<>str2, command       // 不等于
 FIND $=%var%, command           // 变量为空
 FIND $%var%=, command           // 变量为空（同上，变量在左侧）
@@ -1045,20 +1045,22 @@ RAMD ImDisk* -D -m G:                 // 移除
 
 ### SERV — 服务管理
 ```
-SERV servicename                             // 启动服务
-SERV !servicename                            // 停止服务（! 前缀）
-SERV ?servicename,&var                       // 查询状态
-SERV -create name,path,type,start            // 创建服务
-SERV -delete [-stop-] name                   // 删除（-stop-=删除前自动停止）
+SERV [-wait] servicename                     // 启动（-wait=等待完成）
+SERV [-wait] !servicename                    // 停止（! 前缀，-wait=等待完成）
+SERV [?返回名] servicename                   // 查询状态
+SERV -create [?返回名] name,path,type,start[,error,dep,user,pass,display,group,tag]
+SERV -delete [-stop-] [?返回名] name         // 删除（-stop-=删除前自动停止）
 ```
 启动类型：`-boot`，`-system`，`-auto`，`-demand`，`-disabled`，`-delayed-auto`
 
 ### HOTK — 系统级热键
 ```
-HOTK Ctrl+Alt+#0x41,execPath                // 注册（全局，系统级）
+HOTK [--delall] [?[.]返回名] Ctrl+Alt+#0x41,command  // 注册（全局，系统级）
 HOTK Ctrl+Shift+Alt+Win+#0x42,command       // 多修饰键
 HOTK #0x0D,--del                            // 按键码取消注册
 HOTK --del:keyname                          // 按名称取消注册
+HOTK --delall                               // 取消所有已注册热键
+HOTK ?返回名 #0x41                          // 查询指定键的热键名
 ```
 修饰键：`Ctrl`，`Alt`，`Shift`，`Win`。用 `+` 组合。
 虚拟键码使用 `#` 前缀（十进制或十六进制：`#0x41`）。
@@ -1186,12 +1188,6 @@ FONT -p:retName:fontName:lang fontRes   // 私有字体（不注册系统）
 ```
 WALL imagePath                           // 设置壁纸（BMP、JPG、PNG、GIF）
 WALL %SystemRoot%\Web\Wallpaper\img.jpg  // 绝对路径
-WALL -center imagePath                   // 居中（不拉伸）
-WALL -tile imagePath                     // 平铺
-WALL -stretch imagePath                  // 拉伸（默认）
-WALL -fit imagePath                      // 适应屏幕
-WALL -fill imagePath                     // 填充屏幕
-WALL -span imagePath                     // 跨显示器
 WALL ""                                  // 清除壁纸（纯色）
 ```
 
