@@ -54,7 +54,7 @@ CALL @--popmenu WinName [x.y[:align]] // 弹出菜单
 CALL @--WinName                      // 销毁 Win 环境
 CALL @WinName                        // 初始化 Win 环境
 
-// DLL 调用（⚠ 缓冲区输出参数受限，见下方说明；需要 PECMD2012 v1.88+ 完整版）
+// DLL 调用（缓冲区输出用 `*&buf` 形式传递，见下方说明；需要 PECMD2012 v1.88+ 完整版）
 CALL $[? --cd --nrcd --c --[[i]v]ret:[~@]retVar] DLL|*hDll,Func,[#]p1,[#]p2...
 CALL $--ret:retVar [--cd],[--nrcd],-LoadLibrary,[^]DLLpath     // 加载 DLL（^=自动释放）
 CALL $--ret:retVar [&&memVar],-LoadLibrary,*[file]#resID[|type] // 从内存加载
@@ -100,7 +100,7 @@ DLL 标志：`--cd`=切换目录，`--nrcd`=不恢复目录，`--c`=C 调用约�
 - 正确格式：`CALL $ --qd --ret:&&r DLL,Func,#intParam,$strParam`（逗号分隔，`#` 整数，`$` 字符串）
 - `--qd` 影响字符串传递方式（无 --qd 时字符串多含 null 终止符，建议始终加 `--qd`）
 - 点语法（`Func.#param`）不工作，整数无 `#` 前缀返回 0
-- **缓冲区输出限制**：`*` 前缀传缓冲区时 DLL 写入不回传到 PE 变量；`SET$#` 原始缓冲区 + `*` 可能崩溃
+- **缓冲区输出**：`*&buf` 形式传递 PE 变量地址，DLL 写入可回传；`SET$#` 原始缓冲区 + `*` 不加 `&` 可能不回传
 - `GetProcAddress` 始终返回 0x0（实现问题），建议直接用函数名调用
 - 整数返回和字符串输入参数正常工作，32-bit 和 64-bit 行为完全一致
 
@@ -209,7 +209,7 @@ ENVI @@Visible=wid:0|1|*4        // 跨进程可见性
 ENVI^ Clipboard=text             // 写入剪贴板
 ENVI^ Clipboard?=var             // 读取剪贴板到变量
 ENVI^ EXPORTLOCAL=1|0|&1|&0      // PE 变量继承：1=继承，0=隔离（默认），&1=仅本级及以下继承，&0=仅本级及以下隔离
-ENVI^ DisX64=1                   // 禁用 WOW64 文件系统重定向
+ENVI^ DisX64=1[,Old]             // 禁用 WOW64 文件系统重定向（Old=保存原状态用于恢复）
 ENVI^ Arg=*                      // 将单词拆分为参数
 ENVI @@DeskTopFresh=[clearicon][;][1|2|4|8|16][;[-+]path]  // 桌面刷新
 ENVI @@TaskIcoMenu=0|1|2         // 托盘菜单切换
@@ -1258,7 +1258,7 @@ REGI HKCU\abc=""                           // 写入空字符串（"" 表示空�
 
 // 高级操作
 REGI --ak HKCU\Software\Key\,&all             // 枚举所有子键 (k=keys)
-REGI --av HKCU\Software\Key\,&all             // 枚举所有值 (v=variables)
+REGI --av HKCU\Software\Key\,&all             // 枚举所有值 (v=values)
 REGI .?\HKLM\SOFTWARE\Key\Val,&type           // 查询值类型（点+问号）
 REGI --16 ...                                 // 十六进制数据输入
 REGI --su path\val=value                      // 以 SYSTEM 身份运行（提升权限）— 用于 32 位在 64 位系统上
@@ -1378,6 +1378,9 @@ EXEC [=][!][@][^][&][*] [flags] program [args]
 -ex1                    // 继承父进程 PE 变量为环境变量
 -nfb                    // 禁用等待光标
 -hpid:var               // 获取进程句柄（非 PID）
+-exe:filename           // 执行指定文件名（可执行非标准后缀文件如 .tmp）
+--exe:#resID            // 执行内嵌资源程序（#=资源 ID，无*=内存执行，有*=临时文件执行）
+--exe:[*[*]][?.ext:][cab:]传递  // 内嵌程序高级语法
 
 // 附加 EXEC 标志：
 -clone:var            // 克隆 PECMD 运行脚本变量

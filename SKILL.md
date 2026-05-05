@@ -366,7 +366,7 @@ CALL $ --ret:&&r user32.dll,FindWindowW,$Progman,#0             // 返回 0
 | `<` | INT64 | 64 位整数 | `<0x100000000` |
 | `$` | string | 按 Unicode 字符串传递（配合 `--qd` 不含 null） | `$CabinetWClass` |
 | `@` | ANSI | 按 ANSI 字符串传递 | `@text` |
-| `*` | buffer | 传递 PE 变量地址（⚠输出不回传） | `*&buf` |
+| `*` | buffer | 传递 PE 变量地址（`*&buf` 形式可回传输出） | `*&buf` |
 | `=` | raw | 按原始数据传递 | |
 | `~` | deref | 间接解引用（展开变量名再读值） | |
 
@@ -381,7 +381,7 @@ SET?int &buf=&&var:offset             // 从缓冲区偏移读取 32 位整数
 
 ### DLL 输出数据的替代方案
 
-由于 DLL 无法向 PE 变量回传缓冲区数据，获取系统信息应使用内置命令：
+DLL 缓冲区输出可使用 `*&buf` 形式（PE 变量地址传递，输出回传）。获取系统信息也可用内置命令：
 - `FIND --wid*@ &var` — 枚举窗口（返回 HWND、类名、标题）
 - `FIND --pid*@ &var` — 枚举进程
 - `REGI` — 注册表读取系统信息
@@ -427,7 +427,7 @@ GETF# %路径%,0#*,&原始数据                         // 按原始字节读�
 EXEC* &输出=!cmd.exe /c dir /b                            // 捕获全部输出
 EXEC =!"%MyNAME%" TEAM WAIT 1000|LOAD other.ini           // 运行子 PECMD
 EXEC* &out=!cmd.exe /c ipconfig                           // 捕获外部命令输出
-EXEC* -exe:#101 &out=*embedded.exe                        // 从 PECMD 资源运行 EXE
+EXEC* --exe:#101 &out=*embedded.exe                       // 从 PECMD 资源运行 EXE
 ```
 
 ### 单实例互斥体

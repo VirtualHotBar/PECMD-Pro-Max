@@ -260,24 +260,24 @@ IFEX #%&ret%<>0,
 }
 
 // --- Read REG_SZ (type 1, two-call buffer) ---
-SET$# &pdwType=&PtrSz% 0
-SET$# &pcbData=&PtrSz% 0
+SET$# &pdwType=*4 0
+SET$# &pcbData=*%&PtrSz% 0
 SET-long &pcbData=8192:0
-CALL $--qd --ret:&&ret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#1,#0,*&pcbData
+CALL $--qd --ret:&&ret offreg.dll,ORGetValue,#%&hKey%,#0,#0,$%&Value%,#1,#0,*&pcbData
 SET?int &pcbData=&&cbData:0
 SET$# &Data=*%&cbData% 0
-CALL $--qd --ret:&&ret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#1,*&Data,*&pcbData
+CALL $--qd --ret:&&ret offreg.dll,ORGetValue,#%&hKey%,#0,#0,$%&Value%,#1,*&Data,*&pcbData
 
 // --- Read REG_DWORD (type 4) ---
 SET$# &dwData=*4 0
 SET$# &lpcbData=*4 4
-CALL $--qd --ret:&bret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#4,*&dwData,*&lpcbData
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,#%&hKey%,#0,#0,$%&Value%,#4,*&dwData,*&lpcbData
 SET?int &dwData=&&dwVal:0
 
 // --- Read REG_QWORD (type 11) ---
 SET$# &qwData=*8 0
 SET$# &lpcbData=*8 8
-CALL $--qd --ret:&bret offreg.dll,ORGetValue,#%&hKey%,#0,$%&SubKey%,$%&Value%,#11,*&qwData,*&lpcbData
+CALL $--qd --ret:&bret offreg.dll,ORGetValue,#%&hKey%,#0,#0,$%&Value%,#11,*&qwData,*&lpcbData
 SET?longlong &qwData=&&qwVal:0
 
 // --- Write value ---
@@ -375,7 +375,7 @@ SET-long &&input=0:4       // QueryType=0 (Standard)
 SET-long &&input=0:8       // AdditionalParams=0
 SET &output.SIZE=12         // DEVICE_SEEK_PENALTY_DESCRIPTOR: Version(4)+Size(4)+IncursSeekPenalty(1)+3pad
 ENVI$ &&output=*0xC 0
-ENVI$# &&dwSize=*4 0
+SET$# &&dwSize=*4 0
 CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#0x2D1400,*&input,#0xC,*&output,#0xC,*&dwSize,#0
 SET?int &&output=&&IncursSeekPenalty:8
 // 0=SSD (no seek penalty), 1=HDD
@@ -403,11 +403,11 @@ SET?int &&output=&&TrimEnabled:8
 ### 43. STORAGE_GET_DEVICE_NUMBER（路径 → 磁盘/分区映射）
 
 ```wcs
-CALC &IOCTL_STORAGE_GET_DEVICE_NUMBER = shl(0x2D,16) | shl(0,14) | shl(0x05,2) | 0
+CALC &IOCTL_STORAGE_GET_DEVICE_NUMBER = shl(0x2D,16) | shl(0,14) | shl(0x0420,2) | 0
 // 0x2D1080
 SET &STORAGE_DEVICE_NUMBER.SIZE=12  // DeviceType(4)+DeviceNumber(4)+PartitionNumber(4)
 ENVI$ &&output=*0xC 0
-ENVI$# &&dwSize=*4 0
+SET$# &&dwSize=*4 0
 CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_STORAGE_GET_DEVICE_NUMBER%,#0,#0,*&output,#0xC,*&dwSize,#0
 SET?long &&output=&&DeviceType:0
 SET?long &&output=&&DeviceNumber:4
@@ -425,7 +425,7 @@ SET?long &&output=&&PartitionNumber:8
 CALC &IOCTL_DISK_GET_DRIVE_LAYOUT_EX = shl(0x07,16) | shl(0,14) | shl(0x14,2) | 0  // 0x70050
 SET &outBufSz=0x1000                               // 4096 bytes (足够容纳布局+分区表)
 ENVI$ &&output=*8M 0
-ENVI$# &&dwSize=*4 0
+SET$# &&dwSize=*4 0
 CALL $--qd --ret:&bret kernel32.dll,DeviceIoControl,%&hdisk%,#%&IOCTL_DISK_GET_DRIVE_LAYOUT_EX%,#0,#0,*&output,#%&outBufSz%,*&dwSize,#0
 
 // MBR:  PartitionStyle=0, Header at offset 48: Signature(4)+CheckSum(4)
@@ -478,7 +478,7 @@ IOCTL = shl(DeviceType, 16) | shl(Access, 14) | shl(Function, 2) | Method
 | IOCTL_DISK_GET_DRIVE_GEOMETRY_EX | 0x07 | 0 | 0x28 | 0 | 0x700A0 |
 | IOCTL_DISK_GET_DRIVE_LAYOUT_EX | 0x07 | 0 | 0x14 | 0 | 0x70050 |
 | IOCTL_DISK_GET_PARTITION_INFO_EX | 0x07 | 0 | 0x12 | 0 | 0x70048 |
-| IOCTL_STORAGE_GET_DEVICE_NUMBER | 0x2D | 0 | 0x05 | 0 | 0x2D1080 |
+| IOCTL_STORAGE_GET_DEVICE_NUMBER | 0x2D | 0 | 0x0420 | 0 | 0x2D1080 |
 | IOCTL_DISK_PERFORMANCE | 0x07 | 0 | 0x08 | 0 | 0x70020 |
 | IOCTL_DISK_UPDATE_PROPERTIES | 0x07 | 0 | 0x40 | 0 | 0x70100 |
 

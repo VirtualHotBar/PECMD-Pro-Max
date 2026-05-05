@@ -169,7 +169,7 @@ CALL $--ret:&&r #,*&pTaskbar.%&iRelease%
 
 ```wcs
 ENVI$ &&buf=*0x1000 0
-ENVI$# &&dwSize=*4 0
+SET$# &&dwSize=*4 0
 CALL $--qd --ret:&&bret Iphlpapi.dll,GetIfTable,*&buf,*&dwSize,#0
 // If GetLastError==122 (ERROR_INSUFFICIENT_BUFFER), re-allocate with returned size
 ENVI-addr ;&&bufsize=&&buf

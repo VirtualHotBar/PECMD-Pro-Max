@@ -380,8 +380,8 @@ LOAD #103 /l zh-CN                                   // with language parameter
 ### 从 PECMD 资源执行嵌入二进制文件
 
 ```wcs
-EXEC* -exe:#1003 &&out=*bcdboot64.exe %sysdir% /l %lang% /s %esp% /f uefi
-EXEC* -exe:#1005 =*MountESP64                        // wait for completion (=)
+EXEC* --exe:#1003 &&out=*bcdboot64.exe %sysdir% /l %lang% /s %esp% /f uefi
+EXEC* --exe:#1005 =*MountESP64                       // wait for completion (=)
 ```
 
 资源 ID 在构建时嵌入到 PECMD 可执行文件中。这是基于 PECMD 的工具打包依赖项的方式。
@@ -444,7 +444,8 @@ SHUT R                      // reboot (RESTART)
 SHUT L                      // logoff
 SHUT S                      // standby (suspend)
 SHUT H                      // hibernate
-SHUT E                      // eject optical drive + wait 10s
+SHUT E                      // eject optical drive
+SHUT O                      // eject optical drive + wait 10s
 SHUT K                      // lock workstation
 ```
 
@@ -743,9 +744,12 @@ CALL $--qd --ret:&retSize DLL.dll,FunctionName,*&buffer,#%&retSize%,...
 示例 — 获取计算机名：
 ```wcs
 _SUB GetComputerName
-    CALL $--qd --ret:&ret Kernel32.dll,GetComputerNameW,*#0,*#0
-    SET$# &buf=*%&ret% 0
-    CALL $--qd --ret:&ret Kernel32.dll,GetComputerNameW,*&buf,*&ret
+    SET$# &nSize=*4 0
+    CALL $--qd --ret:&ret Kernel32.dll,GetComputerNameW,*#0,*&nSize
+    ENVI?int &nSize=&bufSize
+    IFEX #%&bufSize%=0, EXIT _SUB
+    SET$# &buf=*%&bufSize% 0
+    CALL $--qd --ret:&ret Kernel32.dll,GetComputerNameW,*&buf,*&nSize
     ENVI-ret %~1=%&buf%
 _END
 ```
@@ -908,7 +912,7 @@ _END
 ### 50. QueryDosDeviceW — 所有 MS-DOS 设备
 
 ```wcs
-ENVI$ &&buf=*0x100000 0
+SET$# &&buf=*0x100000 0
 CALL $--qd --ret:&bret kernel32.dll,QueryDosDeviceW,#0,*&buf,#0x80000
 // Returns null-delimited, double-null terminated device list
 // lpos* * for binary null pattern search
@@ -921,9 +925,9 @@ CODE ***unicode,**.buf,*uni,&&result
 ### 51. RtlGetNtVersionNumbers（基于指针）
 
 ```wcs
-ENVI$# &&Major=*4 0
-ENVI$# &&Minor=*4 0  
-ENVI$# &&Build=*4 0
+SET$# &&Major=*4 0
+SET$# &&Minor=*4 0
+SET$# &&Build=*4 0
 CALL $--qd --ret:&bret ntdll.dll,RtlGetNtVersionNumbers,*&Major,*&Minor,*&Build
 SET?int &&Major=&&Major:0
 SET?int &&Minor=&&Minor:0
