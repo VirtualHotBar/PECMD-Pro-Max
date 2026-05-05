@@ -205,7 +205,18 @@ ENVI @Ctrl.Font=size:name
 ENVI @Ctrl.bkcolor=0xRRGGBB
 ENVI @Ctrl.Cursor=32649           // 手型光标
 ENVI @@POS=wid:l:t:w:h:layer:trans:front:activate
-ENVI @@Visible=wid:0|1|*4        // 跨进程可见性
+ENVI @@Visible=wid:0|1|*4        // 跨进程可见性（0=SW_HIDE, 1=SW_SHOW, 3=SW_MAXIMIZE, 4=SW_MINIMIZE 等）
+ENVI @@Enable=wid:[#]0|1         // 跨进程禁用/启用（#=子线程）
+ENVI @@Visible=?wid:&var         // 查询跨进程可见状态
+ENVI @@Enable=?wid:&var          // 查询跨进程可用状态
+ENVI @@IsWindow=?wid:&var        // 查询是否为有效窗口
+ENVI @Win.Paint=funcName         // 画布回调（参数：HDC 宽 高）
+ENVI @Win.HitTest=[-]h[:w:x:y]  // 拖动敏感区域（高=0取消，-=半透明穿透）
+ENVI @Win.trans=0|1|0x2[*]      // 背景透明（0x1=透明模式，0x2=完全透明，*=透明色）
+ENVI @Win.style=[@*]remove[:add] // 窗口风格操作（@=直接，*=扩展）
+ENVI @Win.InvalidateRect=[左:上:右:下]|#WID|@SubName[~扩量][:擦除]  // 刷新区域
+ENVI @Win.cmd[?]=var|cmd         // 动态设定/查询响应命令（?需 ENVI^ QueryCmd=1）
+ENVI @Win.nxp=                   // 禁用 XP 视觉样式
 ENVI^ Clipboard=text             // 写入剪贴板
 ENVI^ Clipboard?=var             // 读取剪贴板到变量
 ENVI^ EXPORTLOCAL=1|0|&1|&0      // PE 变量继承：1=继承，0=隔离（默认），&1=仅本级及以下继承，&0=仅本级及以下隔离
@@ -235,6 +246,7 @@ ENVI ?字符串名,数字名=PEBIT,[path] // 查询位数（32/64）
 ENVI ?返回名=WinVer[+][;...]       // Windows 版本信息
 ENVI ?[$.]返名[,属性名]=FVAR,varName[;GUID]  // EFI 固件变量
 ENVI ?[单个名],[全部名]=DROPFILE,wParam  // 拖放文件信息
+ENVI ?文件版本名[,产品版本名][,2]=FVER,文件路径  // 文件版本查询（2=文件自身版本）
 ENVI @@Cur=?[X名][;Y名]           // 鼠标位置查询
 ENVI @@EATEKEYS=组合键1 ...        // 按键拦截
 ENVI @@RMENU=变量名;文件名         // 获取文件右键菜单（多行，空行为分隔符）
@@ -410,6 +422,13 @@ SET-env ...                       // 等价于 ENVI -env &...（SET 也可用 -e
 ```
 `-env` 和 `-std` 便于操作环境变量；`-get` 用于函数传入 PE 变量名时获取；`-ret` 用于函数返回时操作。
 `SET-env` 临时取消 ForceLocal，用于 SET 命令需要读写环境变量的场景。
+
+### 析构函数语法
+```
+ENVI ~析构函数~变量名=初始值       // 定义时指定析构函数，退出变量定义范围时自动调用
+// 调用形式：析构函数 变量引用 变量值
+_SUB 函数名,*,,析构命令            // _SUB 也支持析构命令（返回前自动执行）
+```
 
 ---
 
@@ -647,8 +666,10 @@ PART -devida list disk N,&var               // 完整：产品号 + 序列号 + 
 PART -iv=N list disk N,&var                 // 查询磁盘信息的第 N 个子字段
 PART -raw list disk N,&var                  // 原始磁盘信息（设备路径、介质 GUID、卷名）
 PART list drv D:,&var                       // 盘符 → 磁盘号 分区号 类型 总线 驱动器 介质
+PART -raw list drv D:,&var                  // 原始盘符信息：设备号 分区号 盘符类型 总线 盘符 媒体类型
 PART list volume volumeName,&var            // 卷信息
 PART -drv list volume N,&var                // 按驱动器号列出卷
+PART -phy list volume N,&var                // 卷信息（含物理设备号/分区号）
 PART -report[:retvar][diskNum]              // 显示/列出报告（忽略其他参数）
 PART -floppy list disk N,&var               // 列出软盘设备
 PART [-cdrom|-floppy] list parent <devOrDrv>,&var  // 列出父设备
@@ -708,6 +729,38 @@ PART -clear                                 // 强制清除分区内有效信息
 
 PART MBR 输出字段：`分区号 类型(hex) 激活 起始(字节) 长度(字节) 隐藏扇区 结束(字节) 物理# 盘符`
 PART GPT 输出字段：`分区号 GUID 属性 起始(字节) 长度(字节) 结束(字节) 物理# 盘符`
+
+### MOUN — WIM/VHD/UDM 挂载
+```
+// WIM 挂载
+MOUN [-svr] WimPath,MountDir,[ImageID],[TempDir]  // 只读挂载 WIM（ID=1 可省略）
+MOUN -u MountDir                                   // 卸载 WIM
+MOUN -query VarName[=rw],MountDir,WimPath          // 查询挂载状态（=rw 仅返回 RW 标志）
+
+// VHD 挂载
+MOUN-vhd [-c[x]|-d|-u|-r|-s:sectsz] VHDPath,MountDir|Size|ParentVHD,[ID],[RetVar][,PEVar]
+// -c 创建 VHD（-cx 创建 VHDX），-r 只读，-d 动态，-iso:ISO 模式
+MOUN-vhd -query [-r] VHDPath,BufPEVar[,SizeVar][,cmd]  // GET_VIRTUAL_DISK_INFO 查询
+
+// UDM 挂载子命令
+MOUN-udm [-ud|-uh|-muh[g]] [-u+] [-udfs] [-udm-] [-w] [-m] [-mall] [-mhide[1]]
+    [-findboot[Only]] [-CurDrv[R][+]] [-udmid:pt#] [-udmask:掩码]
+    [-udimg:文件] [-check[-]] [-ret:返名] 设备名 [盘符表]   // 主挂载命令
+MOUN-udm listudm -ret:返名 设备名 [UD通配符]         // 列出 UDM 分区
+MOUN-udm listud -ret:返名 [-udmask:掩码] 设备名 [通配符]  // 详细 UD 文件列表
+MOUN-udm findboot -ret:返名                           // 查找启动设备
+MOUN-udm findudm [-img] [-norm] -ret:返名 盘符        // 查找对应 UDM
+MOUN-udm setboot -ret:返名 启动菜单 [UDM盘符|#udm号] [类型] [自动加载盘符]
+MOUN-udm sync "盘符列表"                               // 刷新数据到存储体
+MOUN-udm mapsub [-check] [-r] 文件名 盘符             // 只读 UDm 盘的可写加载
+MOUN-udm ud2fs [-efi] 设备名 [bClr=1] [bMkNew=1] [FS=FAT]  // UD 扩展区转文件系统
+MOUN-udm OnlyApp [-noauto]                             // 检测并执行一键恢复
+MOUN-udm Server [-FreshDriver] [-quit] [-safe]         // UDM 自动挂载服务
+MOUN-udm setbootcfg 启动菜单 "值" ["标签头"]           // 设置启动配置
+MOUN-udm getbootcfg [-x[+|a]] 返回名 标签头           // 获取启动配置
+```
+
+UDM 掩码（`-udmask`）：`0x20000`=UD 扩展区，`0x40000`=仅 UD 扩展区，`0x80000`=检查 UD 扩展区，`0xA0001`=组合。
 
 ### SHOW — 显示/隐藏分区
 ```
