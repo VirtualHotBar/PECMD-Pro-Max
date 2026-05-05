@@ -642,6 +642,72 @@ _END
 
 ---
 
+## 65. TIPS/TIPS* 系统托盘与 TABL 高级操作
+
+### 系统托盘（TIPS/TIPS*）
+
+```wcs
+// 创建全局托盘图标（与任务栏共享）
+TIPS 托盘名,提示文本,图标路径,命令
+TIPS* 托盘名,提示文本,图标路径,命令           // * = 窗口私有托盘图标
+
+// 在窗口 _SUB 中使用
+_SUB MyWin,W400H300,Tray App,,#1,,
+    ENVI @this.MSG=_%&WM_TRAYNOTIFY%::wp,lp, CALL DoMenu %&wp% %&lp%
+    TIPS* MyTray,My App,shell32.dll#43,        // 创建私有托盘图标
+_END
+
+// 更新托盘提示文本
+TIPS* MyTray,新提示文本,,
+
+// 最小化到托盘
+_SUB OnMin
+    ENVI @this.Visible=0                       // 隐藏窗口
+    // 点击托盘图标时恢复：
+_END
+
+_SUB DoMenu
+    IFEX $%2=%&WM_RBUTTONDOWN%, CALL @--popmenu TrayMenu
+    IFEX $%2=%&WM_LBUTTONDOWN%, ENVI @this.Visible=1
+_END
+
+_SUB TrayMenu
+    MENU 显示窗口,Show,ENVI @this.Visible=1
+    MENU -
+    MENU 退出,Exit,KILL \
+_END
+```
+
+### TABL 行内着色与高级操作
+
+```wcs
+// 创建带颜色的表格（4 色格式：背景#文字背景#默认文字#选中行）
+TABL -color:0x00F000#0x808000#0xF0E0FF#0x80 Table1,L10T10W500H300,%&Title%,,0x10040
+
+// 单元格着色（格式：行.列;;颜色）
+ENVI @Table1.Color=3.2;;0xFF                         // 第3行第2列，红色（BGR）
+// 行着色（* 前缀）
+ENVI @Table1.Color=*5;;0xFFFF00                       // 第5行整行，黄色
+// 查询鼠标下单元格
+ENVI @Table1.Sel=?.&&Row;&&Col                        // 获取鼠标所在的行.列
+
+// 行内进度条（Percent）
+ENVI @Table1.Percent=3.2;75                           // 第3行第2列显示75%进度条
+ENVI @Table1.Percent=3.2;50;C:::0xFF0000:Loading      // 红色进度条+文字
+// C=居中, R=右对齐, L=左对齐, F=填充, K=块模式
+
+// 行级使能/禁用（~ 前缀）
+ENVI @Table1.Enable=~3;0                               // 禁用第3行
+ENVI @Table1.Enable=~?*;&disabledRows                  // 查询禁用行
+
+// TABS 动态修改标签
+ENVI @TabMain.Title1=新标题                             // 修改第1个标签的标题
+ENVI @TabMain.Tip1=新提示                               // 修改第1个标签的提示
+ENVI @TabMain.SEL=?&&sel                                // 查询当前选中的标签索引
+```
+
+---
+
 ## 67. GDI 绘制（WM_PAINT 绘图）
 
 ### 将 GDI 函数注册为别名

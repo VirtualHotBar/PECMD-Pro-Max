@@ -118,6 +118,7 @@ EXIT FORX      // 跳出 FORX 循环（同 EXIT BREAK）
 EXIT CONTINUE  // 继续下一次迭代（LOOP/FORX）
 EXIT BLOCK     // 跳到当前 {} 块尾部
 EXIT -         // 同 EXIT BLOCK
+EXIT _SIB      // 跳过当前 FORX 迭代的剩余兄弟命令，进入下一迭代
 EXIT ToWin     // 中止函数执行，立即返回窗口消息循环（推荐使用）
 ```
 
@@ -217,6 +218,8 @@ ENVI @@Enable=wid:[#]0|1         // 跨进程禁用/启用（#=子线程）
 ENVI @@Visible=?wid:&var         // 查询跨进程可见状态
 ENVI @@Enable=?wid:&var          // 查询跨进程可用状态
 ENVI @@IsWindow=?wid:&var        // 查询是否为有效窗口
+ENVI @@SENDMSG=hwnd:#msg;wp;lp  // 跨进程同步发送消息（如 SendMessage）
+ENVI @@POSTMSG=hwnd:#msg;wp;lp  // 跨进程异步投递消息（如 PostMessage）
 ENVI @Win.Paint=funcName         // 画布回调（参数：HDC 宽 高）
 ENVI @Win.HitTest=[-]h[:w:x:y]  // 拖动敏感区域（高=0取消，-=半透明穿透）
 ENVI @Win.trans=0|1|0x2[*]      // 背景透明（0x1=透明模式，0x2=完全透明，*=透明色）
