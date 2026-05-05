@@ -211,6 +211,16 @@ FORX @\Windows,&&winDir,1 { ... }                    // @=仅搜索目录，\=�
 
 TEAM SET &a=1| SET &b=2| CALC &c=%&a% + %&b%         // 多命令链
 
+// 线程
+THREAD* CALL WorkerFunc                             // * = 立即执行（持久栈，共享变量）
+THREAD CALL WorkerFunc                              // 复制变量到子线程
+THREAD& CALL WorkerFunc                             // & = 强制 PE 变量模式（最简多线程）
+THREAD+ CALL WorkerFunc                             // + = 抛弃式线程（不等待退出）
+THREAD# CALL WorkerFunc                             // # = 代理模式（线程结束则退出）
+THREAD -wait CALL WorkerFunc                        // 等待完成
+THREAD -tid:&tid CALL WorkerFunc                    // 获取线程 ID
+THREAD --st:128K CALL WorkerFunc                    // 设置栈大小
+
 { LOCK #pecmd                                      // 原子作用域
     LOCK --exist #MyLock,&&ret                      // 检查锁是否存在
 }
