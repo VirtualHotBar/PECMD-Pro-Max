@@ -175,7 +175,10 @@ FIND [ $A | $B ], 命令                // 复合 OR（| 分隔）
 FIND --pid &var,                     // 获取进程/CPU 信息
 FIND --pid*@ &var,                   // 进程列表（用于 TABL）
 FIND --class:Shell_TrayWnd --wid*@ &var  // 按类名过滤窗口列表
+FIND --forpid:PID --wid*@ &var       // 按进程 ID 过滤窗口
+FIND --sub --wid*@ &var              // 递归子窗口
 FIND --menu &var,窗口ID              // 查询窗口的 MENU 句柄
+FIND --menu#Index &var,MenuID        // 按索引查询子 MENU
 ```
 
 ### IFEX — 文件测试 / 数值比较
