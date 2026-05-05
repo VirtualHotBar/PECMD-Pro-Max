@@ -230,6 +230,17 @@ _SUB MyWin,W400H300,Test,
     // --- 跨进程查询 ---
     ENVI @@Pos=?%&WID%:&L:&T:&W:&H                 // 查询位置
     ENVI @@Pos=?%&WID%:&L:&T:&W:&H:&SX:&SY::&Z    // 扩展：含屏幕坐标和层叠序
+
+    // --- 完整 POS 设置语法 ---
+    // ENVI @@POS=wid:L:T:W:H:Z:trans:front:activate
+    // Z 值: 1=底部, 2=移除置顶, 3=置顶, 4=始终置顶(钉住)
+    // trans: 0-255 透明度
+    // front: 1=前台激活
+    // activate: 0=不改变焦点
+    // @前缀: 绝对屏幕坐标; 无@: 客户区坐标
+    ENVI @@POS=%&WID%:100:100:400:300:3:200        // 置顶+半透明
+    ENVI @this.POS=100:100:400:300                  // 设置位置（相对）
+    ENVI @this.POS=?;&L;&T;&W;&H                   // 查询位置（分号分隔）
     ENVI @@IsWindow=?%&WID%:&valid                  // 检查窗口是否有效
     ENVI @@Enable=?%&WID%:&enabled                  // 查询启用状态
 
@@ -237,6 +248,73 @@ _SUB MyWin,W400H300,Test,
     ENVI @@SENDMSG=%&hwnd%:#0x0010;0;0             // 同步发送 WM_CLOSE
     ENVI @@POSTMSG=%&hwnd%:#1;0;0                  // 异步投递自定义消息 #1
     ENVI @this.MSG=0x1000: CALL OnMouseEnter       // WM_MOUSEENTER (PECMD 自定义 0x1000)
+```
+
+---
+
+## 28. 缺少的控件类型（DTIM/IPAD/SLID/SBAR/GROU）
+
+### DTIM — 日期时间选择器
+
+```wcs
+DTIM DTIM1,L10T10W200H25,格式,命令,状态
+// 格式: "yyyy-MM-dd HH:mm:ss" 等日期格式字符串
+// 查询值:
+ENVI @DTIM1.VAL=?&&year;&&month;&&day;&&hour;&&min;&&sec
+// 设置值:
+ENVI @DTIM1.VAL=2024:01:15:14:30:00
+// 鼠标悬停/离开消息:
+ENVI @DTIM1.MSG=0x1000: CALL OnMouseEnter   // WM_MOUSEENTER
+ENVI @DTIM1.MSG=0x1001: CALL OnMouseLeave   // WM_MOUSELEAVE
+```
+
+### IPAD — IP 地址编辑器
+
+```wcs
+IPAD IPAD1,L10T10W200H25,,命令,状态
+// 查询 IP:
+ENVI @IPAD1.VAL=?&&ip1;&&ip2;&&ip3;&&ip4
+// 设置 IP:
+ENVI @IPAD1.VAL=192:168:1:100
+// 设置焦点:
+ENVI @IPAD1.VAL=3                               // 聚焦到第3段
+// 设置范围:
+ENVI @IPAD1.VAL=0:255                           // 设置各段范围 0-255
+```
+
+### SLID — 滑块控件
+
+```wcs
+SLID [-left -right -color:杆色:块色:[*]绑定者] [*] SLID1,形状[,值信息,命令,状态]
+// 值信息: 当前值:最小值:最大值:步长
+SLID SLID1,L10T10W200H30,50:0:100:1,CALL OnSlide,0
+// 查询/设置值:
+ENVI @SLID1.VAL=?&&val                           // 查询当前值
+ENVI @SLID1.VAL=75                               // 设置值
+// 绑定到 EDIT 控件（自动同步）:
+SLID -color:0x808080:0xFF0000:EDIT1 SLID1,L10T10W200H30,50:0:100
+```
+
+### SBAR — 滚动条控件
+
+```wcs
+SBAR SBAR1,L10T10W200H20,,命令,状态
+// 查询/设置值:
+ENVI @SBAR1.VAL=?&&pos;&&min;&&max               // 查询位置和范围
+ENVI @SBAR1.VAL=50:0:100                         // 设置值:最小:最大
+// 启用/禁用和可见性:
+ENVI @SBAR1.Enable=0                             // 禁用
+ENVI @SBAR1.Visible=0                            // 隐藏
+```
+
+### GROU — 分组面板
+
+```wcs
+GROU [-right] [-center] [*] GROU1,形状,[标题],[状态],[前景色#背景色],[字体]
+GROU GROU1,L10T10W380H200,设置选项,,0x000000#0xF0F0F0,12
+// 状态 0x10 = 初始隐藏
+GROU GROU1,L10T10W380H200,高级,,0x10              // 隐藏的分组
+// -right: 标题右对齐, -center: 标题居中
 ```
 
 ---

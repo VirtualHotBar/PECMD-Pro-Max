@@ -1463,6 +1463,16 @@ EXEC [=][!][@][^][&][*] [flags] program [args]
 /RemoveService name   // 卸载服务
 -poprmenu|-runrmenu   // 弹出/执行文件右键菜单
 -runs                 // 写入注册表自动运行（= 前导: HKLM\...\Run, 否则 HKCR\...\Run）
+// 服务模式附加标志（配合 /InstallService）：
+--wait|--nowait       // 等待/不等待进程结束（默认等待）
+--idle ms             // 空闲 ms 毫秒后执行命令
+--idlewait            // 有输入时不终止已运行程序
+--killwin             // 监控并关闭 MESS-svr 窗口
+--nojob               // 不杀子进程
+--gui-                // 无界面交互
+--desk[-]:[不]切换显示 // 桌面切换控制
+--delayservice ms     // 服务启动延迟毫秒数
+--hide                // 隐藏进程窗口
 ```
 
 ### EXEC* — 捕获输出

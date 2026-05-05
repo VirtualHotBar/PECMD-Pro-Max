@@ -87,6 +87,15 @@ PECMD 有**四种访问前缀**对应三种存储层级（加上就近查找机�
 
 > 完整 ENVI^ 控制命令、二进制缓冲区操作（SET-cmp、SET-tom、SET-copy、SET?int 等）和函数参数引用，参见 [commands-full.md](references/commands-full.md)。
 
+### ENVI-env / SET-env — 临时绕过 ForceLocal
+
+`ENVI-env` 和 `SET-env` 后缀临时绕过 ForceLocal=1 限制，直接操作环境变量。常用于线程内读取父窗口上下文的环境变量（如 `__WinID`）：
+
+```wcs
+ENVI-env hwnd0=%&__WinID%           // 从环境变量读取 __WinID（绕过 ForceLocal）
+SET-env MyName=%MyName%             // 临时设为环境变量
+```
+
 ```wcs
 #code=65001
 ENVI^ EnviMode=1
