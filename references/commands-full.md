@@ -212,7 +212,8 @@ ENVI @Ctrl.ID=?&hwnd               // 获取控件 HWND
 ENVI @Ctrl.Font=size:name
 ENVI @Ctrl.bkcolor=0xRRGGBB
 ENVI @Ctrl.Cursor=32649           // 手型光标
-ENVI @@POS=wid:l:t:w:h:layer:trans:front:activate
+ENVI @@POS=wid:l:t:w:h:layer:trans:front:activate  // 设置窗口位置
+ENVI @@POS=?wid:&L:&T:&W:&H:&SX:&SY::&Z  // 查询（含屏幕坐标和层叠序）
 ENVI @@Visible=wid:0|1|*4        // 跨进程可见性（0=SW_HIDE, 1=SW_SHOW, 3=SW_MAXIMIZE, 4=SW_MINIMIZE 等）
 ENVI @@Enable=wid:[#]0|1         // 跨进程禁用/启用（#=子线程）
 ENVI @@Visible=?wid:&var         // 查询跨进程可见状态
