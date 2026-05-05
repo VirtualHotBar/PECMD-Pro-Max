@@ -290,6 +290,51 @@ CALC &r=ln(100)                           // 4.605...
 
 ---
 
+## 12. WRIT/LOOP 嵌套在 FIND/IFEX/TEAM 中失败
+
+**症状：** `WRIT` 或 `LOOP` 命令在 `FIND`/`IFEX`/`TEAM` 内不执行或行为异常。
+
+**原因：** `WRIT` 和 `LOOP` 必须位于单独一行，不能嵌套在 `FIND`、`IFEX`、`TEAM` 命令内部。与 `_SUB` 有相同的限制。
+
+```wcs
+// ❌ 错误：WRIT 嵌套在 TEAM 内
+TEAM FIND $%&a%=hello, WRIT -,$+0,found
+
+// ✅ 正确：用 ! 分隔的命令链
+FIND $%&a%=hello, TEAM WRIT -,$+0,found
+```
+
+---
+
+## 13. 线程中 PE 变量行为不一致
+
+**症状：** 线程中修改的变量有时影响父线程，有时不影响。
+
+**原因：** PE 变量的复制/共享取决于创建线程的上下文：
+- **持久栈上下文**（窗口 `_SUB`、`*` 函数）：变量**共享**——子线程修改直接影响父
+- **非持久上下文**（普通函数、`{}` 块）：变量**复制**——子线程修改不影响父
+
+```wcs
+// 共享场景：窗口内创建线程
+_SUB MainWindow
+    SET &sharedVar=hello
+    THREAD* CALL Worker      // sharedVar 是共享的
+_END
+
+// 复制场景：普通函数内创建线程
+_SUB MyFunc
+    SET &localVar=hello
+    THREAD* CALL Worker      // localVar 是复制的
+_END
+
+// 安全跨线程通信用全局 PE 变量
+SET &::threadResult=
+THREAD* CALL Worker
+// ...稍后读取 %&::threadResult%
+```
+
+---
+
 ## 调试技巧总结
 
 | 技巧 | 说明 |

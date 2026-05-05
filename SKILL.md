@@ -1,6 +1,6 @@
 ---
 name: pecmd-pro-max
-version: 1.5.0
+version: 1.5.5
 description: |
   PECMD2012 WinPE 脚本编程 — 轻量级 Windows GUI、系统工具、启动/初始化
   脚本、自动化。适用于 .wcs/.wci/.wce 文件、磁盘分区、批处理转 PECMD、
@@ -53,8 +53,8 @@ PECMD 有**四种访问前缀**对应三种存储层级（加上就近查找机�
 3. 都没找到 → 当作 `&&a` 在当前范围新建
 
 **关键规则：**
-1. `ENVI^ ForceLocal=1` 放在文件顶部——强制 `ENVI` 和 `SET` 默认创建局部 PE 变量。**务必始终使用**。
-2. `ENVI^ EnviMode=1` — 空变量引用返回空字符串而非报错。务必始终使用。
+1. `ENVI^ ForceLocal=1` 放在文件顶部——强制 `ENVI` 和 `SET` 默认创建局部 PE 变量。**务必始终使用**（默认 `ForceLocal=0`，变量按就近查找链解析）。
+2. `ENVI^ EnviMode=1` — 空变量引用返回空字符串而非报错。务必始终使用（默认 `EnviMode=0`，兼容 4.0 模式：空变量不解释，自动多轮次非顺序解释）。
 3. `SET` **始终**等价于 `ENVI &`（SET 总是创建 PE 变量而非环境变量）。ForceLocal=1 同时影响 SET 和 ENVI 的作用域（默认局部）。
 4. `%Desktop%` 是**环境变量**版本；`%&Desktop%` 是**PE 变量**版本。
 5. 多线程代码中务必使用 PE 变量（`&var`）——环境变量跨线程共享会竞态。跨线程通信用 `&::` 类变量。
@@ -126,7 +126,8 @@ CALL @~~窗口名 [参数]              // 后台快速调用（非阻塞）
 CALL @^窗口名 [参数]               // 并行，父窗口不阻塞子窗口
 CALL @+窗口名 [参数]               // 弃养子窗口
 CALL @--窗口名                     // 销毁 Win 环境
-CALL @--popmenu 窗口名 [x.y]       // 在指定位置弹出菜单
+CALL @--popmenu 窗口名 [x.y[:对齐]] // 在指定位置弹出菜单（对齐：对齐方式）
+CALL --mem &变量名 [*] [参数]      // 执行内存中的动态函数代码
 ```
 
 ### 窗口（GUI）
@@ -173,7 +174,7 @@ FIND [ $A & $B ], 命令                // 复合 AND
 FIND [ $A | $B ], 命令                // 复合 OR（| 分隔）
 FIND --pid &var,                     // 获取进程/CPU 信息
 FIND --pid*@ &var,                   // 进程列表（用于 TABL）
-FIND --wid*@ &var,标题过滤           // 窗口列表
+FIND --class:Shell_TrayWnd --wid*@ &var  // 按类名过滤窗口列表
 FIND --menu &var,窗口ID              // 查询窗口的 MENU 句柄
 ```
 
@@ -505,12 +506,12 @@ CALC -err=0 &r=%&a% / %&b%                            // 出错时返回默认�
 7. **文件编码**：中文脚本首行声明编码（`#code=65001` = UTF-8，`#code=936` = GBK）且文件编码须与声明一致。SDK 示例普遍使用 GBK（936）。
 8. **`{` 位置**：文件级和函数级 `{` 必须从第 1 列开始。在 TEAM/LOOP/IFEX 内部，`{` 启动命令组。
 9. **行续接**：行首第一个非空格字符为 `\` 时，将该行合并到上一行。
-10. **`_SUB` 不能内联**：不能在 FIND/IFEX/TEAM 命令内部定义 `_SUB`。
+10. **`_SUB`、`WRIT`、`LOOP` 不能内联**：不能在 FIND/IFEX/TEAM 命令内部定义 `_SUB`。`WRIT` 和 `LOOP` 也必须位于单独一行，不能嵌套在 FIND/IFEX/TEAM 内。
 11. **空字符串检测**：`FIND $%var%=,` 测试"为空"。`FIND *=var,` 也测试"为空"（惯用法）。`FIND *<>var,` 测试"非空"。
 12. **字面 %**：字符串中表示字面 `%` 用 `%%`。
-13. **线程安全**：线程接收父级 PE 变量的**副本**。真正跨线程共享用 `&::` 变量。
+13. **线程安全**：线程创建时，**共享点之后**的 PE 变量复制到子线程。持久栈上下文（窗口、`*` 函数）中的变量是**共享**的（非复制）；非持久上下文（普通函数、`{}` 块）中的变量自动复制一份。真正跨线程通信用 `&::` 变量。
 14. **中文变量名**：PECMD 社区的事实标准。为这个生态系统编写脚本时使用中文名称。
-15. **OnShutdown.wcs**：PECMD 在关机/重启/注销前自动运行 `%SystemRoot%\System32\OnShutdown.wcs`，格式为 `OnShutdown.wcs <操作码> [脚本参数表]`。操作码：`shutdown`=关机、`reboot`=重启、`logout`=注销、`suspend`=挂起、`hiber`=休眠、`poweroff`=关电、`lock`=锁定计算机。
+15. **OnShutdown.wcs**：PECMD 在关机/重启/注销前自动运行 `%SystemRoot%\System32\OnShutdown.wcs`，格式为 `OnShutdown.wcs <操作码> [脚本参数表]`。操作码：`shutdown`=关机、`reboot`=重启、`logout`=注销、`suspend`=挂起、`hiber`=休眠、`poweroff`=关电、`lock`=锁定计算机、`unknown`=未知。关机菜单支持的子集：`shutdown`、`reboot`、`logout`、`poweroff`、`unknown`。
 16. **`^` 预解释**：`^COMMAND` 将变量展开推迟到执行时（循环中必备）。`^^COMMAND` 预解释两次。
 17. **MSG 上的 `_` 前缀**：控件通知用 `_msg#`；窗口级消息省略 `_`。搞错这一点是非常常见的错误。
 18. **THREAD\* 与 THREAD**：只有持久（窗口）栈中的 THREAD* 共享 PE 变量。在 `{}` 块中，两者都复制。

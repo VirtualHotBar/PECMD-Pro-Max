@@ -181,7 +181,7 @@ ENVI @Edit%B.*del=                                  // delete edit field B
 _SUB MyWin,W400H300,Title,,,,, -trap -nocap -ntab -nfocus
 //   -trap: close button doesn't exit (window survives close)
 //   -nocap: no title bar (frameless window)
-//   -ntab: hidden from taskbar
+//   -ntab: no Tab key navigation (no keyboard focus cycling)
 //   -nfocus: no keyboard focus on creation
 //   -nosysmenu: no system menu (no icon, no min/max/close)
 //   -top: always on top (TOPMOST)
@@ -191,9 +191,52 @@ _SUB MyWin,W400H300,Title,,,,, -trap -nocap -ntab -nfocus
 // Cross-process window hide/show
 ENVI @@Visible=%&WID%:0                           // SW_HIDE (hide to tray)
 ENVI @@Visible=%&WID%:1                           // SW_SHOW (show)
-ENVI @@Visible=%&WID%:2                           // SW_RESTORE (restore from minimize)
+ENVI @@Visible=%&WID%:2                           // SW_SHOWNORMAL
+ENVI @@Visible=%&WID%:3                           // SW_MAXIMIZE
 ENVI @@Visible=%&WID%:*4                          // SW_MINIMIZE
+ENVI @@Visible=%&WID%:5                           // SW_RESTORE
 ENVI @@Visible=?%&WID%:&&state                    // query visibility state
+```
+
+---
+
+## 27. @this. 自引用与窗口属性
+
+`@this.` 引用当前窗口自身，无需知道窗口 ID。SDK 示例广泛使用。
+
+```wcs
+_SUB MyWin,W400H300,Test,
+    // --- 属性设置（@this = 当前窗口）---
+    ENVI @this.Font=12:Microsoft YaHei
+    ENVI @this.bkcolor=0xF0F0F0
+    ENVI @this.Cursor=32649                         // 手型光标 (IDC_HAND)
+    ENVI @this.trans=1*                             // 背景透明（*=透明色模式）
+    ENVI @this.trans=0x2                            // 完全透明
+    ENVI @this.style=0x00040000:0x00C00000          // 去掉WS_SIZEBOX,加上WS_CAPTION
+    ENVI @this.nxp=                                  // 禁用 XP 视觉样式
+    ENVI @this.Paint=OnPaint                        // WM_PAINT 回调
+    ENVI @this.HitTest=20                           // 顶部20像素可拖动（高=20）
+    ENVI @this.HitTest=-20                          // 半透明穿透拖动
+
+    // --- 控件属性 ---
+    ENVI @Edit1.ReadOnly=1                          // EDIT 只读
+    ENVI @Edit1.LINE=10                             // EDIT/MEMO 滚动到第10行
+    ENVI @this.MouseCapture=1                       // 捕获鼠标（0=释放）
+
+    // --- 动态命令 ---
+    ENVI @this.cmd=CALL MyHandler                   // 设置窗口响应命令
+    ENVI @this.cmd?=&currentCmd                     // 查询当前命令
+
+    // --- 跨进程查询 ---
+    ENVI @@Pos=?%&WID%:&L:&T:&W:&H                 // 查询位置
+    ENVI @@Pos=?%&WID%:&L:&T:&W:&H:&SX:&SY::&Z    // 扩展：含屏幕坐标和层叠序
+    ENVI @@IsWindow=?%&WID%:&valid                  // 检查窗口是否有效
+    ENVI @@Enable=?%&WID%:&enabled                  // 查询启用状态
+
+    // --- 跨进程消息发送 ---
+    ENVI @@SENDMSG=%&hwnd%:#0x0010;0;0             // 同步发送 WM_CLOSE
+    ENVI @@POSTMSG=%&hwnd%:#1;0;0                  // 异步投递自定义消息 #1
+    ENVI @this.MSG=0x1000: CALL OnMouseEnter       // WM_MOUSEENTER (PECMD 自定义 0x1000)
 ```
 
 ---

@@ -151,7 +151,14 @@ LOAD path\to\script.ini [args]
 LOAD #101 [args]                           // 从 EXE 资源中执行内置脚本
 LOAD --mem &var [args]                     // 执行变量中存储的代码
 LOAD --Local --EnviMode path.ini           // 以 ForceLocal=1 + EnviMode=1 模式运行
+LOAD --ncd path.ini                        // 不转移当前目录和环境变量（多线程安全）
+LOAD --logs:[*]logFile path.ini            // 日志输出重定向（* = 同时输出到 stdout）
+LOAD - path.ini                            // 不转移持久栈
+LOAD -* path.ini                           // 不转移持久栈和执行栈
+LOAD -del path.ini                         // 加载后删除该脚本
+LOAD path\*.ini *FuncName args             // 调用脚本中的指定函数
 ```
+加载优先级：PEI > #number > WCI/WCS/WCE/WCZ > EXE/COM/NTR/NTE/BAT/CMD > DLL。
 
 ### THREAD / THRD — 创建线程
 ```
@@ -322,7 +329,7 @@ ENVI-long &buf=value:offset              // 写入 LONG (32位)
 ENVI?long &var=源变量:offset             // 读取 LONG
 ENVI?short &var=源变量:offset            // 读取 SHORT
 ENVI?char &var=源变量:offset             // 读取 CHAR
-ENVI?int640 &var=源变量:offset           // 读取 INT64
+ENVI?int64 &var=源变量:offset            // 读取 INT64
 ENVI?ptr &var=源变量:offset              // 读取指针
 ```
 
@@ -1833,12 +1840,21 @@ ENVI @TimerName=interval;count           // 运行 N 次
 ENVI @TimerName=-del                     // 销毁
 ```
 
-### ENVI ? — 系统查询
+### SHUT — 关机/重启/注销
 ```
-ENVI ?WinPE=ispe                          // 检查是否在 WinPE 中运行
-ENVI ?FVER &ver,path\to\file.dll          // 获取文件版本
-ENVI ?ReturnValue=FVAR,varName;{GUID}     // 查询固件变量（UEFI）
+SHUT [-force] [E|O数字|C|R|L|H|S|K|SHUTDOWN|-] [--] [脚本参数表]
 ```
+无参数=关机，`R`=重启，`L`=注销，`H`=休眠，`S`=挂起，`K`=锁定，`-force`=快速关机。
+`E`=弹出光驱后等待10秒，`O数字`=弹出光驱后等待指定毫秒，`C`=关闭光驱。
+`SHUTDOWN -s -r -f --f -t 秒数`=另类关机方式。
+关机前自动执行 `%SystemRoot%\System32\OnShutdown.wcs`。
+
+### LOGO — 启动画面
+```
+LOGO [文件路径[,透明色]] [-] [-top] [-enable] [-wait] [-trans:N]
+```
+支持 BMP/JPG/PNG/GIF（需 GDI+）。无参数 = 渐隐淡出隐藏。
+标志：`-`（快速退出），`-top`（置顶），`-enable`（ESC 退出），`-wait`（等待动画结束），`-trans:N`（透明度 0-255）。
 
 ---
 
