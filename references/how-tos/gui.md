@@ -164,6 +164,7 @@ _END
 
 ```wcs
 // Create controls programmatically from a command string in a variable
+SET &x=100 & &y=50 & &w=200 & &h=30
 ENVI &&cmd=LABE -vcenter -trans Lbl%&i%,L%x%T%y%W%w%H%h%,%&text%,,0x000000,14
 %&cmd%                                              // execute the command to create the control
 
@@ -257,12 +258,12 @@ _SUB MyWin,W400H300,Test,
 ### DTIM — 日期时间选择器
 
 ```wcs
-DTIM DTIM1,L10T10W200H25,格式,命令,状态
-// 格式: "yyyy-MM-dd HH:mm:ss" 等日期格式字符串
-// 查询值:
-ENVI @DTIM1.VAL=?&&year;&&month;&&day;&&hour;&&min;&&sec
+DTIM DTIM1,L10T10W200H25,初始值,命令,状态
+// 初始值: "2008;5;12" 等年;月;日格式（分号分隔）
+// 查询值（最多5个：年月日周标志 或 时分秒标志）:
+ENVI @DTIM1.VAL=?&&year;&&month;&&day;&&weekday;&&flag
 // 设置值:
-ENVI @DTIM1.VAL=2024:01:15:14:30:00
+ENVI @DTIM1.VAL=2024;1;15;14;30
 // 鼠标悬停/离开消息:
 ENVI @DTIM1.MSG=0x1000: CALL OnMouseEnter   // WM_MOUSEENTER
 ENVI @DTIM1.MSG=0x1001: CALL OnMouseLeave   // WM_MOUSELEAVE
@@ -273,26 +274,27 @@ ENVI @DTIM1.MSG=0x1001: CALL OnMouseLeave   // WM_MOUSELEAVE
 ```wcs
 IPAD IPAD1,L10T10W200H25,,命令,状态
 // 查询 IP:
-ENVI @IPAD1.VAL=?&&ip1;&&ip2;&&ip3;&&ip4
+ENVI @IPAD1.VAL=?&&ip1;&&ip2;&&ip3;&&ip4        // 无前缀点：分别返回4段
+ENVI @IPAD1.VAL=?.FullIP                         // 带前缀点：返回完整IP字符串
 // 设置 IP:
-ENVI @IPAD1.VAL=192:168:1:100
+ENVI @IPAD1.VAL=192.168.1.100                    // 点分格式
 // 设置焦点:
-ENVI @IPAD1.VAL=3                               // 聚焦到第3段
+ENVI @IPAD1.VAL=#3                               // #前缀+段号，聚焦到第3段
 // 设置范围:
-ENVI @IPAD1.VAL=0:255                           // 设置各段范围 0-255
+ENVI @IPAD1.VAL=#0:255                           // #前缀+最小:最大
 ```
 
 ### SLID — 滑块控件
 
 ```wcs
 SLID [-left -right -color:杆色:块色:[*]绑定者] [*] SLID1,形状[,值信息,命令,状态]
-// 值信息: 当前值:最小值:最大值:步长
-SLID SLID1,L10T10W200H30,50:0:100:1,CALL OnSlide,0
+// 值信息: [起始值][:终到值][:初值][:页大小]，默认 0:100:0
+SLID SLID1,L10T10W200H30,0:100:50:1,CALL OnSlide,0
 // 查询/设置值:
 ENVI @SLID1.VAL=?&&val                           // 查询当前值
 ENVI @SLID1.VAL=75                               // 设置值
 // 绑定到 EDIT 控件（自动同步）:
-SLID -color:0x808080:0xFF0000:EDIT1 SLID1,L10T10W200H30,50:0:100
+SLID -color:0x808080:0xFF0000:EDIT1 SLID1,L10T10W200H30,0:100:50
 ```
 
 ### SBAR — 滚动条控件
@@ -300,8 +302,8 @@ SLID -color:0x808080:0xFF0000:EDIT1 SLID1,L10T10W200H30,50:0:100
 ```wcs
 SBAR SBAR1,L10T10W200H20,,命令,状态
 // 查询/设置值:
-ENVI @SBAR1.VAL=?&&pos;&&min;&&max               // 查询位置和范围
-ENVI @SBAR1.VAL=50:0:100                         // 设置值:最小:最大
+ENVI @SBAR1.VAL=?&&pos;&&min;&&max;&&page         // 查询位置、范围和页大小
+ENVI @SBAR1.VAL=50:0:100:20                      // 当前值:起始值:终到值:页大小
 // 启用/禁用和可见性:
 ENVI @SBAR1.Enable=0                             // 禁用
 ENVI @SBAR1.Visible=0                            // 隐藏
@@ -312,8 +314,8 @@ ENVI @SBAR1.Visible=0                            // 隐藏
 ```wcs
 GROU [-right] [-center] [*] GROU1,形状,[标题],[状态],[前景色#背景色],[字体]
 GROU GROU1,L10T10W380H200,设置选项,,0x000000#0xF0F0F0,12
-// 状态 0x10 = 初始隐藏
-GROU GROU1,L10T10W380H200,高级,,0x10              // 隐藏的分组
+// 状态 ±16 = 不可见（正负均可）
+GROU GROU1,L10T10W380H200,高级,,-0x10             // 隐藏的分组
 // -right: 标题右对齐, -center: 标题居中
 ```
 
@@ -651,7 +653,7 @@ _SUB SysMenu
 _END
 
 _SUB OnMin
-    ENVI @@Visible=%&__WinID%:4                      // WinAPI ShowWindow 常量: 0=SW_HIDE, 1=SW_SHOW, 2=SW_SHOWNORMAL, 3=SW_MAXIMIZE, 4=SW_MINIMIZE, 5=SW_RESTORE
+    ENVI @@Visible=%&__WinID%:4                      // PECMD @@Visible 常量: 0=隐藏, 1=显示, 2=正常, 3=最大化, 4=最小化, 5=恢复
 _END
 
 _SUB OnClose
@@ -807,6 +809,7 @@ _SUB CanvasWin,W260H320,Canvas Demo,
 _END
 
 _SUB OnPaint                               // %1=HDC, %2=width, %3=height
+    SET &w0=115 & &h0=115                           // 中心点
     CALC #L=%&w0% - %&w%
     CALC #T=%&h0% - %&w%
     CALC #R=%&w0% + %&w%

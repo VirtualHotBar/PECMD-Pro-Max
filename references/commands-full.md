@@ -265,7 +265,7 @@ ENVI @@RMENU=变量名;文件名         // 获取文件右键菜单（多行，
 
 ### CALC — 计算/求值
 ```
-CALC[-u|-txt|-cb] [-gui] [-base=[u]2|8|10|16|N] [-err=defaultValue] [#][变量=]表达式[#[#][小数位][E|F|G]]
+CALC[-u|-txt|-cb-[Lfr:Lto[:Rfr:step]]] [-gui] [-base=[u]2|8|10|16|N] [-err=defaultValue] [#][变量=]表达式[#[#][小数位][E|F|G]]
 ```
 `#` 前缀 = 整数模式。支持：`+ - * / % ^`，位运算 `& | @`，比较 `= <> > >= < <=`，
 逻辑 `&& ||`。函数（共34个）：`abs sin cos tan ctg sqrt ln lg log pow exp pow10`，
@@ -280,6 +280,7 @@ CALC[-u|-txt|-cb] [-gui] [-base=[u]2|8|10|16|N] [-err=defaultValue] [#][变量=]
 `-u` — 无符号输出修饰符（直接跟在 CALC 后面，无空格）。
 `-txt` — 文本模式（直接跟在 CALC 后面）。
 `-cb` — 剪贴板模式（直接跟在 CALC 后面）。
+`-[Lfr:Lto[:Rfr:step]]` — 向量操作模式（`Lfr:Lto` 为左侧行从/到范围，`Rfr` 为右侧起始，`step` 为步长）。
 `CALC -base=16 #&hex=shl(0x07,16)|0x20` — 十六进制位运算。
 `CALC &sz=%&bytes%/1G#3` — 字节转 GB，3 位小数。
 多个表达式：用 `;` 或换行分隔。子变量：`#subName` = 整数子变量，`$subName` = 浮点子变量。
@@ -352,7 +353,7 @@ typedef 类型别名 原类型;
 ### SET-make / ENVI-make — 从缓冲区取子串
 ```
 SET-make &&Str=&buf@offset;$length           // $ 固定长度
-SET-make &&Str=&buf@offset;(%expr%*2)        // ;(...) 计算表达式作为长度
+SET-make &&Str=&buf@offset;(%expr%*2)        // ;(...) 计算表达式作为长度（⚠语法待确认）
 ```
 
 ### SET< / ENVI< — 追加到变量
@@ -462,7 +463,7 @@ FIND $'%var%'='', command       // 安全的空值检查（单引号保护）
 FIND [$][A & B], command         // 复合 AND（条件之间用 &）
 FIND [$][A | B], command         // 复合 OR（条件之间用 |）
 FIND --pid &var,ProcessName            // 获取进程 PID
-FIND --pid &var                        // 获取进程 CPU 滴答数
+FIND --pid &var                        // 返回 5 个值：空闲时间 总时间 CPU个数 1秒时钟数 一时钟100ns数
 FIND --pid*@[.ext|#parentPID] &var,    // 进程列表（可选：扩展名过滤或父进程 PID）
 FIND [--user] --pid*@[.ext|#parentPID] &var,prog[|用户名]  // 按用户名过滤进程
 FIND [--sub][--forpid:PID|--fortid:TID] --wid*@[parentWID] &var,[title]   // 窗口列表（* = 标题前缀匹配）
@@ -1010,25 +1011,6 @@ SHEL PECMD.EXE LOAD MyShell.ini
 ```
 缩进的行在外壳切换时执行。
 
-### SHUT — 关机/重启
-```
-SHUT                              // 关机
-SHUT R                            // 重启
-SHUT S                            // 挂起/待机
-SHUT H                            // 休眠
-SHUT L                            // 注销
-SHUT K                            // 锁定工作站
-SHUT E                            // 弹出光驱
-SHUT C                            // 关闭光驱
-SHUT O                            // 弹出光驱 + 等待 10 秒
-SHUT O5                           // 弹出光驱 + 等待 5 秒（O+数字=等待 N 秒）
-SHUT -force R                     // 强制重启
-SHUT -- [scriptFile]              // 关机时运行脚本
-SHUTDOWN -s|-r|-f|-t 秒           // 传递原始参数给 shutdown.exe
-  // -s=关机 -r=重启 -f=强制 --f=取消强制 -t=延迟
-```
-// OnShutdown.wcs hook 操作码: shutdown reboot logout suspend hiber poweroff unknown lock
-
 ### DISP — 显示设置
 ```
 DISP W1024H768B32F60                             // 宽，高，色深，刷新率
@@ -1052,7 +1034,7 @@ DISP -sort[-r|-n]                                 // 排序模式（r=反向，n
 
 ### PAGE — 虚拟内存
 ```
-PAGE C:\pagefile.sys 256 512   // 最小 256MB，最大 512MB
+PAGE [*force] C:\pagefile.sys 256 512   // 最小 256MB，最大 512MB（*force 强制创建）
 ```
 
 ### RAMD — RAM 磁盘（ImDisk）
@@ -1077,14 +1059,14 @@ HOTK Ctrl+Alt+#0x41,execPath                // 注册（全局，系统级）
 HOTK Ctrl+Shift+Alt+Win+#0x42,command       // 多修饰键
 HOTK #0x0D,--del                            // 按键码取消注册
 HOTK --del:keyname                          // 按名称取消注册
-HOTK -wait [timeout],&var                   // 注意：非标准扩展。请改用标准 WAIT -cont [-timeout],[&var]。
 ```
 修饰键：`Ctrl`，`Alt`，`Shift`，`Win`。用 `+` 组合。
 虚拟键码使用 `#` 前缀（十进制或十六进制：`#0x41`）。
 
 ### HKEY — 窗口/程序级热键
 ```
-HKEY #0x41,command                          // 仅窗口激活时响应（主窗口有焦点时响应）
+HKEY #0x41,command                          // 默认 = 窗口级（此窗口有焦点时响应）
+HKEY *#0x41,command                         // * = 窗口激活时响应（不同窗口可重用，个数不限）
 HKEY $#0x41,command                         // $ = 程序级全局（此 PECMD 实例的任何窗口）
 HKEY Ctrl+Shift+#0x42,command               // 多修饰键
 HKEY #0x0D,--del                            // 按键码取消注册
@@ -1623,7 +1605,7 @@ count < 1 时返回最右边位置。返回 0 表示未找到。
 ```
 LSTR &left=N,%&str%                     // 前 N 个字符
 RSTR &right=N,%&str%                    // 后 N 个字符
-SSTR &mid=M,N,%&str%                    // 从位置 M 取 N 个字符（⚠语法待确认）
+SSTR [-case] &pos=needle,count,%&str%    // LPOS* 别名——查找子字符串位置（非子串提取）
 RPOS &pos=needle,[1],%&haystack%        // 查找最后一个（行为与 LPOS 类似，从右起）
 STRL &len=%&str%                        // 字符串长度
 RAND &var                               // 随机 63 位整数
@@ -1632,12 +1614,6 @@ RAND &var                               // 随机 63 位整数
 ---
 
 ## 其他命令
-
-### TIME — 获取当前时间
-```
-TIME &var                               // 获取当前时间（HH:MM:SS 格式）
-```
-> 注意：完整的 DATE/TIME 命令请参见系统部分。
 
 ### DTIM — 日期/时间选择器（GUI 控件）
 ```
@@ -1865,7 +1841,10 @@ SHUT [-force] [E|O数字|C|R|L|H|S|K|SHUTDOWN|-] [--] [脚本参数表]
 无参数=关机，`R`=重启，`L`=注销，`H`=休眠，`S`=挂起，`K`=锁定，`-force`=快速关机。
 `E`=弹出光驱后等待10秒，`O数字`=弹出光驱后等待指定毫秒，`C`=关闭光驱。
 `SHUTDOWN -s -r -f --f -t 秒数`=另类关机方式。
-关机前自动执行 `%SystemRoot%\System32\OnShutdown.wcs`。
+`-- [scriptFile]`：关机时运行指定脚本。
+关机前自动执行 `%SystemRoot%\System32\OnShutdown.wcs`（操作码: shutdown reboot logout suspend hiber poweroff unknown lock）。
+
+示例：`SHUT R`（重启）、`SHUT -force R`（强制重启）、`SHUT O5`（弹出光驱等5秒）、`SHUT K`（锁定）。
 
 ### LOGO — 启动画面
 ```

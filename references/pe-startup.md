@@ -57,7 +57,7 @@ ENVI $TEMP=%SystemDrive%\TEMP
 ENVI $TMP=%SystemDrive%\TEMP
 
 // 7. 注册热键
-HKEY $Ctrl+Alt+#0x44, EXEC cmd.exe       // Ctrl+Alt+D -> 命令提示符（$ = 系统级热键）
+HKEY $Ctrl+Alt+#0x44, EXEC cmd.exe       // Ctrl+Alt+D -> 命令提示符（$ = 程序级热键，此 PECMD 实例的任何窗口响应）
 
 // 8. 加载外部工具
 LOAD %CurDir%\Tools\Network.ini
@@ -90,7 +90,7 @@ INIT [选项列表],[等待时间],[USB起始盘符]
 ### SHEL — 设置 Windows Shell
 
 ```wcs
-SHEL [-user|-sys] [-shel:"自动命令"] <文件名|命令>[,密码BASE字符串][,重试次数]
+SHEL [-user|-sys] [-shel:"自动命令"] <文件名(含路径)|TEAM或EXEC开始的命令>[,密码BASE字符串][,重试次数]
 ```
 
 - `-user`：强制配合 `MAIN -user` 使用

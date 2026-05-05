@@ -27,14 +27,14 @@ PECMD 脚本是一组平铺的顶层语句。从上到下顺序执行。`_SUB` �
 - `PECMD.EXE MAIN 路径\PECMD.INI` — 标准 WinPE 入口，执行 INI 并启动消息循环
 - 可在 PECMD 内运行 PECMD：`EXEC =!"%MyNAME%" <命令>` — 用于隔离的子操作
 - `EXIT FILE` 终止整个脚本；`EXIT _SUB` 从当前函数返回
-- 循环体内 `EXIT CONTINUE` 继续下一次迭代；`EXIT -` 跳到当前 `{}` 块尾部；`EXIT LOOP` / `EXIT FORX` 跳出循环；`EXIT ToWin` 中止函数返回窗口消息循环
-- 脚本文件常用 `.wcs` 扩展名。中文脚本首行加 `#code=65001` 声明 UTF-8 编码。若首行以 `#!` 开头，编码指令放在第二行。
+- 循环体内 `EXIT CONTINUE` 继续下一次迭代；`EXIT -` 跳到当前 `{}` 块尾部；`EXIT LOOP` / `EXIT FORX` / `EXIT BREAK` 跳出循环；`EXIT ToWin` 中止函数返回窗口消息循环
+- 脚本文件常用 `.wcs` 扩展名（也支持 `.wce`、`.wci`、`.wcx`、`.ini`、`.inf`、`.txt`、`.log` 等）。中文脚本首行加 `#code=65001` 声明 UTF-8 编码。若首行以 `#!` 开头，编码指令放在第二行。
 
 **标准 I/O（stdin/stdout/stderr）：**
 - `READ -,n,&var` — 从 stdin 读取一行
 - `WRIT -,$+0,text` — 写入 stdout
 - `WRIT --,$+0,text` — 写入 stderr
-- `LOGS * CONOUT$` — 输出到控制台（替代 ECHO）
+- `LOGS * CONOUT$` — 输出到控制台（调试终端输出）
 
 ## $2 变量系统
 
@@ -54,12 +54,12 @@ PECMD 有**四种访问前缀**对应三种存储层级（加上就近查找机�
 
 **关键规则：**
 1. `ENVI^ ForceLocal=1` 放在文件顶部——强制 `ENVI` 和 `SET` 默认创建局部 PE 变量。**务必始终使用**（默认 `ForceLocal=0`，变量按就近查找链解析）。
-2. `ENVI^ EnviMode=1` — 空变量引用返回空字符串而非报错。务必始终使用（默认 `EnviMode=0`，兼容 4.0 模式：空变量不解释，自动多轮次非顺序解释）。
+2. `ENVI^ EnviMode=1` — 空变量引用返回空字符串。务必始终使用（默认 `EnviMode=0`，兼容 4.0 模式：空变量不解释为字面文本，自动多轮次非顺序解释）。
 3. `SET` **始终**等价于 `ENVI &`（SET 总是创建 PE 变量而非环境变量）。ForceLocal=1 同时影响 SET 和 ENVI 的作用域（默认局部）。
 4. `%Desktop%` 是**环境变量**版本；`%&Desktop%` 是**PE 变量**版本。
 5. 多线程代码中务必使用 PE 变量（`&var`）——环境变量跨线程共享会竞态。跨线程通信用 `&::` 类变量。
 6. `SET~ &&dest=Source.Key` — `~` 运算符执行**间接解引用**：将右侧展开为变量名，再读取该变量的值。伪数组必备。
-7. `^` 前缀（`^SET`、`^ENVI`、`^CALC`、`^IFEX` 等）— 将变量展开推迟到执行时。循环中动态变量名必备。`^^` 预解释两次。
+7. `^` 前缀（`^SET`、`^ENVI`、`^CALC`、`^IFEX` 等）— 预先解释本命令（help.txt: "命令前若干个^表示预先解释本命令几次"）。循环中动态变量名必备。`^^` 预解释两次。
 8. `ENVI-ret %~1=%var%` — 将值设置到*名称*存储在 `%~1` 中的变量（引用返回）。
 9. `SET-def var=value` — 仅在变量未定义时设置（安全默认值）。
 
@@ -164,7 +164,7 @@ _ENDFILE-IMPORT                // 此行以下内容在 IMPORT 时被丢弃
 }
 ```
 
-文件级和函数级的 `{` 必须从第 1 列开始。嵌套 `_SUB` 用点号访问：`类名.子函数名`。
+文件级和函数级的 `{` 必须从第 1 列开始。嵌套 `_SUB` 用双冒号访问：`类名::子函数名`。点号用于数据成员访问（如 `类名.属性`）。
 
 ## $4 流程控制
 
@@ -181,7 +181,7 @@ FIND |%a%>%b%, 命令                   // | 前缀 = 浮点数比较
 FIND #%a%>%b%, 命令                   // # 前缀 = 整数比较（INT64）
 FIND [ $A & $B ], 命令                // 复合 AND
 FIND [ $A | $B ], 命令                // 复合 OR（| 分隔）
-FIND --pid &var,                     // 获取进程/CPU 信息
+FIND --pid &var,                     // 返回 5 值：空闲时间 总时间 CPU个数 1秒时钟数 一时钟100ns数
 FIND --pid*@ &var,                   // 进程列表（用于 TABL）
 FIND --class:Shell_TrayWnd --wid*@ &var  // 按类名过滤窗口列表
 FIND --forpid:PID --wid*@ &var       // 按进程 ID 过滤窗口
@@ -196,7 +196,7 @@ FIND --menu#Index &var,MenuID        // 按索引查询子 MENU
 IFEX C:\boot.ini, 命令                // 文件/目录存在
 IFEX C:\boot.ini,! 命令               // 不存在
 IFEX x:\, 命令                        // 盘符存在且有文件系统
-IFEX $%val%>=5, 命令                  // $=浮点数比较（#=整数比较）
+IFEX $%val%>=5, 命令                  // $=浮点数比较（#=整数比较，|=字符串比较）
 IFEX [ 条件1 & 条件2 ], 命令          // AND 复合条件
 IFEX [ 条件1 | 条件2 ], 命令          // OR 复合条件（| 分隔）
 IFEX MEMU=?,&var                     // 查询可用内存
@@ -224,12 +224,17 @@ FORX @\Windows,&&winDir,1 { ... }                    // @=仅搜索目录，\=�
 TEAM SET &a=1| SET &b=2| CALC &c=%&a% + %&b%         // 多命令链
 
 // 线程
-THREAD* CALL WorkerFunc                             // * = 立即执行（持久栈，共享变量）
-THREAD CALL WorkerFunc                              // 复制变量到子线程
+THREAD* CALL WorkerFunc                             // * = 持久栈（共享变量，保持父子关系）
+THREAD CALL WorkerFunc                              // 独立模式（复制变量到子线程）
 THREAD& CALL WorkerFunc                             // & = 强制 PE 变量模式（最简多线程）
 THREAD+ CALL WorkerFunc                             // + = 抛弃式线程（不等待退出）
 THREAD# CALL WorkerFunc                             // # = 代理模式（线程结束则退出）
-THREAD -wait CALL WorkerFunc                        // 等待完成
+THREAD $ CALL WorkerFunc                            // $ = 预先解释命令组
+THREAD -link CALL WorkerFunc                        // 保持父子关系（类似 *）
+THREAD -wait CALL WorkerFunc                        // 等待完成（阻塞消息循环）
+THREAD -waitx CALL WorkerFunc                       // 等待完成（不阻塞消息循环）
+THREAD -here CALL WorkerFunc                        // 当前栈的孩子（可修改父栈临时PE变量）
+THREAD -waitp CALL WorkerFunc                       // 进程结束前等待该线程
 THREAD -tid:&tid CALL WorkerFunc                    // 获取线程 ID
 THREAD --st:128K CALL WorkerFunc                    // 设置栈大小
 
@@ -520,9 +525,9 @@ CALC -err=0 &r=%&a% / %&b%                            // 出错时返回默认�
 ## $8 陷阱与注意事项
 
 1. **CALC 空格**：`CALC &J=1+2` 可以正常执行。右侧以 `%&I%` 等变量开头时，用空格分隔（`CALC &J= %&I%+1`）。PECMD 要求减号后必须有空格（`3 - 2`）。
-2. **注释标记**：行尾的 `//` 和 `;` 前面必须有空格才能被识别为注释（如 `SET &a=1 // 注释`）。行首独立的 `//` 可正常工作，但 `//注释`（无空格紧跟非空字符）可能不被识别。
+2. **注释标记**：行尾的 `//` 和 `;` 前面必须有空格才能被识别为注释（如 `SET &a=1 // 注释`）。行首独立的 `//` 可正常工作，但 `//注释`（无空格紧跟非空字符）可能不被识别。`` ` ``（反引号）也是有效注释符。
 3. **SET 就是 ENVI &**：`SET var=val` 语义上等价于 `ENVI &var=val`。启用 ForceLocal=1 后，两者都创建局部 PE 变量。
-4. **FIND 与 IFEX 前缀不同**：FIND 中 `$` = 字符串比较、`|` = 浮点比较、`#` = 整数比较；IFEX 中 `$` = 浮点比较、`#` = 整数比较（无 `|` 前缀——IFEX 中 `|` 是 OR 逻辑运算符，仅在 `[]` 复合条件内使用）。
+4. **FIND 与 IFEX 前缀交换**：FIND 中 `$` = 字符串比较、`|` = 浮点比较；IFEX 中 `$` = 浮点比较、`|` = 字符串比较。`#` 在两者中均为整数比较。IFEX 中 `|` 在 `[]` 复合条件内为 OR 逻辑运算符。
 5. **盘符冒号**：`FDRV`、`FORM`、`FIND C:\=?` 都需要 `:` 后缀。
 6. **带空格的路径**：`LOAD "C:\Program Files\a.ini"` 需要引号。
 7. **文件编码**：中文脚本首行声明编码（`#code=65001` = UTF-8，`#code=936` = GBK）且文件编码须与声明一致。SDK 示例普遍使用 GBK（936）。
