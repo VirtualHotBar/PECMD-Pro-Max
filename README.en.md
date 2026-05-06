@@ -84,3 +84,6 @@ Copy the `pecmd-pro-max/` folder into your AI coding assistant's skills director
 Source repository: [github.com/VirtualHotBar/PECMD-Pro-Max](https://github.com/VirtualHotBar/PECMD-Pro-Max)
 
 ClawHub: [clawhub.ai/virtualhotbar/pecmd-pro-max](https://clawhub.ai/virtualhotbar/pecmd-pro-max)
+## Download History
+
+[![Download History](https://skill-history.com/chart/virtualhotbar/pecmd-pro-max.svg)](https://skill-history.com/virtualhotbar/pecmd-pro-max)
